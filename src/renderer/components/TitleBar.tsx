@@ -1,9 +1,12 @@
-import { Minus, Square, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Minus, Square, X, Minimize2 } from 'lucide-react'
 import { SessionTabBar } from '../features/session/SessionTabBar'
 import { sendWindowControl } from '../features/window/window.service'
 import { PresetsMenu } from './PresetsMenu'
 import { cn } from '../lib/utils'
 import { APP_NAME } from '@shared/constants'
+import { IPC } from '@shared/ipc-channels'
+import { ipc } from '../lib/ipc'
 import logoUrl from '../assets/logo.png'
 
 interface OpenFile {
@@ -25,6 +28,14 @@ function shortName(p: string): string {
 }
 
 export function TitleBar({ activity, openFiles, activeFilePath, onActivateFile, onCloseFile }: Props): JSX.Element {
+  const [isMaximized, setIsMaximized] = useState(false)
+
+  useEffect(() => {
+    return ipc.on(IPC.WINDOW_MAXIMIZED_CHANGE, (payload) => {
+      setIsMaximized((payload as { maximized: boolean }).maximized)
+    })
+  }, [])
+
   return (
     <div
       className="flex items-center h-12 bg-brand-bg border-b border-brand-panel flex-shrink-0 select-none"
@@ -91,8 +102,8 @@ export function TitleBar({ activity, openFiles, activeFilePath, onActivateFile, 
         <button onClick={() => sendWindowControl('minimize')} className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/50 transition-colors rounded" title="Minimize">
           <Minus size={12} />
         </button>
-        <button onClick={() => sendWindowControl('maximize')} className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/50 transition-colors rounded" title="Maximize">
-          <Square size={11} />
+        <button onClick={() => sendWindowControl('maximize')} className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/50 transition-colors rounded" title={isMaximized ? 'Restore' : 'Maximize'}>
+          {isMaximized ? <Minimize2 size={11} /> : <Square size={11} />}
         </button>
         <button onClick={() => sendWindowControl('close')} className="w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors rounded" title="Close">
           <X size={12} />

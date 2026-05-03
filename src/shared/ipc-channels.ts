@@ -24,6 +24,7 @@ export const IPC = {
   // Window: main → renderer (push)
   WINDOW_INITIAL_SESSIONS: 'window:initial-sessions',
   WINDOW_TAB_REATTACHED: 'window:tab-reattached',
+  WINDOW_MAXIMIZED_CHANGE: 'window:maximized-change',
 
   // Settings: renderer → main (invoke)
   SETTINGS_GET: 'settings:get',

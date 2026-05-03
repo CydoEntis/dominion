@@ -69,6 +69,9 @@ export function createWindow(initialSessionIds: string[] = []): BrowserWindow {
   // Capture id before 'closed' fires — webContents is destroyed by then
   const webContentsId = win.webContents.id
   const thisWindowId = getWindowId(win)
+  win.on('maximize', () => win.webContents.send(IPC.WINDOW_MAXIMIZED_CHANGE, { maximized: true }))
+  win.on('unmaximize', () => win.webContents.send(IPC.WINDOW_MAXIMIZED_CHANGE, { maximized: false }))
+
   win.on('closed', () => {
     windows.delete(thisWindowId)
     if (mainWindowId === thisWindowId) mainWindowId = null
