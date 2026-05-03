@@ -51,11 +51,11 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     const fitAddon = new FitAddon()
     terminal.loadAddon(fitAddon)
     terminal.open(containerRef.current)
-    // Defer fit until after browser layout pass so container has real dimensions
-    requestAnimationFrame(() => {
+    // Double-RAF: first frame starts layout, second frame has real dimensions
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       fitAddon.fit()
       terminal.focus()
-    })
+    }))
 
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
@@ -114,10 +114,13 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     }
   }, [sessionId])
 
-  // Re-focus when this pane becomes active
+  // Re-fit and re-focus when this pane becomes active
   useEffect(() => {
     if (activeSessionId === sessionId && terminalRef.current) {
-      terminalRef.current.focus()
+      requestAnimationFrame(() => {
+        fitAddonRef.current?.fit()
+        terminalRef.current?.focus()
+      })
     }
   }, [activeSessionId, sessionId])
 
