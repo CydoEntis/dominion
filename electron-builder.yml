@@ -1,6 +1,6 @@
-appId: dev.cubixai.dominion
+appId: com.cydoentis.dominion
 productName: Dominion
-copyright: "Copyright © 2025 Cody"
+copyright: "Copyright © 2025 CydoEntis"
 
 directories:
   buildResources: build
