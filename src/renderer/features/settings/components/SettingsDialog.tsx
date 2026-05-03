@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Settings, FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
-import { AppSettingsSchema } from '@shared/ipc-types'
+import { AppSettingsSchema, DEFAULT_SETTINGS } from '@shared/ipc-types'
 import type { AppSettings } from '@shared/ipc-types'
 import { IPC } from '@shared/ipc-channels'
 import { Button } from '../../../components/ui/button'
@@ -18,6 +18,7 @@ import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Checkbox } from '../../../components/ui/checkbox'
 import { useStore } from '../../../store/root.store'
+import { cn } from '../../../lib/utils'
 
 const HOTKEY_FIELDS: { key: keyof AppSettings['hotkeys']; label: string }[] = [
   { key: 'newSession', label: 'New Session' },
@@ -26,6 +27,57 @@ const HOTKEY_FIELDS: { key: keyof AppSettings['hotkeys']; label: string }[] = [
   { key: 'commandPalette', label: 'Command Palette' },
   { key: 'toggleDashboard', label: 'Toggle Dashboard' }
 ]
+
+const MODIFIER_KEYS = new Set(['Control', 'Alt', 'Shift', 'Meta'])
+
+interface HotkeyInputProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+function HotkeyInput({ value, onChange }: HotkeyInputProps): JSX.Element {
+  const [capturing, setCapturing] = useState(false)
+
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (e.key === 'Escape') { setCapturing(false); return }
+    if (MODIFIER_KEYS.has(e.key)) return
+
+    const modifiers: string[] = []
+    if (e.ctrlKey) modifiers.push('Ctrl')
+    if (e.altKey) modifiers.push('Alt')
+    if (e.shiftKey) modifiers.push('Shift')
+    if (e.metaKey) modifiers.push('Meta')
+
+    if (modifiers.length === 0) return
+
+    const key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toUpperCase() : e.key
+    onChange([...modifiers, key].join('+'))
+    setCapturing(false)
+  }
+
+  return (
+    <div
+      tabIndex={0}
+      onFocus={() => setCapturing(true)}
+      onBlur={() => setCapturing(false)}
+      onKeyDown={capturing ? handleKeyDown : undefined}
+      className={cn(
+        'flex items-center h-9 px-3 rounded-md border text-xs font-mono cursor-pointer select-none transition-colors outline-none flex-1',
+        capturing
+          ? 'border-brand-green/60 bg-brand-green/5 text-brand-green'
+          : 'border-input bg-background text-zinc-300 hover:border-zinc-600'
+      )}
+    >
+      {capturing
+        ? <span className="text-zinc-500">Press shortcut…</span>
+        : value || <span className="text-zinc-600">—</span>
+      }
+    </div>
+  )
+}
 
 export function SettingsDialog(): JSX.Element {
   const [open, setOpen] = useState(false)
@@ -40,6 +92,7 @@ export function SettingsDialog(): JSX.Element {
   const defaultShell = watch('defaultShell')
   const shellStartDir = watch('shellStartDir')
   const confirmClose = watch('confirmCloseSession')
+  const hotkeys = watch('hotkeys')
 
   const pickShell = async (): Promise<void> => {
     const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FILE) as string | null
@@ -134,10 +187,9 @@ export function SettingsDialog(): JSX.Element {
               {HOTKEY_FIELDS.map(({ key, label }) => (
                 <div key={key} className="flex items-center gap-3">
                   <Label className="w-36 flex-shrink-0 text-zinc-400">{label}</Label>
-                  <Input
-                    {...register(`hotkeys.${key}` as const)}
-                    className="font-mono text-xs"
-                    placeholder="Ctrl+?"
+                  <HotkeyInput
+                    value={hotkeys?.[key] || DEFAULT_SETTINGS.hotkeys[key]}
+                    onChange={(v) => setValue(`hotkeys.${key}` as const, v)}
                   />
                 </div>
               ))}
