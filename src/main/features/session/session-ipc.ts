@@ -31,7 +31,11 @@ export function registerSessionIpc(): void {
   })
 
   ipcMain.handle(IPC.SESSION_PATCH, (_event, payload: { sessionId: string; name?: string; color?: string; groupId?: string | null }) => {
-    return patchSession(payload.sessionId, { name: payload.name, color: payload.color, groupId: payload.groupId ?? undefined })
+    const patch: { name?: string; color?: string; groupId?: string } = {}
+    if (payload.name !== undefined) patch.name = payload.name
+    if (payload.color !== undefined) patch.color = payload.color
+    if (payload.groupId !== undefined) patch.groupId = payload.groupId ?? undefined
+    return patchSession(payload.sessionId, patch)
   })
 
   ipcMain.on(IPC.SESSION_WRITE, (_event, payload) => {
