@@ -34,7 +34,7 @@ export interface SessionSlice {
   restoreTab: (tabId: string, tree: PaneNode, metas: SessionMeta[]) => void
 }
 
-export const createSessionSlice: StateCreator<RootStore, [], [], SessionSlice> = (set) => ({
+export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', never]], [], SessionSlice> = (set) => ({
   sessions: {},
   tabOrder: [],
   activeSessionId: null,

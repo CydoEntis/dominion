@@ -10,7 +10,7 @@ export interface WindowSlice {
   toggleDashboard: () => void
 }
 
-export const createWindowSlice: StateCreator<RootStore, [], [], WindowSlice> = (set) => ({
+export const createWindowSlice: StateCreator<RootStore, [['zustand/immer', never]], [], WindowSlice> = (set) => ({
   windowId: null,
   isMainWindow: false,
   isDashboardOpen: true,

@@ -42,7 +42,7 @@ export function useLayoutRestore(): void {
         agentCommand = `claude --resume ${ps.conversationId}`
       }
       try {
-        const meta = await createSession({ name: ps.name, agentCommand, cwd: ps.cwd || undefined, cols: 80, rows: 24 })
+        const meta = await createSession({ name: ps.name, agentCommand, cwd: ps.cwd || undefined, cols: 80, rows: 24, color: ps.color })
         upsertSession(meta)
         idMap.set(ps.sessionId, meta.sessionId)
         createdMetas.push(meta)

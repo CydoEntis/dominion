@@ -25,3 +25,7 @@ export function writeToSession(payload: SessionWritePayload): void {
 export function resizeSession(payload: SessionResizePayload): void {
   ipc.send(IPC.SESSION_RESIZE, payload)
 }
+
+export async function patchSession(payload: { sessionId: string; name?: string; color?: string }): Promise<SessionMeta> {
+  return ipc.invoke(IPC.SESSION_PATCH, payload) as Promise<SessionMeta>
+}

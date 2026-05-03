@@ -17,27 +17,36 @@ export function useSessionLifecycle(): void {
   const setPendingRestore = useStore((s) => s.setPendingRestore)
   const setIsMainWindow = useStore((s) => s.setIsMainWindow)
 
-  // Refs let both async paths (loadLayout + initial-sessions) coordinate
-  // regardless of which resolves first
   const layoutRef = useRef<PersistedLayout | null | 'loading'>('loading')
   const isMainRef = useRef<boolean | null>(null)
+  // Tracks running sessions found at startup — 'pending' until listSessions resolves
+  const liveSessionsRef = useRef<SessionMeta[] | 'pending'>('pending')
 
   useEffect(() => {
     loadSettings()
     getWindowId().then(setWindowId)
 
-    listSessions().then((sessions) => {
-      sessions.forEach((meta) => upsertSession(meta))
-    })
-
     const maybeShowRestore = (): void => {
-      if (layoutRef.current === 'loading' || isMainRef.current === null) return
+      // Wait for all three async sources to resolve before deciding
+      if (layoutRef.current === 'loading' || isMainRef.current === null || liveSessionsRef.current === 'pending') return
+      const live = liveSessionsRef.current as SessionMeta[]
+      // If PTY sessions are already running (renderer reload / HMR), skip restore.
+      // We already called addTab for them above so tabs are wired up.
+      if (live.length > 0) return
       if (isMainRef.current && layoutRef.current && layoutRef.current.tabs.length > 0) {
         setPendingRestore(layoutRef.current)
       }
     }
 
-    // Load layout eagerly — don't wait for initial-sessions
+    listSessions().then((sessions) => {
+      const running = sessions.filter((m) => m.status === 'running')
+      sessions.forEach((meta) => upsertSession(meta))
+      liveSessionsRef.current = running
+      // Wire up tabs for already-running sessions without layout restore
+      running.forEach((m) => addTab(m.sessionId))
+      maybeShowRestore()
+    })
+
     loadLayout().then((layout) => {
       layoutRef.current = layout
       maybeShowRestore()
@@ -47,8 +56,6 @@ export function useSessionLifecycle(): void {
       const { sessionIds, windowId } = payload as WindowInitialSessionsPayload
       setWindowId(windowId)
       sessionIds.forEach((sessionId) => addTab(sessionId))
-
-      // Detached windows receive their session up-front; main window gets none
       isMainRef.current = sessionIds.length === 0
       setIsMainWindow(isMainRef.current)
       maybeShowRestore()
