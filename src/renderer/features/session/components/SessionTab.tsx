@@ -6,6 +6,7 @@ import { cn } from '../../../lib/utils'
 import type { SessionMeta } from '@shared/ipc-types'
 import { killSession, patchSession } from '../session.service'
 import { useStore } from '../../../store/root.store'
+import { useConfirmClose } from '../hooks/useConfirmClose'
 
 const TAB_COLORS = [
   '#22c55e',
@@ -144,15 +145,18 @@ export function SessionTab({ meta, isActive, onActivate, onContextMenu }: Props)
   const removeTab = useStore((s) => s.removeTab)
   const upsertSession = useStore((s) => s.upsertSession)
   const [editOpen, setEditOpen] = useState(false)
+  const { requestClose, modal: closeModal } = useConfirmClose()
 
   const color = meta.color ?? DEFAULT_COLOR
   const isExited = meta.status !== 'running'
   const agentStatus = meta.agentStatus ?? 'idle'
 
-  const handleClose = async (e: React.MouseEvent): Promise<void> => {
+  const handleClose = (e: React.MouseEvent): void => {
     e.stopPropagation()
-    await killSession(meta.sessionId)
-    removeTab(meta.sessionId)
+    requestClose(async () => {
+      await killSession(meta.sessionId)
+      removeTab(meta.sessionId)
+    })
   }
 
   const handleDoubleClick = (e: React.MouseEvent): void => {
@@ -216,6 +220,7 @@ export function SessionTab({ meta, isActive, onActivate, onContextMenu }: Props)
           onDismiss={() => setEditOpen(false)}
         />
       )}
+      {closeModal}
     </>
   )
 }

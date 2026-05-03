@@ -140,6 +140,20 @@ export function SettingsDialog(): JSX.Element {
               ))}
             </section>
 
+            <div className="h-px bg-zinc-800" />
+
+            <section className="flex flex-col gap-3">
+              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Sessions</p>
+              <label className="flex items-center justify-between cursor-pointer select-none">
+                <span className="text-sm text-zinc-300">Confirm before closing</span>
+                <input
+                  type="checkbox"
+                  {...register('confirmCloseSession')}
+                  className="w-4 h-4 accent-brand-green cursor-pointer"
+                />
+              </label>
+            </section>
+
           </div>
 
           <div className="flex justify-end gap-2 pt-3 mt-2 border-t border-zinc-800 flex-shrink-0">

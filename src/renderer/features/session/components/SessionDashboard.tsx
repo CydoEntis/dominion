@@ -6,6 +6,7 @@ import { useStore } from '../../../store/root.store'
 import { findTabForSession } from '../../terminal/pane-tree'
 import { FileTree } from '../../fs/components/FileTree'
 import { useProjects } from '../hooks/useProjects'
+import { useConfirmClose } from '../hooks/useConfirmClose'
 import { useInstalledEditors } from '../../fs/hooks/useInstalledEditors'
 import { showInFolder, openInEditor, openPath } from '../../fs/fs.service'
 import { createSession, patchSession } from '../session.service'
@@ -453,6 +454,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [sessionCtxMenu, setSessionCtxMenu] = useState<{ x: number; y: number; meta: SessionMeta } | null>(null)
   const [createGroupModal, setCreateGroupModal] = useState<{ pendingSessionId?: string } | null>(null)
+  const { requestClose: requestSessionClose, modal: closeModal } = useConfirmClose()
 
   useEffect(() => {
     if (!externalRefreshTick) return
@@ -516,7 +518,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
                   focusedSessionId={focusedSessionId}
                   paneTree={paneTree}
                   onActivate={(tabId, sessionId) => { setActiveSession(tabId); setFocusedSession(sessionId) }}
-                  onClose={(sessionId) => closeSession(sessionId)}
+                  onClose={(sessionId) => requestSessionClose(() => closeSession(sessionId))}
                   onSessionCtxMenu={(e, meta) => setSessionCtxMenu({ x: e.clientX, y: e.clientY, meta })}
                 />
               )
@@ -540,7 +542,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
                       tabId={tabId}
                       groups={groups}
                       onActivate={() => { if (tabId) { setActiveSession(tabId); setFocusedSession(meta.sessionId) } }}
-                      onClose={() => closeSession(meta.sessionId)}
+                      onClose={() => requestSessionClose(() => closeSession(meta.sessionId))}
                       onContextMenu={(e) => setSessionCtxMenu({ x: e.clientX, y: e.clientY, meta })}
                     />
                   )
@@ -559,10 +561,10 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
               <NewSessionForm variant="sidebar" />
               <button
                 onClick={() => setCreateGroupModal({})}
-                className="flex items-center justify-center gap-1.5 py-2 px-2 text-xs text-zinc-600 hover:bg-brand-panel hover:text-zinc-400 transition-colors rounded"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs text-zinc-600 hover:bg-brand-panel hover:text-zinc-400 transition-colors rounded"
                 title="New group"
               >
-                <Layers size={12} />
+                <Layers size={12} /> New Group
               </button>
             </div>
           </div>
@@ -635,6 +637,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
           onDismiss={() => setCreateGroupModal(null)}
         />
       )}
+      {closeModal}
     </div>
   )
 }

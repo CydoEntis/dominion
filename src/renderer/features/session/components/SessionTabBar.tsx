@@ -3,6 +3,7 @@ import { useStore } from '../../../store/root.store'
 import { SessionTab } from './SessionTab'
 import { TabBarContextMenu } from '../../../components/TabBarContextMenu'
 import { killSession } from '../session.service'
+import { useConfirmClose } from '../hooks/useConfirmClose'
 
 interface CtxTarget {
   x: number
@@ -18,6 +19,7 @@ export function SessionTabBar(): JSX.Element {
   const removeTab = useStore((s) => s.removeTab)
 
   const [ctx, setCtx] = useState<CtxTarget | null>(null)
+  const { requestClose, modal: closeModal } = useConfirmClose()
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -36,10 +38,12 @@ export function SessionTabBar(): JSX.Element {
     setCtx({ x: e.clientX, y: e.clientY, tabId })
   }, [])
 
-  const handleCloseTabs = useCallback(async (tabIds: string[]) => {
-    await Promise.all(tabIds.map((id) => killSession(id).catch(() => {})))
-    tabIds.forEach((id) => removeTab(id))
-  }, [removeTab])
+  const handleCloseTabs = useCallback((tabIds: string[]) => {
+    requestClose(async () => {
+      await Promise.all(tabIds.map((id) => killSession(id).catch(() => {})))
+      tabIds.forEach((id) => removeTab(id))
+    })
+  }, [removeTab, requestClose])
 
   return (
     <>
@@ -72,6 +76,7 @@ export function SessionTabBar(): JSX.Element {
           onDismiss={() => setCtx(null)}
         />
       )}
+      {closeModal}
     </>
   )
 }

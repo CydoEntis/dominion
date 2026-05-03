@@ -139,14 +139,15 @@ export const AppSettingsSchema = z.object({
   recentProjects: z.array(z.string()).default([]),
   defaultShell: z.string().default(''),
   shellStartDir: z.string().default(''),
-  sessionGroups: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
+  sessionGroups: z.array(z.object({ id: z.string(), name: z.string(), color: z.string().optional() })).default([]),
   fontSize: z.number().int().min(8).max(32).default(14),
   fontFamily: z.string().default("'Cascadia Code', 'JetBrains Mono', monospace"),
   theme: z.enum(['system', 'light', 'dark']).default('dark'),
   fileViewerTheme: z.string().default('vitesse-dark'),
   scrollbackLines: z.number().int().min(100).max(100000).default(10000),
   presets: z.array(PresetSchema).default([]),
-  hotkeys: HotkeysSchema.default({})
+  hotkeys: HotkeysSchema.default({}),
+  confirmCloseSession: z.boolean().default(true)
 })
 export type AppSettings = z.infer<typeof AppSettingsSchema>
 
