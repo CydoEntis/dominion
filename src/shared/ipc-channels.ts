@@ -5,6 +5,9 @@ export const IPC = {
   SESSION_LIST: 'session:list',
   SESSION_REPLAY_REQUEST: 'session:replay-request',
 
+  // Session: renderer → main (invoke)
+  SESSION_PATCH: 'session:patch',
+
   // Session: renderer → main (fire-and-forget send)
   SESSION_WRITE: 'session:write',
   SESSION_RESIZE: 'session:resize',
@@ -32,6 +35,7 @@ export const IPC = {
 
   // Dialog: renderer → main (invoke)
   DIALOG_PICK_FOLDER: 'dialog:pick-folder',
+  DIALOG_PICK_FILE: 'dialog:pick-file',
 
   // Persistence: renderer → main (invoke)
   PERSISTENCE_SAVE: 'persistence:save',
@@ -42,7 +46,11 @@ export const IPC = {
   FS_READ_DIR: 'fs:read-dir',
   FS_READ_FILE: 'fs:read-file',
   FS_GIT_STATUS: 'fs:git-status',
-  FS_GIT_DIFF_FILE: 'fs:git-diff-file'
+  FS_GIT_DIFF_FILE: 'fs:git-diff-file',
+  FS_SHOW_IN_FOLDER: 'fs:show-in-folder',
+  FS_OPEN_PATH: 'fs:open-path',
+  FS_OPEN_IN_EDITOR: 'fs:open-in-editor',
+  FS_DETECT_EDITORS: 'fs:detect-editors'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

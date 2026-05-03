@@ -7,12 +7,16 @@ export const CreateSessionPayloadSchema = z.object({
   agentCommand: z.string().optional(), // e.g. 'claude', 'codex', 'gemini'; omit for plain shell
   cwd: z.string().optional(),
   cols: z.number().int().positive().default(80),
-  rows: z.number().int().positive().default(24)
+  rows: z.number().int().positive().default(24),
+  color: z.string().optional()
 })
 export type CreateSessionPayload = z.infer<typeof CreateSessionPayloadSchema>
 
 export const SessionStatusSchema = z.enum(['running', 'exited', 'killed'])
 export type SessionStatus = z.infer<typeof SessionStatusSchema>
+
+export const AgentStatusSchema = z.enum(['idle', 'running', 'waiting-input'])
+export type AgentStatus = z.infer<typeof AgentStatusSchema>
 
 export const SessionMetaSchema = z.object({
   sessionId: z.string().uuid(),
@@ -24,7 +28,9 @@ export const SessionMetaSchema = z.object({
   status: SessionStatusSchema,
   exitCode: z.number().nullable(),
   createdAt: z.number(),
-  pid: z.number().nullable()
+  pid: z.number().nullable(),
+  color: z.string().optional(),
+  agentStatus: AgentStatusSchema.default('idle')
 })
 export type SessionMeta = z.infer<typeof SessionMetaSchema>
 
@@ -129,6 +135,7 @@ export const AppSettingsSchema = z.object({
   openProjects: z.array(z.string()).default([]),
   recentProjects: z.array(z.string()).default([]),
   defaultShell: z.string().default(''),
+  shellStartDir: z.string().default(''),
   fontSize: z.number().int().min(8).max(32).default(14),
   fontFamily: z.string().default("'Cascadia Code', 'JetBrains Mono', monospace"),
   theme: z.enum(['system', 'light', 'dark']).default('dark'),
@@ -149,6 +156,7 @@ export interface PersistedSession {
   agentCommand?: string
   cwd: string
   conversationId?: string
+  color?: string
 }
 
 export interface PersistedTab {
