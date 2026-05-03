@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, Terminal, Zap, Plus, LayoutDashboard } from 'lucide-react'
+import { Search, Terminal, Zap, Plus, FolderOpen, PanelLeft, X, Maximize2 } from 'lucide-react'
 import { useStore } from '../store/root.store'
 import { findTabForSession } from '../features/terminal/pane-tree'
 import { createSession } from '../features/session/session.service'
@@ -100,20 +100,35 @@ export function CommandPalette({ open, onClose }: Props): JSX.Element | null {
       label: 'New Session',
       description: 'Ctrl+T',
       icon: <Plus size={12} />,
-      action: () => {
-        document.dispatchEvent(new CustomEvent('acc:new-session'))
-        onClose()
-      }
+      action: () => { document.dispatchEvent(new CustomEvent('acc:new-session')); onClose() }
     },
     {
-      id: 'toggle-dashboard',
-      label: 'Toggle Dashboard',
-      description: 'Session overview',
-      icon: <LayoutDashboard size={12} />,
-      action: () => {
-        toggleDashboard()
-        onClose()
-      }
+      id: 'open-project',
+      label: 'Open Project',
+      description: 'Ctrl+O',
+      icon: <FolderOpen size={12} />,
+      action: () => { document.dispatchEvent(new CustomEvent('acc:open-project')); onClose() }
+    },
+    {
+      id: 'toggle-sidebar',
+      label: 'Toggle Sidebar',
+      description: 'Ctrl+B',
+      icon: <PanelLeft size={12} />,
+      action: () => { toggleDashboard(); onClose() }
+    },
+    {
+      id: 'close-tab',
+      label: 'Close Active Tab',
+      description: 'Ctrl+W',
+      icon: <X size={12} />,
+      action: () => { document.dispatchEvent(new CustomEvent('acc:close-tab')); onClose() }
+    },
+    {
+      id: 'detach-pane',
+      label: 'Detach Pane to Window',
+      description: 'Ctrl+Shift+D',
+      icon: <Maximize2 size={12} />,
+      action: () => { document.dispatchEvent(new CustomEvent('acc:detach-pane')); onClose() }
     }
   ].filter((a) => !q || a.label.toLowerCase().includes(q))
 

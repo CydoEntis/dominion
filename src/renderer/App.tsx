@@ -186,6 +186,9 @@ export function App(): JSX.Element {
       if (match(e, hk.newSession)) {
         e.preventDefault(); e.stopPropagation()
         document.dispatchEvent(new CustomEvent('acc:new-session'))
+      } else if (e.ctrlKey && e.key.toLowerCase() === 'o' && !e.shiftKey && !e.altKey) {
+        e.preventDefault(); e.stopPropagation()
+        document.dispatchEvent(new CustomEvent('acc:open-project'))
       } else if (match(e, hk.closeSession)) {
         e.preventDefault(); e.stopPropagation()
         const sid = activeSessionIdRef.current

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, FolderOpen, FolderClosed, Plus, Terminal, RefreshCw } from 'lucide-react'
 import { useStore } from '../store/root.store'
 import { findTabForSession } from '../features/terminal/pane-tree'
@@ -68,6 +68,12 @@ export function SessionDashboard({ onFileClick, activeTab }: Props): JSX.Element
   const allSessions = Object.values(sessions).sort((a, b) => b.createdAt - a.createdAt)
 
   // Track which project is selected in the projects panel
+  useEffect(() => {
+    const handler = (): void => { addProject() }
+    document.addEventListener('acc:open-project', handler)
+    return () => document.removeEventListener('acc:open-project', handler)
+  }, [])
+
   const [refreshTicks, setRefreshTicks] = useState<Record<string, number>>({})
   const bumpRefresh = (root: string): void => setRefreshTicks((t) => ({ ...t, [root]: (t[root] ?? 0) + 1 }))
 
@@ -172,7 +178,7 @@ export function SessionDashboard({ onFileClick, activeTab }: Props): JSX.Element
                     className="flex-shrink-0 text-zinc-700 hover:text-zinc-300 transition-colors opacity-0 group-hover:opacity-100 ml-0.5"
                     title="Close session"
                   >
-                    <X size={10} />
+                    <X size={13} />
                   </button>
                 </div>
                 <div className={cn('pl-3.5 text-[10px] truncate', isFocused ? 'text-zinc-400' : 'text-zinc-600')}>

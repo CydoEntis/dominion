@@ -31,35 +31,27 @@ function KeybindEntry({ keys, label, action }: KeybindRow): JSX.Element {
 }
 
 export function EmptyState(): JSX.Element {
-  const openNewSession = (): void => {
-    document.dispatchEvent(new CustomEvent('acc:new-session'))
-  }
-
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-6 select-none">
-      {/* Logo */}
       <img src={logoUrl} alt="Dominion" className="w-24 h-24 object-contain opacity-90" />
 
-      {/* Title */}
       <div className="text-center">
         <h1 className="text-2xl font-bold text-brand-light tracking-wide">Dominion</h1>
         <p className="text-xs text-zinc-600 mt-1 tracking-widest uppercase">Agent Control Center</p>
       </div>
 
-      {/* Divider */}
       <div className="w-64 h-px bg-brand-panel" />
 
-      {/* Keybinds */}
       <div className="flex flex-col gap-0.5">
-        <KeybindEntry keys={['Ctrl', 'T']} label="New session" action={openNewSession} />
+        <KeybindEntry keys={['Ctrl', 'T']} label="New session" action={() => document.dispatchEvent(new CustomEvent('acc:new-session'))} />
+        <KeybindEntry keys={['Ctrl', 'O']} label="Open project" action={() => document.dispatchEvent(new CustomEvent('acc:open-project'))} />
         <KeybindEntry keys={['Ctrl', 'P']} label="Command palette" action={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true }))} />
-        <KeybindEntry keys={['Ctrl', 'B']} label="Toggle sidebar" />
+        <KeybindEntry keys={['Ctrl', 'B']} label="Toggle sidebar" action={() => document.dispatchEvent(new CustomEvent('acc:toggle-sidebar'))} />
         <div className="h-px bg-brand-panel/50 mx-4 my-1" />
         <KeybindEntry keys={['Ctrl', 'W']} label="Close active tab" />
         <KeybindEntry keys={['Ctrl', 'Shift', 'D']} label="Detach pane to window" />
       </div>
 
-      {/* Version hint */}
       <p className="text-[10px] text-zinc-700 tracking-wider">v0.1.0</p>
     </div>
   )
