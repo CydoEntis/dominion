@@ -48,7 +48,7 @@ export function SessionTab({ meta, isActive, onActivate }: Props): JSX.Element {
         title="Close session"
         className="flex-shrink-0 p-0.5 rounded hover:bg-white/15 text-zinc-500 hover:text-zinc-300 transition-colors"
       >
-        <X size={11} />
+        <X size={14} />
       </button>
     </div>
   )
