@@ -1,10 +1,18 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import { IPC } from '@shared/ipc-channels'
 import type { FsEntry, GitStatusEntry } from '@shared/ipc-types'
+
+const CANDIDATE_EDITORS = [
+  { name: 'VS Code', command: 'code' },
+  { name: 'Cursor', command: 'cursor' },
+  { name: 'Zed', command: 'zed' },
+  { name: 'Sublime Text', command: 'subl' },
+  { name: 'Notepad++', command: 'notepad++' },
+]
 
 const execAsync = promisify(exec)
 const IGNORE = new Set(['.git', 'node_modules', 'dist', 'out', '.next', '__pycache__'])
@@ -42,6 +50,33 @@ export function registerFsIpc(): void {
     } catch {
       return []
     }
+  })
+
+  ipcMain.handle(IPC.FS_SHOW_IN_FOLDER, (_event, { filePath }: { filePath: string }) => {
+    shell.showItemInFolder(filePath)
+  })
+
+  ipcMain.handle(IPC.FS_OPEN_PATH, (_event, { filePath }: { filePath: string }) => {
+    return shell.openPath(filePath)
+  })
+
+  ipcMain.handle(IPC.FS_OPEN_IN_EDITOR, (_event, { command, filePath }: { command: string; filePath: string }) => {
+    spawn(command, [filePath], { detached: true, stdio: 'ignore' }).unref()
+  })
+
+  ipcMain.handle(IPC.FS_DETECT_EDITORS, async () => {
+    const probe = process.platform === 'win32' ? 'where' : 'which'
+    const results = await Promise.all(
+      CANDIDATE_EDITORS.map(async (e) => {
+        try {
+          await execAsync(`${probe} ${e.command}`)
+          return e
+        } catch {
+          return null
+        }
+      })
+    )
+    return results.filter(Boolean)
   })
 
   ipcMain.handle(IPC.FS_GIT_DIFF_FILE, async (_, { projectRoot, filePath }: { projectRoot: string; filePath: string }): Promise<string | null> => {

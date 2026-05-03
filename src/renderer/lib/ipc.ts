@@ -1,4 +1,4 @@
-import type { IpcBridge } from '../../preload/index'
+import type { IpcBridge } from '@shared/ipc-bridge'
 
 declare global {
   interface Window {

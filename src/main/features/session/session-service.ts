@@ -46,7 +46,9 @@ export function createSession(
     status: 'running',
     exitCode: null,
     createdAt: Date.now(),
-    pid: null
+    pid: null,
+    color: payload.color,
+    agentStatus: 'idle'
   }
 
   const pty = new PtyProcess({
@@ -58,6 +60,10 @@ export function createSession(
     rows: payload.rows,
     onCwdChange: (newCwd) => {
       const updated = updateSessionMeta(sessionId, { cwd: newCwd })
+      if (updated) broadcastMetaUpdate(updated)
+    },
+    onAgentStatus: (agentStatus) => {
+      const updated = updateSessionMeta(sessionId, { agentStatus })
       if (updated) broadcastMetaUpdate(updated)
     }
   })
@@ -103,6 +109,12 @@ export function resizeSession(sessionId: string, cols: number, rows: number): vo
 }
 
 export { listSessions }
+
+export function patchSession(sessionId: string, patch: { name?: string; color?: string }): SessionMeta | undefined {
+  const updated = updateSessionMeta(sessionId, patch)
+  if (updated) broadcastMetaUpdate(updated)
+  return updated
+}
 
 export function replayAndSubscribe(sessionId: string, webContentsId: number): string[] {
   const entry = getSession(sessionId)

@@ -38,4 +38,12 @@ export function registerWindowIpc(): void {
     })
     return result.canceled ? null : result.filePaths[0]
   })
+
+  ipcMain.handle(IPC.DIALOG_PICK_FILE, async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(win!, {
+      properties: ['openFile']
+    })
+    return result.canceled ? null : result.filePaths[0]
+  })
 }

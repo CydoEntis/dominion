@@ -7,7 +7,8 @@ import {
   writeToSession,
   resizeSession,
   listSessions,
-  replayAndSubscribe
+  replayAndSubscribe,
+  patchSession
 } from './session-service'
 
 export function registerSessionIpc(): void {
@@ -27,6 +28,10 @@ export function registerSessionIpc(): void {
   ipcMain.handle(IPC.SESSION_REPLAY_REQUEST, (event, payload: { sessionId: string }) => {
     const chunks = replayAndSubscribe(payload.sessionId, event.sender.id)
     return { chunks }
+  })
+
+  ipcMain.handle(IPC.SESSION_PATCH, (_event, payload: { sessionId: string; name?: string; color?: string }) => {
+    return patchSession(payload.sessionId, { name: payload.name, color: payload.color })
   })
 
   ipcMain.on(IPC.SESSION_WRITE, (_event, payload) => {

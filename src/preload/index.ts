@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { IpcBridge } from '@shared/ipc-bridge'
 
-const ipc = {
+const ipc: IpcBridge = {
   invoke: (channel: string, payload?: unknown): Promise<unknown> =>
     ipcRenderer.invoke(channel, payload),
 
@@ -20,5 +21,3 @@ const ipc = {
 }
 
 contextBridge.exposeInMainWorld('ipc', ipc)
-
-export type IpcBridge = typeof ipc
