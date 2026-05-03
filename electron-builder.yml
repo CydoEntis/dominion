@@ -25,8 +25,9 @@ win:
 mac:
   icon: build/icon.png
   category: public.app-category.developer-tools
-  hardenedRuntime: false
+  hardenedRuntime: true
   gatekeeperAssess: false
+  notarize: true
   target:
     - target: dmg
       arch: [x64, arm64]
