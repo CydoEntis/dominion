@@ -37,7 +37,7 @@ export function useKeyboardShortcuts({ onTogglePalette }: Callbacks): void {
       if (match(e, hk.newSession)) {
         e.preventDefault(); e.stopPropagation()
         document.dispatchEvent(new CustomEvent('acc:new-session'))
-      } else if (e.ctrlKey && e.key.toLowerCase() === 'o' && !e.shiftKey && !e.altKey) {
+      } else if (match(e, hk.openProject)) {
         e.preventDefault(); e.stopPropagation()
         document.dispatchEvent(new CustomEvent('acc:open-project'))
       } else if (match(e, hk.closeSession)) {

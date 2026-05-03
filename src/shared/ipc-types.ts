@@ -119,6 +119,7 @@ export const HotkeysSchema = z.object({
   closeSession: z.string().default('Ctrl+W'),
   commandPalette: z.string().default('Ctrl+P'),
   toggleDashboard: z.string().default('Ctrl+D'),
+  openProject: z.string().default('Ctrl+O'),
 })
 export type Hotkeys = z.infer<typeof HotkeysSchema>
 

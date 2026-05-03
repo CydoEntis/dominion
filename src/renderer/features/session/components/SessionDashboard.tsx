@@ -584,7 +584,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
                 <div className="flex flex-col gap-2">
                   <p className="text-[10px] text-zinc-700 uppercase tracking-wider">Keyboard shortcuts</p>
                   {([
-                    { keys: 'Ctrl+O', label: 'Open project' },
+                    { keys: settings.hotkeys.openProject, label: 'Open project' },
                     { keys: settings.hotkeys.newSession, label: 'New session' },
                     { keys: settings.hotkeys.commandPalette, label: 'Command palette' },
                     { keys: settings.hotkeys.toggleDashboard, label: 'Toggle dashboard' },

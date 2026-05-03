@@ -22,6 +22,7 @@ import { useStore } from '../../../store/root.store'
 const HOTKEY_FIELDS: { key: keyof AppSettings['hotkeys']; label: string }[] = [
   { key: 'newSession', label: 'New Session' },
   { key: 'closeSession', label: 'Close Session' },
+  { key: 'openProject', label: 'Open Project' },
   { key: 'commandPalette', label: 'Command Palette' },
   { key: 'toggleDashboard', label: 'Toggle Dashboard' }
 ]
