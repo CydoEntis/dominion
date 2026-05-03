@@ -1,6 +1,6 @@
 import { ipcMain, shell } from 'electron'
 import { promises as fs } from 'fs'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import { IPC } from '@shared/ipc-channels'
@@ -77,6 +77,15 @@ export function registerFsIpc(): void {
       })
     )
     return results.filter(Boolean)
+  })
+
+  ipcMain.handle(IPC.FS_RENAME, async (_event, { oldPath, newName }: { oldPath: string; newName: string }) => {
+    const newPath = join(dirname(oldPath), newName)
+    await fs.rename(oldPath, newPath)
+  })
+
+  ipcMain.handle(IPC.FS_TRASH, async (_event, { filePath }: { filePath: string }) => {
+    await shell.trashItem(filePath)
   })
 
   ipcMain.handle(IPC.FS_GIT_DIFF_FILE, async (_, { projectRoot, filePath }: { projectRoot: string; filePath: string }): Promise<string | null> => {

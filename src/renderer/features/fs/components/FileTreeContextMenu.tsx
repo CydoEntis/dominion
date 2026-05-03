@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Eye, FolderOpen, Copy, ExternalLink } from 'lucide-react'
+import { Eye, FolderOpen, Copy, ExternalLink, Pencil, Trash2 } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { showInFolder, openPath, openInEditor } from '../fs.service'
 import type { FsEntry } from '@shared/ipc-types'
@@ -14,6 +14,8 @@ interface Props {
   rel: string
   editors: InstalledEditor[]
   onFileClick: (path: string, xy: string | undefined) => void
+  onRename: () => void
+  onDelete: () => void
   onDismiss: () => void
 }
 
@@ -41,7 +43,7 @@ function Divider(): JSX.Element {
   return <div className="h-px bg-brand-panel my-1" />
 }
 
-export function FileTreeContextMenu({ x, y, entry, projectRoot, rel, editors, onFileClick, onDismiss }: Props): JSX.Element {
+export function FileTreeContextMenu({ x, y, entry, projectRoot, rel, editors, onFileClick, onRename, onDelete, onDismiss }: Props): JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const isMd = entry.name.toLowerCase().endsWith('.md')
 
@@ -59,7 +61,7 @@ export function FileTreeContextMenu({ x, y, entry, projectRoot, rel, editors, on
   }, [onDismiss])
 
   const adjustedX = Math.min(x, window.innerWidth - 220)
-  const adjustedY = Math.min(y, window.innerHeight - 300)
+  const adjustedY = Math.min(y, window.innerHeight - 320)
 
   const dismiss = (fn: () => void) => () => { fn(); onDismiss() }
 
@@ -115,6 +117,20 @@ export function FileTreeContextMenu({ x, y, entry, projectRoot, rel, editors, on
         icon={<FolderOpen size={12} />}
         label="Reveal in Explorer"
         onClick={dismiss(() => showInFolder(entry.path))}
+      />
+
+      <Divider />
+
+      <Item
+        icon={<Pencil size={12} />}
+        label="Rename"
+        onClick={dismiss(() => onRename())}
+      />
+      <Item
+        icon={<Trash2 size={12} />}
+        label="Move to Trash"
+        onClick={dismiss(() => onDelete())}
+        className="text-red-400 hover:text-red-300"
       />
     </div>,
     document.body

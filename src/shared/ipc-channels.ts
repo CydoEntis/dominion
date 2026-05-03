@@ -50,7 +50,9 @@ export const IPC = {
   FS_SHOW_IN_FOLDER: 'fs:show-in-folder',
   FS_OPEN_PATH: 'fs:open-path',
   FS_OPEN_IN_EDITOR: 'fs:open-in-editor',
-  FS_DETECT_EDITORS: 'fs:detect-editors'
+  FS_DETECT_EDITORS: 'fs:detect-editors',
+  FS_RENAME: 'fs:rename',
+  FS_TRASH: 'fs:trash'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
