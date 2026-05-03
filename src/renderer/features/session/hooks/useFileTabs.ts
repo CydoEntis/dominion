@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useStore } from '../../../store/root.store'
 
-interface OpenFile {
+export interface OpenFile {
   path: string
   root: string
   hasChanges: boolean
@@ -15,9 +15,43 @@ export interface UseFileTabsReturn {
   handleCloseFile: (path: string) => void
 }
 
+const FILES_KEY = 'dominion:open-files'
+const ACTIVE_KEY = 'dominion:active-file'
+
+function loadFiles(): OpenFile[] {
+  try {
+    const raw = localStorage.getItem(FILES_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as OpenFile[]
+    // Restore without hasChanges — git status unknown at startup
+    return parsed.map((f) => ({ ...f, hasChanges: false }))
+  } catch {
+    return []
+  }
+}
+
+function loadActiveFile(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_KEY)
+  } catch {
+    return null
+  }
+}
+
 export function useFileTabs(): UseFileTabsReturn {
-  const [openFiles, setOpenFiles] = useState<OpenFile[]>([])
-  const [activeFilePath, setActiveFilePath] = useState<string | null>(null)
+  const [openFiles, setOpenFiles] = useState<OpenFile[]>(loadFiles)
+  const [activeFilePath, setActiveFilePath] = useState<string | null>(loadActiveFile)
+
+  useEffect(() => {
+    try { localStorage.setItem(FILES_KEY, JSON.stringify(openFiles)) } catch {}
+  }, [openFiles])
+
+  useEffect(() => {
+    try {
+      if (activeFilePath) localStorage.setItem(ACTIVE_KEY, activeFilePath)
+      else localStorage.removeItem(ACTIVE_KEY)
+    } catch {}
+  }, [activeFilePath])
 
   const handleFileClick = useCallback((path: string, xy: string | undefined): void => {
     const root = useStore.getState().settings.projectRoot

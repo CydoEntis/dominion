@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { X, RefreshCw, FileText, GitBranch } from 'lucide-react'
-import { getGitDiff, readFile } from '../features/fs/fs.service'
-import { cn } from '../lib/utils'
+import { getGitDiff, readFile } from '../fs.service'
+import { cn } from '../../../lib/utils'
 
 interface Props {
   projectRoot: string

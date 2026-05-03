@@ -17,11 +17,18 @@ const EXT_LANG: Record<string, BundledLanguage> = {
   yml: 'yaml', toml: 'toml', md: 'markdown', sh: 'bash', bash: 'bash',
   zsh: 'bash', ps1: 'powershell', sql: 'sql', xml: 'xml', vue: 'vue',
   svelte: 'svelte', graphql: 'graphql', dockerfile: 'dockerfile',
+  env: 'ini', ini: 'ini', cfg: 'ini', conf: 'ini',
+  gitignore: 'ini', npmrc: 'ini', editorconfig: 'ini',
+  lock: 'yaml', prisma: 'prisma', proto: 'proto',
+  tf: 'hcl', hcl: 'hcl', lua: 'lua', r: 'r', dart: 'dart',
 }
 
 export function getLang(filePath: string): BundledLanguage {
   const name = filePath.replace(/\\/g, '/').split('/').pop() ?? ''
-  if (name.toLowerCase() === 'dockerfile') return 'dockerfile'
+  const lower = name.toLowerCase()
+  if (lower === 'dockerfile' || lower.startsWith('dockerfile.')) return 'dockerfile'
+  if (lower.startsWith('.env')) return 'ini'
+  if (lower === 'makefile' || lower === 'gemfile' || lower === 'rakefile') return 'ruby'
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
   return EXT_LANG[ext] ?? 'text'
 }
@@ -44,9 +51,9 @@ export async function getHighlighter(themes: BundledTheme[]): Promise<import('sh
 
 export interface CtxMenu { x: number; y: number }
 
+export type FilePaneTab = 'content' | 'diff' | 'preview'
+
 export interface UseFilePaneReturn {
-  tab: 'content' | 'diff'
-  setTab: (t: 'content' | 'diff') => void
   html: string | null
   diff: string | null
   loading: boolean
@@ -57,8 +64,23 @@ export interface UseFilePaneReturn {
   reload: () => void
 }
 
-export function useFilePane(file: OpenFile, theme: BundledTheme, allThemes: BundledTheme[]): UseFilePaneReturn {
-  const [tab, setTab] = useState<'content' | 'diff'>(file.hasChanges ? 'diff' : 'content')
+function isMarkdown(filePath: string): boolean {
+  return filePath.replace(/\\/g, '/').split('/').pop()?.split('.').pop()?.toLowerCase() === 'md'
+}
+
+export function defaultTab(file: OpenFile): FilePaneTab {
+  if (file.hasChanges) return 'diff'
+  if (isMarkdown(file.path)) return 'preview'
+  return 'content'
+}
+
+export function useFilePane(
+  file: OpenFile,
+  theme: BundledTheme,
+  allThemes: BundledTheme[],
+  tab: FilePaneTab,
+  onTabChange: (t: FilePaneTab) => void
+): UseFilePaneReturn {
   const [html, setHtml] = useState<string | null>(null)
   const [diff, setDiff] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -70,6 +92,11 @@ export function useFilePane(file: OpenFile, theme: BundledTheme, allThemes: Bund
     mountedRef.current = true
     return () => { mountedRef.current = false }
   }, [])
+
+  // Reset tab when file changes
+  useEffect(() => {
+    onTabChange(defaultTab(file))
+  }, [file.path])
 
   const loadContent = async (): Promise<void> => {
     setLoading(true)
@@ -103,12 +130,8 @@ export function useFilePane(file: OpenFile, theme: BundledTheme, allThemes: Bund
 
   useEffect(() => {
     if (tab === 'content') loadContent()
-    else loadDiff()
+    else if (tab === 'diff') loadDiff()
   }, [file.path, tab, theme, reloadTick])
-
-  useEffect(() => {
-    setTab(file.hasChanges ? 'diff' : 'content')
-  }, [file.path])
 
   const handleContextMenu = (e: React.MouseEvent): void => {
     const selection = window.getSelection()?.toString()
@@ -125,5 +148,5 @@ export function useFilePane(file: OpenFile, theme: BundledTheme, allThemes: Bund
 
   const reload = (): void => setReloadTick((t) => t + 1)
 
-  return { tab, setTab, html, diff, loading, ctxMenu, setCtxMenu, handleContextMenu, handleCopy, reload }
+  return { html, diff, loading, ctxMenu, setCtxMenu, handleContextMenu, handleCopy, reload }
 }
