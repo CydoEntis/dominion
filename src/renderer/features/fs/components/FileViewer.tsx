@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { X, FileText, GitBranch, RefreshCw, Palette } from 'lucide-react'
-import { useStore } from '../store/root.store'
-import { useFilePane, EXT_LANG } from '../features/fs/useFilePane'
-import { cn } from '../lib/utils'
+import { useStore } from '../../../store/root.store'
+import { useFilePane, EXT_LANG } from '../hooks/useFilePane'
+import { cn } from '../../../lib/utils'
 import type { BundledTheme } from 'shiki'
 
 interface OpenFile {

@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import { Search, Terminal, Zap, Plus, FolderOpen, PanelLeft, X, Maximize2 } from 'lucide-react'
-import { useCommandPalette } from '../features/session/useCommandPalette'
+import { useCommandPalette } from '../features/session/hooks/useCommandPalette'
 import { cn } from '../lib/utils'
 
 const ICON_MAP: Record<string, JSX.Element> = {

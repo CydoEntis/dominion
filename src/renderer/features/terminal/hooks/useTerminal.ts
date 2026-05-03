@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
-import { ipc } from '../../lib/ipc'
+import { ipc } from '../../../lib/ipc'
 import { IPC } from '@shared/ipc-channels'
-import { replayRequest, writeToSession, resizeSession } from '../session/session.service'
-import { useStore } from '../../store/root.store'
+import { replayRequest, writeToSession, resizeSession } from '../../session/session.service'
+import { useStore } from '../../../store/root.store'
 import type { SessionDataPayload } from '@shared/ipc-types'
 
 export function useTerminal(sessionId: string, containerRef: React.RefObject<HTMLDivElement>): void {

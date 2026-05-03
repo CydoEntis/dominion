@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useStore } from '../../store/root.store'
+import { useStore } from '../../../store/root.store'
 
 interface OpenFile {
   path: string

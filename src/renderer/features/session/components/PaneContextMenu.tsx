@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useRef } from 'react'
 import { Columns2, Rows2, ExternalLink, PanelLeftOpen, X } from 'lucide-react'
-import { cn } from '../lib/utils'
+import { cn } from '../../../lib/utils'
 
 interface Props {
   x: number

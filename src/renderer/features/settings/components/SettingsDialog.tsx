@@ -4,17 +4,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Settings } from 'lucide-react'
 import { AppSettingsSchema } from '@shared/ipc-types'
 import type { AppSettings } from '@shared/ipc-types'
-import { Button } from '../../components/ui/button'
+import { Button } from '../../../components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger
-} from '../../components/ui/dialog'
-import { Input } from '../../components/ui/input'
-import { Label } from '../../components/ui/label'
-import { useStore } from '../../store/root.store'
+} from '../../../components/ui/dialog'
+import { Input } from '../../../components/ui/input'
+import { Label } from '../../../components/ui/label'
+import { useStore } from '../../../store/root.store'
 
 const HOTKEY_FIELDS: { key: keyof AppSettings['hotkeys']; label: string }[] = [
   { key: 'newSession', label: 'New Session' },

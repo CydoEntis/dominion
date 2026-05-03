@@ -3,19 +3,19 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus } from 'lucide-react'
-import { Button } from '../../components/ui/button'
+import { Button } from '../../../components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger
-} from '../../components/ui/dialog'
-import { Input } from '../../components/ui/input'
-import { Label } from '../../components/ui/label'
-import { createSession } from './session.service'
-import { useStore } from '../../store/root.store'
-import { cn } from '../../lib/utils'
+} from '../../../components/ui/dialog'
+import { Input } from '../../../components/ui/input'
+import { Label } from '../../../components/ui/label'
+import { createSession } from '../session.service'
+import { useStore } from '../../../store/root.store'
+import { cn } from '../../../lib/utils'
 
 const PRESETS = [
   { id: 'shell', label: 'Shell', command: undefined },

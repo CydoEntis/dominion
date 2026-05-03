@@ -1,4 +1,4 @@
-import { useStore } from '../../store/root.store'
+import { useStore } from '../../../store/root.store'
 import { SessionTab } from './SessionTab'
 import { NewSessionForm } from './NewSessionForm'
 
@@ -24,7 +24,7 @@ export function SessionTabBar(): JSX.Element {
           />
         )
       })}
-      <div className="flex items-center px-2">
+      <div className="flex items-center px-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <NewSessionForm />
       </div>
     </div>

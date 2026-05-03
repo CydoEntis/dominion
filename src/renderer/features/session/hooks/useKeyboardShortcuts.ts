@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { useStore } from '../../store/root.store'
-import { killSession } from './session.service'
+import { useStore } from '../../../store/root.store'
+import { killSession } from '../session.service'
 
 interface Callbacks {
   onTogglePalette: () => void

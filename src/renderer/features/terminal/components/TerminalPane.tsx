@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { useTerminal } from './useTerminal'
+import { useTerminal } from '../hooks/useTerminal'
 
 interface Props {
   sessionId: string

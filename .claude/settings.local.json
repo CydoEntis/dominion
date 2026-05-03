@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(git -C /c/Programming/command-center status)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.opcito.com)",
+      "WebFetch(domain:superset.sh)",
+      "WebFetch(domain:electron-vite.org)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "WebFetch(domain:thomasdeegan.medium.com)",
+      "WebFetch(domain:blog.logrocket.com)",
+      "WebFetch(domain:heckmann.app)",
+      "Bash(npm install *)",
+      "Bash(./node_modules/.bin/electron-rebuild *)",
+      "Bash(npx electron-vite *)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft Visual Studio/**)",
+      "Read(//c/Program Files/Microsoft Visual Studio/**)",
+      "Bash(node *)",
+      "Bash(npx tsc *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(k\\) for k in {**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}]\")",
+      "Bash(git init *)",
+      "Bash(git config *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(gh repo *)",
+      "Bash(git push *)",
+      "Bash(npm run *)",
+      "Bash(git mv *)",
+      "Bash(sed -i -e 's|from '\\\\''../../lib/ipc'\\\\''|from '\\\\''../../../lib/ipc'\\\\''|g' -e 's|from '\\\\''../../store/root.store'\\\\''|from '\\\\''../../../store/root.store'\\\\''|g' -e 's|from '\\\\''../session/session.service'\\\\''|from '\\\\''../../session/session.service'\\\\''|g' src/renderer/features/terminal/hooks/useTerminal.ts)",
+      "Bash(sed -i -e 's|from '\\\\''./useTerminal'\\\\''|from '\\\\''../hooks/useTerminal'\\\\''|g' src/renderer/features/terminal/components/TerminalPane.tsx)",
+      "Bash(sed -i -e 's|from '\\\\''./fs.service'\\\\''|from '\\\\''../fs.service'\\\\''|g' src/renderer/features/fs/hooks/useFilePane.ts)",
+      "Bash(sed -i -e 's|from '\\\\''../features/fs/fs.service'\\\\''|from '\\\\''../fs.service'\\\\''|g' -e 's|from '\\\\''../lib/utils'\\\\''|from '\\\\''../../../lib/utils'\\\\''|g' src/renderer/features/fs/components/FileTree.tsx)",
+      "Bash(sed -i -e 's|from '\\\\''../store/root.store'\\\\''|from '\\\\''../../../store/root.store'\\\\''|g' -e 's|from '\\\\''../features/fs/useFilePane'\\\\''|from '\\\\''../hooks/useFilePane'\\\\''|g' -e 's|from '\\\\''../features/fs/hooks/useFilePane'\\\\''|from '\\\\''../hooks/useFilePane'\\\\''|g' -e 's|from '\\\\''../lib/utils'\\\\''|from '\\\\''../../../lib/utils'\\\\''|g' src/renderer/features/fs/components/FileViewer.tsx)",
+      "Bash(sed -i -e 's|from '\\\\''./features/session/useSessionLifecycle'\\\\''|from '\\\\''./features/session/hooks/useSessionLifecycle'\\\\''|g' -e 's|from '\\\\''./features/session/useLayoutPersistence'\\\\''|from '\\\\''./features/session/hooks/useLayoutPersistence'\\\\''|g' -e 's|from '\\\\''./features/session/useLayoutRestore'\\\\''|from '\\\\''./features/session/hooks/useLayoutRestore'\\\\''|g' -e 's|from '\\\\''./features/session/useKeyboardShortcuts'\\\\''|from '\\\\''./features/session/hooks/useKeyboardShortcuts'\\\\''|g' -e 's|from '\\\\''./features/session/usePaneActions'\\\\''|from '\\\\''./features/session/hooks/usePaneActions'\\\\''|g' -e 's|from '\\\\''./features/session/useFileTabs'\\\\''|from '\\\\''./features/session/hooks/useFileTabs'\\\\''|g' -e 's|from '\\\\''./features/terminal/TerminalPane'\\\\''|from '\\\\''./features/terminal/components/TerminalPane'\\\\''|g' -e 's|from '\\\\''./features/terminal/pane-tree'\\\\''|from '\\\\''./features/terminal/pane-tree'\\\\''|g' -e 's|from '\\\\''./components/SessionDashboard'\\\\''|from '\\\\''./features/session/components/SessionDashboard'\\\\''|g' -e 's|from '\\\\''./components/PaneContextMenu'\\\\''|from '\\\\''./features/session/components/PaneContextMenu'\\\\''|g' -e 's|from '\\\\''./components/FileViewer'\\\\''|from '\\\\''./features/fs/components/FileViewer'\\\\''|g' -e 's|from '\\\\''./features/settings/SettingsDialog'\\\\''|from '\\\\''./features/settings/components/SettingsDialog'\\\\''|g' src/renderer/App.tsx)",
+      "Bash(sed -i -e 's|from '\\\\''../features/session/SessionTabBar'\\\\''|from '\\\\''../features/session/components/SessionTabBar'\\\\''|g' -e 's|from '\\\\''../features/window/useWindowMaximized'\\\\''|from '\\\\''../features/window/hooks/useWindowMaximized'\\\\''|g' -e 's|from '\\\\''./PresetsMenu'\\\\''|from '\\\\''../features/settings/components/PresetsMenu'\\\\''|g' src/renderer/components/TitleBar.tsx)",
+      "Bash(sed -i -e 's|from '\\\\''../features/session/useCommandPalette'\\\\''|from '\\\\''../features/session/hooks/useCommandPalette'\\\\''|g' src/renderer/components/CommandPalette.tsx)"
+    ]
+  }
+}

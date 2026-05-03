@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { useStore } from '../../store/root.store'
-import { saveLayout } from './persistence.service'
-import { collectSessionIds } from '../terminal/pane-tree'
+import { useStore } from '../../../store/root.store'
+import { saveLayout } from '../persistence.service'
+import { collectSessionIds } from '../../terminal/pane-tree'
 import type { PersistedLayout } from '@shared/ipc-types'
 
 export function useLayoutPersistence(): void {

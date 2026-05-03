@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { useStore } from '../../store/root.store'
-import { createSession } from './session.service'
-import { detachTab } from '../window/window.service'
-import { clearLayout } from './persistence.service'
-import { collectSessionIds } from '../terminal/pane-tree'
+import { useStore } from '../../../store/root.store'
+import { createSession } from '../session.service'
+import { detachTab } from '../../window/window.service'
+import { clearLayout } from '../persistence.service'
+import { collectSessionIds } from '../../terminal/pane-tree'
 import type { PersistedLayout } from '@shared/ipc-types'
-import type { PaneNode } from '../terminal/pane-tree'
+import type { PaneNode } from '../../terminal/pane-tree'
 
 function remapPaneTree(node: PaneNode, idMap: Map<string, string>): PaneNode {
   if (node.type === 'leaf') {

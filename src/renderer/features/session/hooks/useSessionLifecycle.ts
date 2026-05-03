@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { ipc } from '../../lib/ipc'
+import { ipc } from '../../../lib/ipc'
 import { IPC } from '@shared/ipc-channels'
-import { useStore } from '../../store/root.store'
-import { listSessions } from './session.service'
-import { getWindowId } from '../window/window.service'
-import { loadLayout } from './persistence.service'
+import { useStore } from '../../../store/root.store'
+import { listSessions } from '../session.service'
+import { getWindowId } from '../../window/window.service'
+import { loadLayout } from '../persistence.service'
 import type { PersistedLayout, SessionMeta, SessionExitPayload, WindowInitialSessionsPayload, TabReattachedPayload } from '@shared/ipc-types'
 
 export function useSessionLifecycle(): void {

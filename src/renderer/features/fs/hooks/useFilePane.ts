@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { readFile, getGitDiff } from './fs.service'
+import { readFile, getGitDiff } from '../fs.service'
 import type { BundledTheme } from 'shiki'
 import type { BundledLanguage } from 'shiki'
 

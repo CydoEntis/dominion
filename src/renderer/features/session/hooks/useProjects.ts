@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { useStore } from '../../store/root.store'
-import { pickFolder } from '../window/window.service'
-import { createSession, killSession } from './session.service'
-import { findTabForSession } from '../terminal/pane-tree'
+import { useStore } from '../../../store/root.store'
+import { pickFolder } from '../../window/window.service'
+import { createSession, killSession } from '../session.service'
+import { findTabForSession } from '../../terminal/pane-tree'
 
 export interface UseProjectsReturn {
   openProjects: string[]

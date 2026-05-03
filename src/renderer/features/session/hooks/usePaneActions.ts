@@ -1,6 +1,6 @@
-import { useStore } from '../../store/root.store'
-import { createSession, killSession } from './session.service'
-import { detachTab, reattachTab } from '../window/window.service'
+import { useStore } from '../../../store/root.store'
+import { createSession, killSession } from '../session.service'
+import { detachTab, reattachTab } from '../../window/window.service'
 
 interface ContextMenuTarget {
   x: number

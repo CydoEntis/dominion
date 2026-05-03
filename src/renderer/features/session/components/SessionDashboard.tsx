@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { X, FolderOpen, FolderClosed, Plus, Terminal, RefreshCw } from 'lucide-react'
-import { useStore } from '../store/root.store'
-import { findTabForSession } from '../features/terminal/pane-tree'
-import { FileTree } from './FileTree'
-import { useProjects } from '../features/session/useProjects'
-import { createSession } from '../features/session/session.service'
-import { cn } from '../lib/utils'
+import { useStore } from '../../../store/root.store'
+import { findTabForSession } from '../../terminal/pane-tree'
+import { FileTree } from '../../fs/components/FileTree'
+import { useProjects } from '../hooks/useProjects'
+import { createSession } from '../session.service'
+import { cn } from '../../../lib/utils'
 
 interface ProjectSectionProps {
   path: string

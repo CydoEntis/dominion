@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Zap, Play, Trash2, Plus, FolderOpen } from 'lucide-react'
-import { useStore } from '../store/root.store'
-import { createSession } from '../features/session/session.service'
-import { pickFolder } from '../features/window/window.service'
-import { cn } from '../lib/utils'
+import { useStore } from '../../../store/root.store'
+import { createSession } from '../../session/session.service'
+import { pickFolder } from '../../window/window.service'
+import { cn } from '../../../lib/utils'
 import type { Preset } from '@shared/ipc-types'
 
 interface AddFormState {

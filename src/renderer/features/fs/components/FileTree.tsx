@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from 'lucide-react'
-import { readDir, getGitStatus } from '../features/fs/fs.service'
-import { cn } from '../lib/utils'
+import { readDir, getGitStatus } from '../fs.service'
+import { cn } from '../../../lib/utils'
 import type { FsEntry, GitStatusEntry } from '@shared/ipc-types'
 
 function statusColor(xy: string): string {

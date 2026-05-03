@@ -1,8 +1,8 @@
 import { X } from 'lucide-react'
-import { cn } from '../../lib/utils'
+import { cn } from '../../../lib/utils'
 import type { SessionMeta } from '@shared/ipc-types'
-import { killSession } from './session.service'
-import { useStore } from '../../store/root.store'
+import { killSession } from '../session.service'
+import { useStore } from '../../../store/root.store'
 
 interface Props {
   meta: SessionMeta

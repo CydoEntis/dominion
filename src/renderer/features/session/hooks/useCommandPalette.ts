@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useStore } from '../../store/root.store'
-import { findTabForSession } from '../terminal/pane-tree'
-import { createSession } from './session.service'
+import { useStore } from '../../../store/root.store'
+import { findTabForSession } from '../../terminal/pane-tree'
+import { createSession } from '../session.service'
 import type { Preset } from '@shared/ipc-types'
 
 export interface PaletteItem {
