@@ -23,6 +23,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     const terminal = new Terminal({
       fontSize: settings.fontSize,
       fontFamily: settings.fontFamily,
+      copyOnSelect: true,
       theme: {
         background: '#09090b',
         foreground: '#fafafa',
@@ -62,6 +63,15 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
 
     const { cols, rows } = terminal
     registerTerminal(sessionId, cols, rows)
+
+    // Ctrl+Shift+V → paste from clipboard
+    terminal.attachCustomKeyEventHandler((e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
+        navigator.clipboard.readText().then((text) => terminal.paste(text)).catch(() => {})
+        return false
+      }
+      return true
+    })
 
     // Forward keystrokes to PTY
     terminal.onData((data) => {

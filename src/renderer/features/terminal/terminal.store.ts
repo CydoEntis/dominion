@@ -15,7 +15,7 @@ export interface TerminalSlice {
   setTerminalReady: (sessionId: string, ready: boolean) => void
 }
 
-export const createTerminalSlice: StateCreator<RootStore, [], [], TerminalSlice> = (set) => ({
+export const createTerminalSlice: StateCreator<RootStore, [['zustand/immer', never]], [], TerminalSlice> = (set) => ({
   mountedTerminals: {},
 
   registerTerminal: (sessionId, cols, rows) =>
