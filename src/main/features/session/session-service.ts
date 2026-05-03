@@ -65,6 +65,10 @@ export function createSession(
     onAgentStatus: (agentStatus) => {
       const updated = updateSessionMeta(sessionId, { agentStatus })
       if (updated) broadcastMetaUpdate(updated)
+    },
+    onConversationId: (conversationId) => {
+      const updated = updateSessionMeta(sessionId, { conversationId })
+      if (updated) broadcastMetaUpdate(updated)
     }
   })
 

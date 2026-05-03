@@ -13,6 +13,7 @@ interface PtyOptions {
   rows: number
   onCwdChange?: (cwd: string) => void
   onAgentStatus?: (status: AgentStatus) => void
+  onConversationId?: (id: string) => void
 }
 
 // Claude Code activity signals:
@@ -33,6 +34,7 @@ export class PtyProcess {
   private conversationId: string | undefined
   private readonly onCwdChange?: (cwd: string) => void
   private readonly onAgentStatus?: (status: AgentStatus) => void
+  private readonly onConversationId?: (id: string) => void
   private agentStatus: AgentStatus = 'idle'
   private waitingTimer: ReturnType<typeof setTimeout> | null = null
   private idleTimer: ReturnType<typeof setTimeout> | null = null
@@ -44,6 +46,7 @@ export class PtyProcess {
     this.sessionId = opts.sessionId
     this.onCwdChange = opts.onCwdChange
     this.onAgentStatus = opts.onAgentStatus
+    this.onConversationId = opts.onConversationId
 
     this.pty = nodePty.spawn(opts.command, opts.args, {
       name: 'xterm-256color',
@@ -98,7 +101,10 @@ export class PtyProcess {
     }
 
     const match = UUID_V4_RE.exec(chunk)
-    if (match) this.conversationId = match[0]
+    if (match && match[0] !== this.conversationId) {
+      this.conversationId = match[0]
+      this.onConversationId?.(match[0])
+    }
 
     const osc7 = OSC7_RE.exec(chunk)
     if (osc7) {

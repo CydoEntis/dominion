@@ -30,7 +30,8 @@ export const SessionMetaSchema = z.object({
   createdAt: z.number(),
   pid: z.number().nullable(),
   color: z.string().optional(),
-  agentStatus: AgentStatusSchema.default('idle')
+  agentStatus: AgentStatusSchema.default('idle'),
+  conversationId: z.string().optional()
 })
 export type SessionMeta = z.infer<typeof SessionMetaSchema>
 
