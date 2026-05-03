@@ -13,7 +13,7 @@ export interface SettingsSlice {
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>
 }
 
-export const createSettingsSlice: StateCreator<RootStore, [], [], SettingsSlice> = (set) => ({
+export const createSettingsSlice: StateCreator<RootStore, [['zustand/immer', never]], [], SettingsSlice> = (set) => ({
   settings: DEFAULT_SETTINGS,
   settingsLoaded: false,
 
