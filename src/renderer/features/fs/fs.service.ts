@@ -17,3 +17,19 @@ export async function getGitStatus(projectRoot: string): Promise<GitStatusEntry[
 export async function getGitDiff(projectRoot: string, filePath: string): Promise<string | null> {
   return ipc.invoke(IPC.FS_GIT_DIFF_FILE, { projectRoot, filePath }) as Promise<string | null>
 }
+
+export function showInFolder(filePath: string): Promise<void> {
+  return ipc.invoke(IPC.FS_SHOW_IN_FOLDER, { filePath }) as Promise<void>
+}
+
+export function openPath(filePath: string): Promise<string> {
+  return ipc.invoke(IPC.FS_OPEN_PATH, { filePath }) as Promise<string>
+}
+
+export function openInEditor(command: string, filePath: string): Promise<void> {
+  return ipc.invoke(IPC.FS_OPEN_IN_EDITOR, { command, filePath }) as Promise<void>
+}
+
+export async function detectEditors(): Promise<{ name: string; command: string }[]> {
+  return ipc.invoke(IPC.FS_DETECT_EDITORS) as Promise<{ name: string; command: string }[]>
+}
