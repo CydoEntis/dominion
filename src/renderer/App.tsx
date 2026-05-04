@@ -19,6 +19,7 @@ import { useLayoutRestore } from './features/session/hooks/useLayoutRestore'
 import { useKeyboardShortcuts } from './features/session/hooks/useKeyboardShortcuts'
 import { usePaneActions } from './features/session/hooks/usePaneActions'
 import { useFileTabs } from './features/session/hooks/useFileTabs'
+import { useAutoUpdater } from './features/updater/hooks/useAutoUpdater'
 import { useStore } from './store/root.store'
 import { cn } from './lib/utils'
 import { Kbd } from './components/Kbd'
@@ -78,6 +79,7 @@ export function App(): JSX.Element {
   useSessionLifecycle()
   useLayoutPersistence()
   useLayoutRestore()
+  useAutoUpdater()
 
   const activeSessionId = useStore((s) => s.activeSessionId)
   const tabOrder = useStore((s) => s.tabOrder)

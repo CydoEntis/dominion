@@ -5,6 +5,7 @@ import { registerWindowIpc } from './features/window/window-ipc'
 import { registerSettingsIpc } from './features/settings/settings-ipc'
 import { registerPersistenceIpc } from './features/persistence/persistence-ipc'
 import { registerFsIpc } from './features/fs/fs-ipc'
+import { initUpdater } from './features/updater/updater'
 
 function registerAllIpc(): void {
   registerSessionIpc()
@@ -17,6 +18,7 @@ function registerAllIpc(): void {
 app.whenReady().then(() => {
   registerAllIpc()
   createWindow()
+  initUpdater()
 
   app.on('activate', () => {
     const { BrowserWindow } = require('electron')

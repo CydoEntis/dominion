@@ -42,6 +42,12 @@ export const IPC = {
   PERSISTENCE_LOAD: 'persistence:load',
   PERSISTENCE_CLEAR: 'persistence:clear',
 
+  // Updater: main → renderer (push)
+  UPDATE_AVAILABLE: 'update:available',
+  UPDATE_DOWNLOADED: 'update:downloaded',
+  // Updater: renderer → main (invoke)
+  UPDATE_INSTALL: 'update:install',
+
   // Filesystem: renderer → main (invoke)
   FS_READ_DIR: 'fs:read-dir',
   FS_READ_FILE: 'fs:read-file',
