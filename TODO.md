@@ -4,10 +4,10 @@
 
 ## Easy
 
-- [ ] **Shell picker in Settings** — let users choose which shell to use (cmd, PowerShell, bash, zsh) instead of always reading from env
-- [ ] **Session status badge** — show a visual indicator on each session tab when the agent is actively generating vs idle
-- [ ] **Configurable font size** — expose terminal font size as a settings option
-- [ ] **Session rename on double-click** — double-click a tab to rename it inline instead of going through the context menu
+- [x] **Shell picker in Settings** — let users choose which shell to use (cmd, PowerShell, bash, zsh) instead of always reading from env
+- [x] **Session status badge** — show a visual indicator on each session tab when the agent is actively generating vs idle
+- [x] **Configurable font size** — expose terminal font size as a settings option
+- [x] **Session rename on double-click** — double-click a tab to rename it inline instead of going through the context menu
 
 ---
 

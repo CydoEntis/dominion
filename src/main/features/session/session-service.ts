@@ -9,6 +9,7 @@ import {
   updateSessionMeta
 } from './session-registry'
 import { IPC } from '@shared/ipc-channels'
+import { getSettings } from '../settings/settings-store'
 import type {
   CreateSessionPayload,
   SessionMeta,
@@ -16,13 +17,14 @@ import type {
 } from '@shared/ipc-types'
 
 function resolveShellSpawn(agentCommand?: string): { command: string; args: string[] } {
+  const defaultShell = getSettings().defaultShell
   if (process.platform === 'win32') {
-    const shell = process.env.COMSPEC || 'C:\\Windows\\System32\\cmd.exe'
+    const shell = defaultShell || process.env.COMSPEC || 'C:\\Windows\\System32\\cmd.exe'
     return agentCommand
       ? { command: shell, args: ['/k', agentCommand] }
       : { command: shell, args: [] }
   }
-  const shell = process.env.SHELL || '/bin/bash'
+  const shell = defaultShell || process.env.SHELL || '/bin/bash'
   return agentCommand
     ? { command: shell, args: ['-c', `${agentCommand}; exec ${shell}`] }
     : { command: shell, args: [] }
