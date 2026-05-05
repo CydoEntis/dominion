@@ -587,25 +587,9 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
         <div className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto min-h-0">
             {openProjects.length === 0 && (
-              <div className="flex flex-col gap-6 px-4 py-8">
-                <div className="flex flex-col items-center gap-2">
-                  <FolderClosed size={28} className="text-zinc-700" />
-                  <p className="text-xs text-zinc-500 font-medium">No projects open</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-[10px] text-zinc-700 uppercase tracking-wider">Keyboard shortcuts</p>
-                  {([
-                    { keys: settings.hotkeys.openProject, label: 'Open project' },
-                    { keys: settings.hotkeys.newSession, label: 'New session' },
-                    { keys: settings.hotkeys.commandPalette, label: 'Command palette' },
-                    { keys: settings.hotkeys.toggleDashboard, label: 'Toggle dashboard' },
-                  ] as { keys: string; label: string }[]).map(({ keys, label }) => (
-                    <div key={label} className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-zinc-600">{label}</span>
-                      <kbd className="text-[10px] text-zinc-500 bg-brand-panel border border-zinc-700 rounded px-1.5 py-0.5 font-mono whitespace-nowrap">{keys}</kbd>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-col items-center gap-2 px-4 py-8">
+                <FolderClosed size={28} className="text-zinc-700" />
+                <p className="text-xs text-zinc-500 font-medium">No projects open</p>
               </div>
             )}
             {openProjects.map((p) => {

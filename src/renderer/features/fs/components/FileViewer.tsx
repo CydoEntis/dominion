@@ -3,6 +3,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react'
 import { useStore } from '../../../store/root.store'
 import { useFilePane, EXT_LANG } from '../hooks/useFilePane'
 import { MarkdownPane } from './MarkdownPane'
+import { EmptyState } from '../../../components/EmptyState'
 import { cn } from '../../../lib/utils'
 import type { BundledTheme } from 'shiki'
 import type { FilePaneTab } from '../hooks/useFilePane'
@@ -175,11 +176,7 @@ export function FileViewer({ files, activeFilePath, tab, onTabChange }: Props): 
   const settings = useStore((s) => s.settings)
 
   if (files.length === 0) {
-    return (
-      <div className="flex flex-col bg-brand-bg flex-1 min-h-0 items-center justify-center">
-        <p className="text-sm text-zinc-600">Click a file in the tree to open it</p>
-      </div>
-    )
+    return <div className="flex flex-col bg-brand-bg flex-1 min-h-0 relative"><EmptyState /></div>
   }
 
   const activeFile = files.find((f) => f.path === activeFilePath) ?? files[0]
