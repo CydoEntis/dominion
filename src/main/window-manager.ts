@@ -13,6 +13,7 @@ import { getSession } from './features/session/session-registry'
 const windows = new Map<string, BrowserWindow>()
 let windowCounter = 0
 let mainWindowId: string | null = null
+let settingsWinId: string | null = null
 
 function getWindowId(win: BrowserWindow): string {
   return String(win.id)
@@ -115,6 +116,47 @@ export function detachTab(sessionId: string, fromWindowId: string): string {
 
   const newWin = createWindow([sessionId])
   return getWindowId(newWin)
+}
+
+export function openSettingsWindow(): void {
+  if (settingsWinId) {
+    const existing = windows.get(settingsWinId)
+    if (existing && !existing.isDestroyed()) { existing.focus(); return }
+  }
+
+  const iconPath = app.isPackaged
+    ? join(process.resourcesPath, 'logo.png')
+    : join(process.cwd(), 'logo.png')
+
+  const win = new BrowserWindow({
+    width: 520,
+    height: 620,
+    resizable: false,
+    frame: false,
+    icon: iconPath,
+    backgroundColor: '#0b0d10',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false
+    }
+  })
+
+  const id = String(win.id)
+  settingsWinId = id
+  windows.set(id, win)
+
+  win.on('closed', () => {
+    windows.delete(id)
+    if (settingsWinId === id) settingsWinId = null
+  })
+
+  if (process.env.NODE_ENV === 'development' || process.env.ELECTRON_RENDERER_URL) {
+    win.loadURL(process.env.ELECTRON_RENDERER_URL + '#settings')
+  } else {
+    win.loadURL(`file://${join(__dirname, '../renderer/index.html')}#settings`)
+  }
 }
 
 export function reattachTab(sessionId: string, fromWindowId: string): boolean {

@@ -83,7 +83,11 @@ function AddPresetForm({ onSave, onCancel }: { onSave: (data: AddFormState) => v
   )
 }
 
-export function PresetsMenu(): JSX.Element {
+interface PresetsMenuProps {
+  iconOnly?: boolean
+}
+
+export function PresetsMenu({ iconOnly }: PresetsMenuProps = {}): JSX.Element {
   const [open, setOpen] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -145,7 +149,9 @@ export function PresetsMenu(): JSX.Element {
 
   const rect = buttonRef.current?.getBoundingClientRect()
   const menuStyle = rect
-    ? { top: rect.bottom + 4, right: window.innerWidth - rect.right }
+    ? iconOnly
+      ? { bottom: window.innerHeight - rect.bottom, left: rect.right + 4 }
+      : { top: rect.bottom + 4, right: window.innerWidth - rect.right }
     : { top: 44, right: 80 }
 
   return (
@@ -154,16 +160,24 @@ export function PresetsMenu(): JSX.Element {
         ref={buttonRef}
         onClick={() => { setOpen((v) => !v); setShowAdd(false) }}
         className={cn(
-          'flex items-center gap-1.5 px-2.5 h-7 rounded text-xs font-medium transition-colors',
-          open
-            ? 'bg-brand-green/10 text-brand-light'
-            : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+          'flex items-center justify-center transition-colors border-l-2',
+          iconOnly
+            ? cn('w-12 h-12 flex-shrink-0',
+                open
+                  ? 'border-l-brand-green text-brand-light bg-brand-panel/40'
+                  : 'border-l-transparent text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/20'
+              )
+            : cn('gap-1.5 px-2.5 h-7 rounded text-xs font-medium border-l-transparent',
+                open
+                  ? 'bg-brand-green/10 text-brand-light'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+              )
         )}
         title="Launch presets"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <Zap size={12} />
-        <span>Presets</span>
+        <Zap size={iconOnly ? 20 : 12} />
+        {!iconOnly && <span>Presets</span>}
       </button>
 
       {open &&

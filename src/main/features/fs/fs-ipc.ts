@@ -18,7 +18,54 @@ const execAsync = promisify(exec)
 const IGNORE = new Set(['.git', 'node_modules', 'dist', 'out', '.next', '__pycache__'])
 const MAX_FILE_BYTES = 5_000_000
 
+async function detectShells(): Promise<{ name: string; path: string }[]> {
+  const available: { name: string; path: string }[] = []
+
+  if (process.platform === 'win32') {
+    // PowerShell Core — scan versioned install dir
+    try {
+      const psDir = 'C:\\Program Files\\PowerShell'
+      const versions = await fs.readdir(psDir)
+      for (const v of [...versions].sort().reverse()) {
+        const p = `${psDir}\\${v}\\pwsh.exe`
+        try { await fs.access(p); available.push({ name: `PowerShell ${v}`, path: p }); break } catch {}
+      }
+    } catch {}
+
+    const winCandidates = [
+      { name: 'Windows PowerShell', path: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe' },
+      { name: 'Command Prompt (cmd)', path: 'C:\\Windows\\System32\\cmd.exe' },
+      { name: 'Git Bash', path: 'C:\\Program Files\\Git\\bin\\bash.exe' },
+      { name: 'Git Bash (x86)', path: 'C:\\Program Files (x86)\\Git\\bin\\bash.exe' },
+      { name: 'WSL', path: 'C:\\Windows\\System32\\wsl.exe' },
+    ]
+    for (const c of winCandidates) {
+      try { await fs.access(c.path); available.push(c) } catch {}
+    }
+  } else {
+    const unixCandidates = [
+      { name: 'zsh', path: '/bin/zsh' },
+      { name: 'bash', path: '/bin/bash' },
+      { name: 'sh', path: '/bin/sh' },
+      { name: 'fish', path: '/usr/bin/fish' },
+      { name: 'zsh (Homebrew)', path: '/usr/local/bin/zsh' },
+      { name: 'bash (Homebrew)', path: '/usr/local/bin/bash' },
+      { name: 'fish (Homebrew)', path: '/usr/local/bin/fish' },
+      { name: 'zsh (Homebrew M1)', path: '/opt/homebrew/bin/zsh' },
+      { name: 'bash (Homebrew M1)', path: '/opt/homebrew/bin/bash' },
+      { name: 'fish (Homebrew M1)', path: '/opt/homebrew/bin/fish' },
+    ]
+    for (const c of unixCandidates) {
+      try { await fs.access(c.path); available.push(c) } catch {}
+    }
+  }
+
+  return available
+}
+
 export function registerFsIpc(): void {
+  ipcMain.handle(IPC.FS_DETECT_SHELLS, async () => detectShells())
+
   ipcMain.handle(IPC.FS_READ_DIR, async (_, { dirPath }: { dirPath: string }): Promise<FsEntry[]> => {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
     return entries

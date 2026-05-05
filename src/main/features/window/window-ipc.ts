@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, dialog } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import type { DetachTabPayload, WindowControlAction } from '@shared/ipc-types'
-import { detachTab, reattachTab, getWindow, focusWindow } from '../../window-manager'
+import { detachTab, reattachTab, getWindow, focusWindow, openSettingsWindow } from '../../window-manager'
 
 export function registerWindowIpc(): void {
   ipcMain.handle(IPC.WINDOW_GET_ID, (event) => {
@@ -29,6 +29,10 @@ export function registerWindowIpc(): void {
     if (action === 'minimize') win.minimize()
     else if (action === 'maximize') win.isMaximized() ? win.unmaximize() : win.maximize()
     else if (action === 'close') win.close()
+  })
+
+  ipcMain.handle(IPC.WINDOW_OPEN_SETTINGS, () => {
+    openSettingsWindow()
   })
 
   ipcMain.handle(IPC.DIALOG_PICK_FOLDER, async (event) => {
