@@ -12,6 +12,7 @@ import { NoteEditor } from './components/NoteEditor'
 import { NoteDrawer } from './components/NoteDrawer'
 import { ActivityBar } from './components/ActivityBar'
 import { SettingsForm } from './features/settings/components/SettingsForm'
+import { PresetsPanel } from './features/settings/components/PresetsPanel'
 import { CommandPalette } from './components/CommandPalette'
 import { FileViewer, VIEWER_THEMES } from './features/fs/components/FileViewer'
 import type { FilePaneTab } from './features/fs/hooks/useFilePane'
@@ -100,7 +101,7 @@ export function App(): JSX.Element {
 
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [sidebarTab, setSidebarTab] = useState<'sessions' | 'projects' | 'notes' | 'settings'>('sessions')
+  const [sidebarTab, setSidebarTab] = useState<'sessions' | 'projects' | 'notes' | 'presets' | 'settings'>('sessions')
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [noteDrawerOpen, setNoteDrawerOpen] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
@@ -229,7 +230,7 @@ export function App(): JSX.Element {
     []
   )
 
-  const handleActivityChange = (next: 'sessions' | 'projects' | 'notes' | 'settings'): void => {
+  const handleActivityChange = (next: 'sessions' | 'projects' | 'notes' | 'presets' | 'settings'): void => {
     if (next === sidebarTab && isDashboardOpen) {
       useStore.getState().toggleDashboard()
     } else {
@@ -246,7 +247,9 @@ export function App(): JSX.Element {
       ? 'Notes'
       : sidebarTab === 'settings'
         ? 'Settings'
-        : (activeFilePath ? activeFilePath.replace(/\\/g, '/').split('/').pop() ?? activeFilePath : 'Projects')
+        : sidebarTab === 'presets'
+          ? (activeMeta?.name ?? 'Presets')
+          : (activeFilePath ? activeFilePath.replace(/\\/g, '/').split('/').pop() ?? activeFilePath : 'Projects')
   const titleBarSubtitle = sidebarTab === 'sessions'
     ? (activeMeta?.cwd ?? '')
     : sidebarTab === 'notes' || sidebarTab === 'settings'
@@ -265,6 +268,8 @@ export function App(): JSX.Element {
             <div style={{ width: sidebarWidth, flexShrink: 0 }} className="flex flex-col h-full">
               {sidebarTab === 'notes' ? (
                 <NotepadPane activeNoteId={activeNoteId} onActivate={setActiveNoteId} onCreate={() => { const id = createNote(); setActiveNoteId(id) }} />
+              ) : sidebarTab === 'presets' ? (
+                <PresetsPanel />
               ) : (
                 <SessionDashboard
                   onFileClick={handleFileClick}
