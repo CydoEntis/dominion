@@ -41,3 +41,7 @@ export async function renameEntry(oldPath: string, newName: string): Promise<voi
 export async function trashEntry(filePath: string): Promise<void> {
   return ipc.invoke(IPC.FS_TRASH, { filePath }) as Promise<void>
 }
+
+export function openExternal(url: string): Promise<void> {
+  return ipc.invoke(IPC.SHELL_OPEN_EXTERNAL, { url }) as Promise<void>
+}

@@ -58,7 +58,10 @@ export const IPC = {
   FS_OPEN_IN_EDITOR: 'fs:open-in-editor',
   FS_DETECT_EDITORS: 'fs:detect-editors',
   FS_RENAME: 'fs:rename',
-  FS_TRASH: 'fs:trash'
+  FS_TRASH: 'fs:trash',
+
+  // Shell: renderer → main (invoke)
+  SHELL_OPEN_EXTERNAL: 'shell:open-external'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

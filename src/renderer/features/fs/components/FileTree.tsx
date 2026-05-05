@@ -24,6 +24,29 @@ function statusLabel(xy: string): string {
   return 'A'
 }
 
+function norm(p: string): string {
+  return p.replace(/\\/g, '/')
+}
+
+function expandedKey(root: string): string {
+  return `dominion:tree-expanded:${root}`
+}
+
+function loadExpanded(root: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(expandedKey(root))
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function saveExpanded(root: string, set: Set<string>): void {
+  try {
+    localStorage.setItem(expandedKey(root), JSON.stringify([...set]))
+  } catch {}
+}
+
 interface CtxTarget {
   x: number
   y: number
@@ -38,18 +61,20 @@ interface TreeNodeProps {
   projectRoot: string
   activeFilePath: string | null
   renamingPath: string | null
+  expanded: Set<string>
   onFileClick: (path: string, xy: string | undefined) => void
   onContextMenu: (e: React.MouseEvent, entry: FsEntry, rel: string) => void
   onRenameSubmit: (entry: FsEntry, newName: string) => void
   onRenameCancel: () => void
+  onToggle: (path: string) => void
 }
 
-function TreeNode({ entry, depth, gitMap, projectRoot, activeFilePath, renamingPath, onFileClick, onContextMenu, onRenameSubmit, onRenameCancel }: TreeNodeProps): JSX.Element {
-  const [expanded, setExpanded] = useState(false)
+function TreeNode({ entry, depth, gitMap, projectRoot, activeFilePath, renamingPath, expanded, onFileClick, onContextMenu, onRenameSubmit, onRenameCancel, onToggle }: TreeNodeProps): JSX.Element {
   const [children, setChildren] = useState<FsEntry[] | null>(null)
   const [renameValue, setRenameValue] = useState(entry.name)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const isExpanded = expanded.has(norm(entry.path))
   const isRenaming = renamingPath === entry.path
 
   useEffect(() => {
@@ -59,16 +84,23 @@ function TreeNode({ entry, depth, gitMap, projectRoot, activeFilePath, renamingP
     }
   }, [isRenaming, entry.name])
 
+  // Load children when expanded via persisted state (component mounts already-expanded)
+  useEffect(() => {
+    if (isExpanded && entry.isDirectory && !children) {
+      readDir(entry.path).then(setChildren)
+    }
+  }, [isExpanded, entry.path, entry.isDirectory])
+
   const toggle = async (): Promise<void> => {
     if (!entry.isDirectory) {
-      const rel = entry.path.replace(/\\/g, '/').replace(projectRoot, '').replace(/^\//, '')
+      const rel = norm(entry.path).replace(projectRoot, '').replace(/^\//, '')
       onFileClick(entry.path, gitMap.get(rel))
       return
     }
-    if (!expanded && !children) {
+    if (!isExpanded && !children) {
       setChildren(await readDir(entry.path))
     }
-    setExpanded((v) => !v)
+    onToggle(norm(entry.path))
   }
 
   const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -81,10 +113,10 @@ function TreeNode({ entry, depth, gitMap, projectRoot, activeFilePath, renamingP
     }
   }
 
-  const rel = entry.path.replace(/\\/g, '/').replace(projectRoot, '').replace(/^\//, '')
+  const rel = norm(entry.path).replace(projectRoot, '').replace(/^\//, '')
   const xy = gitMap.get(rel)
   const isActive = !entry.isDirectory && activeFilePath !== null &&
-    entry.path.replace(/\\/g, '/') === activeFilePath.replace(/\\/g, '/')
+    norm(entry.path) === norm(activeFilePath)
 
   return (
     <>
@@ -98,11 +130,11 @@ function TreeNode({ entry, depth, gitMap, projectRoot, activeFilePath, renamingP
       >
         <button onClick={toggle} className="flex items-center gap-1.5 flex-1 min-w-0">
           <span className="flex-shrink-0 text-zinc-500 w-3.5">
-            {entry.isDirectory ? (expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />) : null}
+            {entry.isDirectory ? (isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />) : null}
           </span>
           <span className="flex-shrink-0 text-zinc-400 w-4 flex items-center">
             {entry.isDirectory
-              ? expanded ? <FolderOpen size={13} className="text-yellow-500/70" /> : <Folder size={13} className="text-yellow-500/70" />
+              ? isExpanded ? <FolderOpen size={13} className="text-yellow-500/70" /> : <Folder size={13} className="text-yellow-500/70" />
               : <File size={13} />}
           </span>
           {isRenaming ? (
@@ -127,7 +159,7 @@ function TreeNode({ entry, depth, gitMap, projectRoot, activeFilePath, renamingP
           </span>
         )}
       </div>
-      {expanded && children && children.map((child) => (
+      {isExpanded && children && children.map((child) => (
         <TreeNode
           key={child.path}
           entry={child}
@@ -136,10 +168,12 @@ function TreeNode({ entry, depth, gitMap, projectRoot, activeFilePath, renamingP
           projectRoot={projectRoot}
           activeFilePath={activeFilePath}
           renamingPath={renamingPath}
+          expanded={expanded}
           onFileClick={onFileClick}
           onContextMenu={onContextMenu}
           onRenameSubmit={onRenameSubmit}
           onRenameCancel={onRenameCancel}
+          onToggle={onToggle}
         />
       ))}
     </>
@@ -195,6 +229,42 @@ export function FileTree({ projectRoot: rootProp, activeFilePath = null, onFileC
 
   const projectRoot = rootProp.replace(/\\/g, '/')
 
+  const [expanded, setExpanded] = useState<Set<string>>(() => loadExpanded(projectRoot))
+
+  // Reset expansion state when the project root changes
+  useEffect(() => {
+    setExpanded(loadExpanded(projectRoot))
+  }, [projectRoot])
+
+  // Auto-expand ancestor directories of the active file so it stays visible
+  useEffect(() => {
+    if (!activeFilePath || !projectRoot) return
+    const filePath = norm(activeFilePath)
+    if (!filePath.startsWith(projectRoot)) return
+    const relative = filePath.slice(projectRoot.length).replace(/^\//, '')
+    const parts = relative.split('/')
+    if (parts.length <= 1) return
+    const toExpand: string[] = []
+    for (let i = 1; i < parts.length; i++) {
+      toExpand.push(projectRoot + '/' + parts.slice(0, i).join('/'))
+    }
+    setExpanded(prev => {
+      const next = new Set([...prev, ...toExpand])
+      saveExpanded(projectRoot, next)
+      return next
+    })
+  }, [activeFilePath, projectRoot])
+
+  const handleToggle = useCallback((path: string): void => {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      saveExpanded(projectRoot, next)
+      return next
+    })
+  }, [projectRoot])
+
   const loadRoot = useCallback(async () => {
     if (!projectRoot) return
     setRootEntries(await readDir(projectRoot))
@@ -248,10 +318,12 @@ export function FileTree({ projectRoot: rootProp, activeFilePath = null, onFileC
             projectRoot={projectRoot}
             activeFilePath={activeFilePath}
             renamingPath={renamingPath}
+            expanded={expanded}
             onFileClick={onFileClick}
             onContextMenu={handleContextMenu}
             onRenameSubmit={handleRenameSubmit}
             onRenameCancel={() => setRenamingPath(null)}
+            onToggle={handleToggle}
           />
         ))}
       </div>

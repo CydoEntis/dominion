@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import { TitleBar } from './components/TitleBar'
@@ -118,6 +118,51 @@ export function App(): JSX.Element {
   const { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClose } = usePaneActions(contextMenu)
 
   useKeyboardShortcuts({ onTogglePalette: () => setPaletteOpen((v) => !v) })
+
+  // Keep refs so the one-time effects below always see current values
+  const sidebarTabRef = useRef(sidebarTab)
+  const isDashboardOpenRef = useRef(isDashboardOpen)
+  const openFilesRef = useRef(openFiles)
+  const activeFilePathRef = useRef(activeFilePath)
+  const handleFileClickRef = useRef(handleFileClick)
+  useEffect(() => { sidebarTabRef.current = sidebarTab }, [sidebarTab])
+  useEffect(() => { isDashboardOpenRef.current = isDashboardOpen }, [isDashboardOpen])
+  useEffect(() => { openFilesRef.current = openFiles }, [openFiles])
+  useEffect(() => { activeFilePathRef.current = activeFilePath }, [activeFilePath])
+  useEffect(() => { handleFileClickRef.current = handleFileClick }, [handleFileClick])
+
+  // Terminal → file viewer: open a file path dispatched from the terminal context menu
+  useEffect(() => {
+    const handler = (e: Event): void => {
+      const path = (e as CustomEvent<{ path: string }>).detail?.path
+      if (!path) return
+      if (!isDashboardOpenRef.current) useStore.getState().toggleDashboard()
+      setSidebarTab('projects')
+      handleFileClickRef.current(path, undefined)
+    }
+    document.addEventListener('acc:open-file', handler)
+    return () => document.removeEventListener('acc:open-file', handler)
+  }, [])
+
+  // File viewer keybinds: Alt+R → raw, Alt+P → preview (md only), Alt+D → diff (changed files)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return
+      if (sidebarTabRef.current !== 'projects' || !openFilesRef.current.length) return
+      const path = activeFilePathRef.current
+      const isMd = path?.replace(/\\/g, '/').split('/').pop()?.split('.').pop()?.toLowerCase() === 'md'
+      const activeFile = openFilesRef.current.find((f) => f.path === path)
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault(); setFileViewTab('content')
+      } else if ((e.key === 'p' || e.key === 'P') && isMd) {
+        e.preventDefault(); setFileViewTab('preview')
+      } else if ((e.key === 'd' || e.key === 'D') && activeFile?.hasChanges) {
+        e.preventDefault(); setFileViewTab('diff')
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, sessionId: string, tabId: string) => {

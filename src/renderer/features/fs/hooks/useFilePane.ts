@@ -68,9 +68,7 @@ function isMarkdown(filePath: string): boolean {
   return filePath.replace(/\\/g, '/').split('/').pop()?.split('.').pop()?.toLowerCase() === 'md'
 }
 
-export function defaultTab(file: OpenFile): FilePaneTab {
-  if (file.hasChanges) return 'diff'
-  if (isMarkdown(file.path)) return 'preview'
+export function defaultTab(_file: OpenFile): FilePaneTab {
   return 'content'
 }
 

@@ -295,8 +295,9 @@ function SessionRow({ meta, isFocused, tabId, onActivate, onClose, onContextMenu
       className={cn(
         'group w-full flex flex-col gap-0.5 px-3 py-2 transition-colors border-l-2',
         tabId ? 'cursor-pointer' : 'opacity-30 cursor-default',
-        isFocused ? 'bg-brand-panel border-l-brand-green' : 'border-l-transparent hover:bg-brand-surface'
+        isFocused ? 'bg-brand-panel' : 'hover:bg-brand-surface'
       )}
+      style={{ borderLeftColor: isFocused ? sessionColor : 'transparent' }}
       onClick={onActivate}
       onContextMenu={(e) => { e.preventDefault(); onContextMenu(e) }}
     >
@@ -304,9 +305,9 @@ function SessionRow({ meta, isFocused, tabId, onActivate, onClose, onContextMenu
         {isRunning && agentStatus === 'running' ? (
           <Loader2 size={11} className="flex-shrink-0 animate-spin" style={{ color: sessionColor }} />
         ) : isRunning && agentStatus === 'waiting-input' ? (
-          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-amber-400 animate-pulse" />
+          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: sessionColor }} />
         ) : (
-          <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', isRunning ? 'bg-green-400' : 'bg-zinc-600')} />
+          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: isRunning ? sessionColor : '#52525b' }} />
         )}
         <span className={cn('text-xs font-medium truncate flex-1 min-w-0', isFocused ? 'text-zinc-100' : 'text-zinc-500')}>
           {meta.name}

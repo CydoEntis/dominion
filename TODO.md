@@ -8,6 +8,8 @@
 - [x] **Session status badge** — show a visual indicator on each session tab when the agent is actively generating vs idle
 - [x] **Configurable font size** — expose terminal font size as a settings option
 - [x] **Session rename on double-click** — double-click a tab to rename it inline instead of going through the context menu
+- [x] **Tab accent color + live indicator recolor** — when a session color is set, the tab bar highlight and the live status indicator circle should both adopt that color, not stay at the default accent
+- [x] **Files default to raw view** — open files in raw mode by default instead of whichever view was last active
 
 ---
 
@@ -18,6 +20,10 @@
 - [ ] **Task status tracking** — tag sessions as IN PROGRESS / READY FOR REVIEW / DONE with color indicators in the sidebar (like image #83)
 - [ ] **PR review panel** — pull up a diff view alongside a terminal showing changed files, +/- counts, and approve/comment actions (like image #85 right panel)
 - [ ] **Inline git status in file tree** — show +/- line counts next to each changed file in the project file tree
+- [x] **File tree state persistence** — file tree should remember which folders are expanded and keep the selected item visible when navigating away to another pane or window and returning
+- [x] **Fix terminal pane layout collapse** — terminal pane shrinks/collapses when switching to another pane or window; layout should be preserved across navigation
+- [x] **File viewer keybinds** — keyboard shortcuts to switch the active file between raw, markdown preview, and diff views without using the mouse
+- [x] **Clickable links and file paths in terminal** — Shift+click a URL in terminal output to open it in the browser; click a file path to open it in the file viewer; Ctrl+C copies selected terminal text; right-click opens a context menu (copy, open link, open file, etc.)
 
 ---
 
@@ -28,6 +34,7 @@
 - [ ] **Workspace management** — group sessions + projects into named workspaces that can be saved, switched, and restored independently
 - [ ] **Parallel task orchestration** — spawn N agent sessions from a single task list, track progress across all of them from a unified view (like image #83)
 - [ ] **Remote session support** — connect to agents running on a remote machine over SSH instead of only local processes
+- [ ] **Notes panel** — a lightweight notepad accessible from the sidebar; backed by a user-configured notes directory on the file system; supports creating folders, plain text files, and `.md` files; files are saved directly to disk with no special data model
 
 ---
 

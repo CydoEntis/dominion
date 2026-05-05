@@ -193,7 +193,7 @@ export function SessionTab({ meta, isActive, onActivate, onContextMenu }: Props)
         {!isExited && agentStatus === 'running' ? (
           <Loader2 size={12} className="flex-shrink-0 animate-spin" style={{ color }} />
         ) : !isExited && agentStatus === 'waiting-input' ? (
-          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse bg-amber-400" />
+          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: color }} />
         ) : (
           <span
             className="w-2 h-2 rounded-full flex-shrink-0"

@@ -35,7 +35,27 @@
       "Bash(sed -i -e 's|from '\\\\''../store/root.store'\\\\''|from '\\\\''../../../store/root.store'\\\\''|g' -e 's|from '\\\\''../features/fs/useFilePane'\\\\''|from '\\\\''../hooks/useFilePane'\\\\''|g' -e 's|from '\\\\''../features/fs/hooks/useFilePane'\\\\''|from '\\\\''../hooks/useFilePane'\\\\''|g' -e 's|from '\\\\''../lib/utils'\\\\''|from '\\\\''../../../lib/utils'\\\\''|g' src/renderer/features/fs/components/FileViewer.tsx)",
       "Bash(sed -i -e 's|from '\\\\''./features/session/useSessionLifecycle'\\\\''|from '\\\\''./features/session/hooks/useSessionLifecycle'\\\\''|g' -e 's|from '\\\\''./features/session/useLayoutPersistence'\\\\''|from '\\\\''./features/session/hooks/useLayoutPersistence'\\\\''|g' -e 's|from '\\\\''./features/session/useLayoutRestore'\\\\''|from '\\\\''./features/session/hooks/useLayoutRestore'\\\\''|g' -e 's|from '\\\\''./features/session/useKeyboardShortcuts'\\\\''|from '\\\\''./features/session/hooks/useKeyboardShortcuts'\\\\''|g' -e 's|from '\\\\''./features/session/usePaneActions'\\\\''|from '\\\\''./features/session/hooks/usePaneActions'\\\\''|g' -e 's|from '\\\\''./features/session/useFileTabs'\\\\''|from '\\\\''./features/session/hooks/useFileTabs'\\\\''|g' -e 's|from '\\\\''./features/terminal/TerminalPane'\\\\''|from '\\\\''./features/terminal/components/TerminalPane'\\\\''|g' -e 's|from '\\\\''./features/terminal/pane-tree'\\\\''|from '\\\\''./features/terminal/pane-tree'\\\\''|g' -e 's|from '\\\\''./components/SessionDashboard'\\\\''|from '\\\\''./features/session/components/SessionDashboard'\\\\''|g' -e 's|from '\\\\''./components/PaneContextMenu'\\\\''|from '\\\\''./features/session/components/PaneContextMenu'\\\\''|g' -e 's|from '\\\\''./components/FileViewer'\\\\''|from '\\\\''./features/fs/components/FileViewer'\\\\''|g' -e 's|from '\\\\''./features/settings/SettingsDialog'\\\\''|from '\\\\''./features/settings/components/SettingsDialog'\\\\''|g' src/renderer/App.tsx)",
       "Bash(sed -i -e 's|from '\\\\''../features/session/SessionTabBar'\\\\''|from '\\\\''../features/session/components/SessionTabBar'\\\\''|g' -e 's|from '\\\\''../features/window/useWindowMaximized'\\\\''|from '\\\\''../features/window/hooks/useWindowMaximized'\\\\''|g' -e 's|from '\\\\''./PresetsMenu'\\\\''|from '\\\\''../features/settings/components/PresetsMenu'\\\\''|g' src/renderer/components/TitleBar.tsx)",
-      "Bash(sed -i -e 's|from '\\\\''../features/session/useCommandPalette'\\\\''|from '\\\\''../features/session/hooks/useCommandPalette'\\\\''|g' src/renderer/components/CommandPalette.tsx)"
+      "Bash(sed -i -e 's|from '\\\\''../features/session/useCommandPalette'\\\\''|from '\\\\''../features/session/hooks/useCommandPalette'\\\\''|g' src/renderer/components/CommandPalette.tsx)",
+      "Bash(Get-ChildItem *)",
+      "Bash(findstr *)",
+      "Bash(Select-String *)",
+      "Bash(Select-Object Name)",
+      "Bash(git revert *)",
+      "Bash(npx grep *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)",
+      "Bash(identify /tmp/logo_original.png)",
+      "PowerShell(git checkout *)",
+      "PowerShell(Copy-Item *)",
+      "PowerShell(\\(Get-Item \"C:\\\\Programming\\\\command-center\\\\logo.png\"\\).Length; \\(Get-Item \"C:\\\\Programming\\\\command-center\\\\src\\\\renderer\\\\assets\\\\logo.png\"\\).Length)",
+      "Bash(git tag *)",
+      "Bash(gh run *)",
+      "Bash(gh release *)",
+      "Bash(gh api *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(grep -E \"shared.*\\\\.\\(ts|tsx\\)$\")",
+      "Bash(Select-Object FullName)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

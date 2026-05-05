@@ -88,6 +88,10 @@ export function registerFsIpc(): void {
     await shell.trashItem(filePath)
   })
 
+  ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, (_event, { url }: { url: string }) => {
+    return shell.openExternal(url)
+  })
+
   ipcMain.handle(IPC.FS_GIT_DIFF_FILE, async (_, { projectRoot, filePath }: { projectRoot: string; filePath: string }): Promise<string | null> => {
     const rel = filePath.replace(/\\/g, '/')
     try {
