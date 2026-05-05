@@ -12,7 +12,7 @@ export function useAutoUpdater(): void {
 
     const offDownloaded = ipc.on(IPC.UPDATE_DOWNLOADED, (payload) => {
       const { version } = payload as { version: string }
-      toast.success(`Dominion v${version} ready`, {
+      toast.success(`Shepherd v${version} ready`, {
         duration: Infinity,
         description: 'Restart to apply the update.',
         action: {

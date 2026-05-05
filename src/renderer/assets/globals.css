@@ -38,7 +38,7 @@
     --card-foreground: 0 0% 95%;
     --popover: 225 16% 8%;
     --popover-foreground: 0 0% 95%;
-    --primary: 73 100% 50%;
+    --primary: 144 47% 47%;
     --primary-foreground: 225 16% 6%;
     --secondary: 221 18% 13%;
     --secondary-foreground: 0 0% 95%;
@@ -50,7 +50,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 221 18% 13%;
     --input: 221 18% 13%;
-    --ring: 73 100% 50%;
+    --ring: 144 47% 47%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -74,7 +74,7 @@
    Kept in @layer base so Tailwind utilities (outline-none) can override it. */
 @layer base {
   :focus-visible {
-    outline: 2px solid rgba(175, 255, 0, 0.55);
+    outline: 2px solid rgba(63, 174, 107, 0.55);
     outline-offset: 2px;
     border-radius: 3px;
   }
@@ -106,7 +106,7 @@
 
 /* Text selection color — brand-green at low opacity */
 ::selection {
-  background-color: rgba(175, 255, 0, 0.25);
+  background-color: rgba(63, 174, 107, 0.25);
   color: inherit;
 }
 
@@ -154,15 +154,15 @@
 .markdown-body h4 { font-size: 1.1rem; }
 .markdown-body h5, .markdown-body h6 { font-size: 0.95rem; color: #a1a1aa; }
 .markdown-body p { margin: 0.75em 0; }
-.markdown-body a { color: #afff00; text-decoration: underline; text-underline-offset: 3px; }
-.markdown-body a:hover { color: #d4ff70; }
+.markdown-body a { color: #3fae6b; text-decoration: underline; text-underline-offset: 3px; }
+.markdown-body a:hover { color: #5ec480; }
 .markdown-body strong { color: #f4f4f5; font-weight: 600; }
 .markdown-body em { color: #d4d4d8; font-style: italic; }
 .markdown-body ul, .markdown-body ol { padding-left: 1.75em; margin: 0.5em 0; }
 .markdown-body li { margin: 0.25em 0; }
 .markdown-body li + li { margin-top: 0.15em; }
 .markdown-body blockquote {
-  border-left: 3px solid #afff0066;
+  border-left: 3px solid #3fae6b66;
   margin: 1em 0;
   padding: 0.25em 1em;
   color: #71717a;
@@ -174,7 +174,7 @@
   font-family: 'Cascadia Code', 'JetBrains Mono', monospace;
   font-size: 0.875em;
   background: #27272a;
-  color: #afff00;
+  color: #3fae6b;
   padding: 0.15em 0.4em;
   border-radius: 4px;
 }
@@ -224,12 +224,12 @@
   color: #e4e4e7 !important;
 }
 [data-sonner-toaster] [data-sonner-toast][data-type="success"] {
-  background: rgba(175, 255, 0, 0.06) !important;
-  border-color: rgba(175, 255, 0, 0.2) !important;
-  color: #afff00 !important;
+  background: rgba(63, 174, 107, 0.06) !important;
+  border-color: rgba(63, 174, 107, 0.2) !important;
+  color: #3fae6b !important;
 }
 [data-sonner-toaster] [data-sonner-toast][data-type="success"] svg {
-  color: #afff00 !important;
+  color: #3fae6b !important;
 }
 [data-sonner-toaster] [data-sonner-toast][data-type="error"] {
   background: rgba(239, 68, 68, 0.06) !important;

@@ -33,10 +33,10 @@ export function EmptyState(): JSX.Element {
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 select-none">
-      <img src={logoUrl} alt="Dominion" className="w-20 h-20 object-contain opacity-90" />
+      <img src={logoUrl} alt="Shepherd" className="w-20 h-20 object-contain opacity-90" />
 
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-brand-green tracking-wide">Dominion</h1>
+        <h1 className="text-2xl font-bold text-brand-green tracking-wide">Shepherd</h1>
       </div>
 
       <div className="w-56 h-px bg-brand-panel" />

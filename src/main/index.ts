@@ -1,5 +1,5 @@
 import { app } from 'electron'
-app.setName('Dominion')
+app.setName('Shepherd')
 import { createWindow } from './window-manager'
 import { registerSessionIpc } from './features/session/session-ipc'
 import { registerWindowIpc } from './features/window/window-ipc'
