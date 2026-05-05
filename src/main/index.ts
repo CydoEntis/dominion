@@ -6,6 +6,7 @@ import { registerWindowIpc } from './features/window/window-ipc'
 import { registerSettingsIpc } from './features/settings/settings-ipc'
 import { registerPersistenceIpc } from './features/persistence/persistence-ipc'
 import { registerFsIpc } from './features/fs/fs-ipc'
+import { registerNotesIpc } from './features/notes/notes-ipc'
 import { initUpdater } from './features/updater/updater'
 
 function registerAllIpc(): void {
@@ -14,6 +15,7 @@ function registerAllIpc(): void {
   registerSettingsIpc()
   registerPersistenceIpc()
   registerFsIpc()
+  registerNotesIpc()
 }
 
 app.whenReady().then(() => {

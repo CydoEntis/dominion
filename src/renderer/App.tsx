@@ -131,12 +131,15 @@ export function App(): JSX.Element {
   const { openFiles, activeFilePath, setActiveFilePath, handleFileClick, handleCloseFile } = useFileTabs()
   const { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClose } = usePaneActions(contextMenu)
 
+  const addNote = useStore((s) => s.addNote)
+  const storeSaveNote = useStore((s) => s.saveNote)
+
   const createNote = useCallback((): string => {
     const id = crypto.randomUUID()
-    const current = useStore.getState().settings.notes ?? []
-    updateSettings({ notes: [{ id, content: '', updatedAt: Date.now() }, ...current] })
+    addNote(id)
+    storeSaveNote(id, '')
     return id
-  }, [updateSettings])
+  }, [addNote, storeSaveNote])
 
   useKeyboardShortcuts({
     onTogglePalette: () => setPaletteOpen((v) => !v),

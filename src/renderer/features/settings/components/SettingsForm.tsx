@@ -138,10 +138,11 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
     values: settings
   })
 
-  const defaultShell  = watch('defaultShell') ?? ''
-  const shellStartDir = watch('shellStartDir') ?? ''
-  const confirmClose  = watch('confirmCloseSession')
-  const hotkeys       = watch('hotkeys')
+  const defaultShell   = watch('defaultShell') ?? ''
+  const shellStartDir  = watch('shellStartDir') ?? ''
+  const notesDirectory = watch('notesDirectory') ?? ''
+  const confirmClose   = watch('confirmCloseSession')
+  const hotkeys        = watch('hotkeys')
 
   const pickShell = async (): Promise<void> => {
     const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FILE) as string | null
@@ -151,6 +152,11 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
   const pickShellStartDir = async (): Promise<void> => {
     const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
     if (picked !== null) setValue('shellStartDir', picked)
+  }
+
+  const pickNotesDir = async (): Promise<void> => {
+    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    if (picked !== null) setValue('notesDirectory', picked)
   }
 
   const onSubmit = async (data: AppSettings): Promise<void> => {
@@ -223,6 +229,31 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
                 />
               </div>
             ))}
+          </div>
+        </section>
+
+        <div className="h-px bg-zinc-800" />
+
+        <section className="flex flex-col gap-3">
+          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Notes</p>
+          <div className="flex flex-col gap-1.5">
+            <Label>Notes directory</Label>
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={notesDirectory}
+                placeholder="Default (userData/notes)"
+                className="flex-1 text-xs text-zinc-400 cursor-default"
+              />
+              <button
+                type="button"
+                onClick={pickNotesDir}
+                className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0"
+                title="Browse"
+              >
+                <FolderOpen size={14} />
+              </button>
+            </div>
           </div>
         </section>
 

@@ -16,8 +16,8 @@ interface Props {
 }
 
 export function NoteDrawer({ open, onClose, activeNoteId, onCreate }: Props): JSX.Element | null {
-  const notes = useStore((s) => s.settings.notes ?? [])
-  const updateSettings = useStore((s) => s.updateSettings)
+  const notes = useStore((s) => s.notes)
+  const saveNote = useStore((s) => s.saveNote)
 
   const activeNote = notes.find(n => n.id === activeNoteId) ?? notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)[0] ?? null
   const effectiveId = activeNote?.id ?? null
@@ -25,28 +25,27 @@ export function NoteDrawer({ open, onClose, activeNoteId, onCreate }: Props): JS
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [displayContent, setDisplayContent] = useState(activeNote?.content ?? '')
   const localContentRef = useRef(activeNote?.content ?? '')
+  const prevIdRef = useRef<string | null>(effectiveId)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (open) requestAnimationFrame(() => textareaRef.current?.focus())
   }, [open])
-  const prevIdRef = useRef<string | null>(effectiveId)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const saveNote = useCallback((id: string, content: string): void => {
-    const current = useStore.getState().settings.notes ?? []
-    updateSettings({ notes: current.map(n => n.id === id ? { ...n, content, updatedAt: Date.now() } : n) })
-  }, [updateSettings])
+  const flushSave = useCallback((id: string, content: string): void => {
+    saveNote(id, content)
+  }, [saveNote])
 
   useEffect(() => {
     if (prevIdRef.current !== effectiveId) {
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      if (prevIdRef.current) saveNote(prevIdRef.current, localContentRef.current)
+      if (prevIdRef.current) flushSave(prevIdRef.current, localContentRef.current)
       prevIdRef.current = effectiveId
     }
     const content = activeNote?.content ?? ''
     localContentRef.current = content
     setDisplayContent(content)
-  }, [effectiveId, saveNote])
+  }, [effectiveId, flushSave])
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
 
@@ -55,7 +54,7 @@ export function NoteDrawer({ open, onClose, activeNoteId, onCreate }: Props): JS
     localContentRef.current = value
     setDisplayContent(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => { if (effectiveId) saveNote(effectiveId, value) }, 400)
+    debounceRef.current = setTimeout(() => { if (effectiveId) flushSave(effectiveId, value) }, 400)
   }
 
   if (!open) return null

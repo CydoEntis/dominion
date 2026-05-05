@@ -115,6 +115,16 @@ export function detachTab(sessionId: string, fromWindowId: string): string {
   }
 
   const newWin = createWindow([sessionId])
+
+  newWin.on('closed', () => {
+    if (!mainWindowId) return
+    const mainWin = windows.get(mainWindowId)
+    if (!mainWin || mainWin.isDestroyed()) return
+    const reattachEntry = getSession(sessionId)
+    if (reattachEntry) reattachEntry.pty.subscribe(mainWin.webContents.id)
+    mainWin.webContents.send(IPC.WINDOW_TAB_REATTACHED, { sessionId })
+  })
+
   return getWindowId(newWin)
 }
 

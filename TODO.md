@@ -4,8 +4,8 @@
 
 ## Bugs
 
-- [ ] **Detached window session recovery** — when a detached window is closed, the session tab in the main window goes gray and can't be resumed. The IPC plumbing (`WINDOW_REATTACH_TAB` in `window-ipc.ts`) already exists — need to detect the detached window's `close` event and either auto-reattach or surface a "Reattach" button on the grayed tab.
-- [ ] **Notes save directory** — notes are currently stored as JSON blobs inside `%APPDATA%\Dominion\settings.json` (Electron userData), not as real files. Add a "Notes directory" setting (folder picker) and save each note as an individual `.md` file on disk so users know where their notes live and can point it at a synced folder (e.g. iCloud, Dropbox, OneDrive).
+- [x] **Detached window session recovery** — when a detached window is closed, the session tab in the main window goes gray and can't be resumed. The IPC plumbing (`WINDOW_REATTACH_TAB` in `window-ipc.ts`) already exists — need to detect the detached window's `close` event and either auto-reattach or surface a "Reattach" button on the grayed tab.
+- [x] **Notes save directory** — notes are currently stored as JSON blobs inside `%APPDATA%\Shepherd\settings.json` (Electron userData), not as real files. Add a "Notes directory" setting (folder picker) and save each note as an individual `.md` file on disk so users know where their notes live and can point it at a synced folder (e.g. iCloud, Dropbox, OneDrive).
 
 ---
 

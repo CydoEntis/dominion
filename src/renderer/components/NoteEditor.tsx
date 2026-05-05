@@ -16,8 +16,9 @@ interface Props {
 }
 
 export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.Element {
-  const notes = useStore((s) => s.settings.notes ?? [])
-  const updateSettings = useStore((s) => s.updateSettings)
+  const notes = useStore((s) => s.notes)
+  const saveNote = useStore((s) => s.saveNote)
+  const deleteNote = useStore((s) => s.deleteNote)
 
   const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
   const activeNote = notes.find(n => n.id === activeNoteId) ?? sorted[0] ?? null
@@ -28,21 +29,20 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
   const prevIdRef = useRef<string | null>(effectiveId)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const saveNote = useCallback((id: string, content: string): void => {
-    const current = useStore.getState().settings.notes ?? []
-    updateSettings({ notes: current.map(n => n.id === id ? { ...n, content, updatedAt: Date.now() } : n) })
-  }, [updateSettings])
+  const flushSave = useCallback((id: string, content: string): void => {
+    saveNote(id, content)
+  }, [saveNote])
 
   useEffect(() => {
     if (prevIdRef.current !== effectiveId) {
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      if (prevIdRef.current) saveNote(prevIdRef.current, localContentRef.current)
+      if (prevIdRef.current) flushSave(prevIdRef.current, localContentRef.current)
       prevIdRef.current = effectiveId
       const content = activeNote?.content ?? ''
       localContentRef.current = content
       setDisplayContent(content)
     }
-  }, [effectiveId, saveNote])
+  }, [effectiveId, flushSave])
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
 
@@ -51,13 +51,12 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
     localContentRef.current = value
     setDisplayContent(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => { if (effectiveId) saveNote(effectiveId, value) }, 400)
+    debounceRef.current = setTimeout(() => { if (effectiveId) flushSave(effectiveId, value) }, 400)
   }
 
-  const deleteNote = (id: string, e: React.MouseEvent): void => {
+  const handleDelete = (id: string, e: React.MouseEvent): void => {
     e.stopPropagation()
-    const current = useStore.getState().settings.notes ?? []
-    updateSettings({ notes: current.filter(n => n.id !== id) })
+    deleteNote(id)
   }
 
   if (notes.length === 0) {
@@ -90,7 +89,7 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
           >
             <span className="max-w-[140px] truncate">{noteTitle(note)}</span>
             <button
-              onClick={(e) => deleteNote(note.id, e)}
+              onClick={(e) => handleDelete(note.id, e)}
               className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 transition-all flex-shrink-0"
               title="Delete note"
             >

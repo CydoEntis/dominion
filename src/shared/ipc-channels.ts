@@ -62,6 +62,11 @@ export const IPC = {
   FS_RENAME: 'fs:rename',
   FS_TRASH: 'fs:trash',
 
+  // Notes: renderer → main (invoke)
+  NOTES_LOAD: 'notes:load',
+  NOTES_SAVE: 'notes:save',
+  NOTES_DELETE: 'notes:delete',
+
   // Shell: renderer → main (invoke)
   SHELL_OPEN_EXTERNAL: 'shell:open-external'
 } as const

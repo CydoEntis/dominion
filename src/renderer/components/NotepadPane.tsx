@@ -29,14 +29,8 @@ interface Props {
 }
 
 export function NotepadPane({ activeNoteId, onActivate, onCreate }: Props): JSX.Element {
-  const notes = useStore((s) => s.settings.notes ?? [])
-  const updateSettings = useStore((s) => s.updateSettings)
-
-  const deleteNote = (id: string, e: React.MouseEvent): void => {
-    e.stopPropagation()
-    const current = useStore.getState().settings.notes ?? []
-    updateSettings({ notes: current.filter(n => n.id !== id) })
-  }
+  const notes = useStore((s) => s.notes)
+  const deleteNote = useStore((s) => s.deleteNote)
 
   const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
 
@@ -79,7 +73,7 @@ export function NotepadPane({ activeNoteId, onActivate, onCreate }: Props): JSX.
               <p className="text-[10px] text-zinc-600 truncate mt-0.5 pr-5">{notePreview(note)}</p>
             )}
             <button
-              onClick={(e) => deleteNote(note.id, e)}
+              onClick={(e) => { e.stopPropagation(); deleteNote(note.id) }}
               className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 rounded text-zinc-500 hover:text-red-400 transition-all"
               title="Delete note"
             >
