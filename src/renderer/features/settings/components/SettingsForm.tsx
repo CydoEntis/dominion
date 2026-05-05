@@ -141,8 +141,9 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
   const defaultShell   = watch('defaultShell') ?? ''
   const shellStartDir  = watch('shellStartDir') ?? ''
   const notesDirectory = watch('notesDirectory') ?? ''
-  const confirmClose   = watch('confirmCloseSession')
-  const hotkeys        = watch('hotkeys')
+  const confirmClose      = watch('confirmCloseSession')
+  const resumeOnStartup   = watch('resumeOnStartup')
+  const hotkeys           = watch('hotkeys')
 
   const pickShell = async (): Promise<void> => {
     const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FILE) as string | null
@@ -269,6 +270,19 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
               id="confirm-close"
               checked={confirmClose ?? true}
               onCheckedChange={(v) => setValue('confirmCloseSession', v === true)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor="resume-on-startup" className="text-sm text-zinc-300 font-normal cursor-pointer">
+                Resume on startup
+              </Label>
+              <span className="text-xs text-zinc-500">Re-launch agent sessions and send /resume on next app start</span>
+            </div>
+            <Checkbox
+              id="resume-on-startup"
+              checked={resumeOnStartup ?? false}
+              onCheckedChange={(v) => setValue('resumeOnStartup', v === true)}
             />
           </div>
         </section>

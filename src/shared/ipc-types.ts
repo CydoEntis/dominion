@@ -151,6 +151,7 @@ export const AppSettingsSchema = z.object({
   presets: z.array(PresetSchema).default([]),
   hotkeys: HotkeysSchema.default({}),
   confirmCloseSession: z.boolean().default(true),
+  resumeOnStartup: z.boolean().default(false),
   notesDirectory: z.string().default(''),
   notes: z.array(z.object({ id: z.string(), content: z.string().default(''), updatedAt: z.number().default(0) })).default([])
 })

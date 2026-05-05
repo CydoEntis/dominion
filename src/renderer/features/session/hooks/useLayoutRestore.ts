@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useStore } from '../../../store/root.store'
-import { createSession } from '../session.service'
+import { createSession, writeToSession } from '../session.service'
 import { detachTab } from '../../window/window.service'
 import { clearLayout } from '../persistence.service'
 import { collectSessionIds } from '../../terminal/pane-tree'
@@ -25,6 +25,7 @@ export function useLayoutRestore(): void {
   const upsertSession = useStore((s) => s.upsertSession)
   const restoreTab = useStore((s) => s.restoreTab)
   const windowId = useStore((s) => s.windowId)
+  const resumeOnStartup = useStore((s) => s.settings.resumeOnStartup)
 
   const windowIdRef = useRef(windowId)
   useEffect(() => { windowIdRef.current = windowId }, [windowId])
@@ -35,6 +36,7 @@ export function useLayoutRestore(): void {
 
     const idMap = new Map<string, string>()
     const createdMetas: Awaited<ReturnType<typeof createSession>>[] = []
+    const resumeIds: string[] = []
 
     for (const ps of layout.sessions) {
       let agentCommand = ps.agentCommand
@@ -46,6 +48,7 @@ export function useLayoutRestore(): void {
         upsertSession(meta)
         idMap.set(ps.sessionId, meta.sessionId)
         createdMetas.push(meta)
+        if (resumeOnStartup && ps.agentCommand) resumeIds.push(meta.sessionId)
       } catch {}
     }
 
@@ -63,6 +66,14 @@ export function useLayoutRestore(): void {
         const tabMetas = createdMetas.filter((m) => tabSessionIds.has(m.sessionId))
         restoreTab(newTabId, remapped, tabMetas)
       }
+    }
+
+    if (resumeIds.length > 0) {
+      setTimeout(() => {
+        for (const sessionId of resumeIds) {
+          writeToSession({ sessionId, data: '/resume\r' })
+        }
+      }, 2000)
     }
   }
 
