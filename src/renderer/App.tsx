@@ -14,6 +14,8 @@ import { ActivityBar } from './components/ActivityBar'
 import { SettingsForm } from './features/settings/components/SettingsForm'
 import { PresetsPanel } from './features/settings/components/PresetsPanel'
 import { CommandPalette } from './components/CommandPalette'
+import { FileSearchPalette } from './components/FileSearchPalette'
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal'
 import { FileViewer, VIEWER_THEMES } from './features/fs/components/FileViewer'
 import type { FilePaneTab } from './features/fs/hooks/useFilePane'
 import { createSession, killSession } from './features/session/session.service'
@@ -101,6 +103,8 @@ export function App(): JSX.Element {
 
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [fileSearchOpen, setFileSearchOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [sidebarTab, setSidebarTab] = useState<'sessions' | 'projects' | 'notes' | 'presets' | 'settings'>('sessions')
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [noteDrawerOpen, setNoteDrawerOpen] = useState(false)
@@ -144,6 +148,8 @@ export function App(): JSX.Element {
 
   useKeyboardShortcuts({
     onTogglePalette: () => setPaletteOpen((v) => !v),
+    onFileSearch: () => setFileSearchOpen((v) => !v),
+    onShowShortcuts: () => setShortcutsOpen((v) => !v),
     onNewNote: useCallback(() => {
       const id = createNote()
       setActiveNoteId(id)
@@ -287,17 +293,8 @@ export function App(): JSX.Element {
           </>
         )}
 
-        {/* Sessions content — tab bar + pane area */}
+        {/* Sessions content — pane area (no tab bar; sessions are managed from the sidebar) */}
         <div className={cn('flex-1 min-w-0 min-h-0', (isDashboardOpen && (sidebarTab === 'projects' || sidebarTab === 'notes' || sidebarTab === 'settings')) ? 'hidden' : 'flex flex-col')}>
-          {tabOrder.length > 0 && !(isDashboardOpen && sidebarTab === 'sessions') && (
-            <TabBar
-              activity="sessions"
-              openFiles={openFiles}
-              activeFilePath={activeFilePath}
-              onActivateFile={setActiveFilePath}
-              onCloseFile={handleCloseFile}
-            />
-          )}
           <div className="flex-1 min-h-0 relative">
             {tabOrder.length === 0 && <EmptyState />}
             {tabOrder.map((tabId) => {
@@ -400,7 +397,9 @@ export function App(): JSX.Element {
       )}
 
       <NoteDrawer open={noteDrawerOpen} onClose={() => setNoteDrawerOpen(false)} activeNoteId={activeNoteId} onCreate={() => { const id = createNote(); setActiveNoteId(id) }} />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onShowShortcuts={() => { setPaletteOpen(false); setShortcutsOpen(true) }} />
+      <FileSearchPalette open={fileSearchOpen} onClose={() => setFileSearchOpen(false)} onOpenFile={(path) => { if (!isDashboardOpen) useStore.getState().toggleDashboard(); setSidebarTab('projects'); handleFileClick(path, undefined) }} />
+      <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <Toaster position="bottom-right" theme="dark" richColors />
     </div>
   )

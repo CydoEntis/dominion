@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { useStore } from '../../../store/root.store'
 import { pickFolder } from '../../window/window.service'
 import { createSession, killSession } from '../session.service'
 import { findTabForSession } from '../../terminal/pane-tree'
+
+const MAX_PROJECTS = 10
 
 export interface UseProjectsReturn {
   openProjects: string[]
@@ -36,6 +39,10 @@ export function useProjects(): UseProjectsReturn {
   }
 
   const addProject = async (): Promise<void> => {
+    if (openProjects.length >= MAX_PROJECTS) {
+      toast.error(`Maximum ${MAX_PROJECTS} projects allowed`)
+      return
+    }
     const folder = await pickFolder()
     if (!folder) return
     const normalized = folder.replace(/\\/g, '/')

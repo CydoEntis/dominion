@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { X, FolderOpen, FolderClosed, Plus, Terminal, Loader2, ExternalLink, Copy, ChevronDown, ChevronRight, Pencil, Check, Layers } from 'lucide-react'
+import { X, FolderOpen, FolderClosed, Plus, Terminal, Loader2, ExternalLink, Copy, ChevronDown, ChevronRight, Pencil, Check, Layers, Search } from 'lucide-react'
 import { Input } from '../../../components/ui/input'
+import { Label } from '../../../components/ui/label'
 import { createPortal } from 'react-dom'
 import { NewSessionForm } from './NewSessionForm'
 import { useStore } from '../../../store/root.store'
 import { findTabForSession } from '../../terminal/pane-tree'
 import { FileTree } from '../../fs/components/FileTree'
+import { PROJECT_COLORS } from '../../fs/components/FileTabBar'
 import { useProjects } from '../hooks/useProjects'
 import { useConfirmClose } from '../hooks/useConfirmClose'
 import { useInstalledEditors } from '../../fs/hooks/useInstalledEditors'
@@ -229,6 +231,7 @@ function CreateGroupModal({ pendingSessionId, onConfirm, onDismiss }: CreateGrou
 interface ProjectSectionProps {
   path: string
   name: string
+  colorIndex: number
   refreshTick: number
   activeFilePath: string | null
   onFileClick: (path: string, xy: string | undefined) => void
@@ -236,22 +239,27 @@ interface ProjectSectionProps {
   onRemove: () => void
 }
 
-function ProjectSection({ path, name, refreshTick, activeFilePath, onFileClick, onNewSession, onRemove }: ProjectSectionProps): JSX.Element {
+function ProjectSection({ path, name, colorIndex, refreshTick, activeFilePath, onFileClick, onNewSession, onRemove }: ProjectSectionProps): JSX.Element {
   const [expanded, setExpanded] = useState(true)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+  const color = PROJECT_COLORS[colorIndex % PROJECT_COLORS.length]
   return (
     <div className="flex flex-col flex-shrink-0">
       {ctxMenu && <ProjectContextMenu x={ctxMenu.x} y={ctxMenu.y} path={path} onDismiss={() => setCtxMenu(null)} />}
       <div
-        className="group flex items-center gap-1.5 px-2 py-1.5 border-b border-brand-panel/60 cursor-pointer hover:bg-brand-panel/20 transition-colors"
+        className="group flex items-center gap-2 px-3 py-2.5 border-b border-brand-panel/60 cursor-pointer transition-all"
+        style={{ background: `linear-gradient(to right, ${color}2e, transparent)` }}
+        onClick={() => setExpanded((v) => !v)}
         onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY }) }}
       >
-        <button onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1.5 flex-1 min-w-0">
-          {expanded ? <FolderOpen size={13} className="text-brand-light flex-shrink-0" /> : <FolderClosed size={13} className="text-zinc-500 flex-shrink-0" />}
-          <span className="text-xs font-semibold text-zinc-200 truncate">{name}</span>
-        </button>
-        <button onClick={(e) => { e.stopPropagation(); onNewSession() }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-brand-light transition-colors" title="New session in this project"><Terminal size={11} /></button>
-        <button onClick={(e) => { e.stopPropagation(); onRemove() }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-400 transition-colors" title="Remove"><X size={11} /></button>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {expanded
+            ? <FolderOpen size={15} className="flex-shrink-0" style={{ color }} />
+            : <FolderClosed size={15} className="flex-shrink-0" style={{ color }} />}
+          <span className="text-sm font-semibold text-zinc-200 truncate">{name}</span>
+        </div>
+        <button onClick={(e) => { e.stopPropagation(); onNewSession() }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-brand-light transition-colors" title="New session in this project"><Terminal size={12} /></button>
+        <button onClick={(e) => { e.stopPropagation(); onRemove() }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-400 transition-colors" title="Remove"><X size={12} /></button>
       </div>
       {expanded && <FileTree projectRoot={path} activeFilePath={activeFilePath} onFileClick={onFileClick} refreshTick={refreshTick} />}
     </div>
@@ -275,6 +283,10 @@ function timeAgo(ts: number): string {
 
 // ─── Session row ─────────────────────────────────────────────────────────────
 
+import { SESSION_COLORS } from '../session.service'
+
+const MAX_NAME_LENGTH = 32
+
 interface SessionRowProps {
   meta: SessionMeta
   isFocused: boolean
@@ -286,47 +298,133 @@ interface SessionRowProps {
 }
 
 function SessionRow({ meta, isFocused, tabId, onActivate, onClose, onContextMenu }: SessionRowProps): JSX.Element {
+  const upsertSession = useStore((s) => s.upsertSession)
   const isRunning = meta.status === 'running'
   const agentStatus = meta.agentStatus ?? 'idle'
   const sessionColor = meta.color ?? '#22c55e'
 
+  const [editOpen, setEditOpen] = useState(false)
+  const [editName, setEditName] = useState(meta.name)
+  const [editColor, setEditColor] = useState(meta.color ?? '#22c55e')
+  const [nameError, setNameError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const openEdit = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    setEditName(meta.name)
+    setEditColor(meta.color ?? '#22c55e')
+    setNameError(null)
+    setEditOpen(true)
+    setTimeout(() => inputRef.current?.select(), 0)
+  }
+
+  const handleSave = async (): Promise<void> => {
+    const trimmed = editName.trim()
+    if (!trimmed) { setNameError('Name cannot be blank'); return }
+    if (trimmed.length > MAX_NAME_LENGTH) { setNameError(`Max ${MAX_NAME_LENGTH} characters`); return }
+    setEditOpen(false)
+    const updated = await patchSession({ sessionId: meta.sessionId, name: trimmed, color: editColor })
+    upsertSession(updated)
+    toast.success('Session updated')
+  }
+
   return (
-    <div
-      className={cn(
-        'group w-full flex flex-col gap-0.5 px-3 py-2 transition-colors border-l-2',
-        tabId ? 'cursor-pointer' : 'opacity-30 cursor-default',
-        isFocused ? 'bg-brand-panel' : 'hover:bg-brand-surface'
-      )}
-      style={{ borderLeftColor: isFocused ? sessionColor : 'transparent' }}
-      onClick={onActivate}
-      onContextMenu={(e) => { e.preventDefault(); onContextMenu(e) }}
-    >
-      <div className="flex items-center gap-2 min-w-0">
-        {isRunning && agentStatus === 'running' ? (
-          <Loader2 size={11} className="flex-shrink-0 animate-spin" style={{ color: sessionColor }} />
-        ) : isRunning && agentStatus === 'waiting-input' ? (
-          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: sessionColor }} />
-        ) : (
-          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: isRunning ? sessionColor : '#52525b' }} />
+    <>
+      <div
+        className={cn(
+          'group w-full flex flex-col gap-0.5 px-3 py-2 transition-all border-l-2',
+          tabId ? 'cursor-pointer' : 'opacity-30 cursor-default',
         )}
-        <span className={cn('text-xs font-medium truncate flex-1 min-w-0', isFocused ? 'text-zinc-100' : 'text-zinc-500')}>
-          {meta.name}
-        </span>
-        <span className={cn('text-[10px] flex-shrink-0', isFocused ? 'text-zinc-400' : 'text-zinc-700')}>
-          {timeAgo(meta.createdAt)}
-        </span>
-        <button
-          onClick={(e) => { e.stopPropagation(); onClose() }}
-          className="flex-shrink-0 text-zinc-700 hover:text-zinc-300 transition-colors opacity-0 group-hover:opacity-100 ml-0.5"
-          title="Close session"
+        style={{
+          borderLeftColor: isFocused ? sessionColor : 'transparent',
+          background: `linear-gradient(to right, ${sessionColor}${isFocused ? '2e' : '12'}, transparent)`,
+        }}
+        onClick={onActivate}
+        onDoubleClick={openEdit}
+        onContextMenu={(e) => { e.preventDefault(); onContextMenu(e) }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {isRunning && agentStatus === 'running' ? (
+            <Loader2 size={11} className="flex-shrink-0 animate-spin" style={{ color: sessionColor }} />
+          ) : isRunning && agentStatus === 'waiting-input' ? (
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: sessionColor }} />
+          ) : (
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: isRunning ? sessionColor : '#52525b' }} />
+          )}
+          <span className={cn('text-xs font-medium truncate flex-1 min-w-0', isFocused ? 'text-zinc-100' : 'text-zinc-500')}>
+            {meta.name}
+          </span>
+          <span className={cn('text-[10px] flex-shrink-0', isFocused ? 'text-zinc-400' : 'text-zinc-700')}>
+            {timeAgo(meta.createdAt)}
+          </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onClose() }}
+            className="flex-shrink-0 text-zinc-700 hover:text-zinc-300 transition-colors opacity-0 group-hover:opacity-100 ml-0.5"
+            title="Close session"
+          >
+            <X size={13} />
+          </button>
+        </div>
+        <div className={cn('pl-3.5 text-[10px] truncate', isFocused ? 'text-zinc-400' : 'text-zinc-600')}>
+          {shortPath(meta.cwd)}
+        </div>
+      </div>
+
+      {editOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setEditOpen(false) }}
         >
-          <X size={13} />
-        </button>
-      </div>
-      <div className={cn('pl-3.5 text-[10px] truncate', isFocused ? 'text-zinc-400' : 'text-zinc-600')}>
-        {shortPath(meta.cwd)}
-      </div>
-    </div>
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="relative bg-brand-surface border border-brand-panel/60 rounded-lg shadow-2xl w-80 p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-zinc-200">Edit Session</span>
+              <button onClick={() => setEditOpen(false)} className="text-zinc-500 hover:text-zinc-300 transition-colors"><X size={14} /></button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-zinc-500">Name</Label>
+                <span className={cn('text-xs', editName.trim().length > MAX_NAME_LENGTH ? 'text-red-400' : 'text-zinc-600')}>
+                  {editName.trim().length}/{MAX_NAME_LENGTH}
+                </span>
+              </div>
+              <Input
+                ref={inputRef}
+                value={editName}
+                onChange={(e) => { setEditName(e.target.value); setNameError(null) }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditOpen(false) }}
+                className={cn(nameError ? 'border-red-500/70 focus-visible:ring-0 focus:border-red-400' : '')}
+              />
+              {nameError && <span className="text-xs text-red-400">{nameError}</span>}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-zinc-500">Color</Label>
+              <div className="flex gap-2 flex-wrap">
+                {SESSION_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setEditColor(c)}
+                    style={{ backgroundColor: c }}
+                    className={cn('w-7 h-7 rounded-full transition-transform hover:scale-110 flex-shrink-0', editColor === c && 'ring-2 ring-white ring-offset-2 ring-offset-brand-surface scale-110')}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end pt-1">
+              <button onClick={() => setEditOpen(false)} className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors rounded">Cancel</button>
+              <button
+                onClick={handleSave}
+                disabled={!!nameError || !editName.trim()}
+                className="px-4 py-1.5 text-xs font-medium rounded bg-brand-green/20 text-brand-green hover:bg-brand-green/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   )
 }
 
@@ -453,6 +551,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
 
   const { openProjects, refreshTicks, bumpRefresh, addProject, removeProject, closeSession } = useProjects()
 
+  const [sessionQuery, setSessionQuery] = useState('')
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [sessionCtxMenu, setSessionCtxMenu] = useState<{ x: number; y: number; meta: SessionMeta } | null>(null)
   const [createGroupModal, setCreateGroupModal] = useState<{ pendingSessionId?: string } | null>(null)
@@ -463,7 +562,9 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
     openProjects.forEach((path) => bumpRefresh(path))
   }, [externalRefreshTick])
 
-  const allSessions = Object.values(sessions).sort((a, b) => b.createdAt - a.createdAt)
+  const allSessions = Object.values(sessions)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .filter((m) => !sessionQuery || m.name.toLowerCase().includes(sessionQuery.toLowerCase()) || m.cwd.toLowerCase().includes(sessionQuery.toLowerCase()))
   const groups = settings.sessionGroups ?? []
 
   const handleAssignGroup = useCallback(async (sessionId: string, groupId: string | null) => {
@@ -507,6 +608,15 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
       {/* Sessions tab */}
       {activeTab === 'sessions' && (
         <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-brand-panel/40 flex-shrink-0">
+            <Search size={11} className="text-zinc-600 flex-shrink-0" />
+            <input
+              value={sessionQuery}
+              onChange={(e) => setSessionQuery(e.target.value)}
+              placeholder="Filter sessions…"
+              className="flex-1 bg-transparent text-xs text-zinc-300 placeholder:text-zinc-600 outline-none"
+            />
+          </div>
           <div className="flex-1 overflow-y-auto py-1">
             {/* Group sections */}
             {groups.map((group) => {
@@ -592,13 +702,14 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
                 <p className="text-xs text-zinc-500 font-medium">No projects open</p>
               </div>
             )}
-            {openProjects.map((p) => {
+            {openProjects.map((p, idx) => {
               const name = p.split('/').filter(Boolean).pop() ?? p
               return (
                 <ProjectSection
                   key={p}
                   path={p}
                   name={name}
+                  colorIndex={idx}
                   refreshTick={refreshTicks[p] ?? 0}
                   activeFilePath={activeFilePath}
                   onFileClick={onFileClick}

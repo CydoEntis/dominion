@@ -17,10 +17,32 @@ export function SessionTabBar(): JSX.Element {
   const activeSessionId = useStore((s) => s.activeSessionId)
   const setActiveSession = useStore((s) => s.setActiveSession)
   const removeTab = useStore((s) => s.removeTab)
+  const reorderTabs = useStore((s) => s.reorderTabs)
 
   const [ctx, setCtx] = useState<CtxTarget | null>(null)
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
   const { requestClose, modal: closeModal } = useConfirmClose()
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const handleDragStart = useCallback((id: string) => setDraggedId(id), [])
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
+    e.preventDefault()
+    setDragOverId(id)
+  }, [])
+  const handleDrop = useCallback((id: string) => {
+    if (draggedId && draggedId !== id) {
+      const order = [...tabOrder]
+      const from = order.indexOf(draggedId)
+      const to = order.indexOf(id)
+      order.splice(from, 1)
+      order.splice(to, 0, draggedId)
+      reorderTabs(order)
+    }
+    setDraggedId(null)
+    setDragOverId(null)
+  }, [draggedId, tabOrder, reorderTabs])
+  const handleDragEnd = useCallback(() => { setDraggedId(null); setDragOverId(null) }, [])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -59,8 +81,13 @@ export function SessionTabBar(): JSX.Element {
               key={sessionId}
               meta={meta}
               isActive={activeSessionId === sessionId}
+              isDragOver={dragOverId === sessionId}
               onActivate={() => setActiveSession(sessionId)}
               onContextMenu={(e) => handleContextMenu(e, sessionId)}
+              onDragStart={() => handleDragStart(sessionId)}
+              onDragOver={(e) => handleDragOver(e, sessionId)}
+              onDrop={() => handleDrop(sessionId)}
+              onDragEnd={handleDragEnd}
             />
           )
         })}

@@ -10,17 +10,7 @@ import { useConfirmClose } from '../hooks/useConfirmClose'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 
-const TAB_COLORS = [
-  '#22c55e',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-  '#ef4444',
-  '#f97316',
-  '#eab308',
-  '#06b6d4',
-  '#71717a',
-]
+import { SESSION_COLORS as TAB_COLORS } from '../session.service'
 
 const DEFAULT_COLOR = '#22c55e'
 const MAX_NAME_LENGTH = 32
@@ -122,7 +112,7 @@ function EditModal({ meta, onSave, onDismiss }: EditModalProps): JSX.Element {
           <button
             onClick={handleSave}
             disabled={!!error || !name.trim()}
-            className="px-4 py-1.5 text-xs font-medium rounded bg-brand-green text-black hover:bg-brand-green/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 text-xs font-medium rounded bg-brand-green/20 text-brand-green hover:bg-brand-green/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Save
           </button>
@@ -136,11 +126,16 @@ function EditModal({ meta, onSave, onDismiss }: EditModalProps): JSX.Element {
 interface Props {
   meta: SessionMeta
   isActive: boolean
+  isDragOver?: boolean
   onActivate: () => void
   onContextMenu?: (e: React.MouseEvent) => void
+  onDragStart?: () => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDrop?: () => void
+  onDragEnd?: () => void
 }
 
-export function SessionTab({ meta, isActive, onActivate, onContextMenu }: Props): JSX.Element {
+export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMenu, onDragStart, onDragOver, onDrop, onDragEnd }: Props): JSX.Element {
   const removeTab = useStore((s) => s.removeTab)
   const upsertSession = useStore((s) => s.upsertSession)
   const [editOpen, setEditOpen] = useState(false)
@@ -175,18 +170,24 @@ export function SessionTab({ meta, isActive, onActivate, onContextMenu }: Props)
       <div
         role="tab"
         aria-selected={isActive}
+        draggable
         onClick={onActivate}
         onDoubleClick={handleDoubleClick}
         onContextMenu={(e) => { e.preventDefault(); onContextMenu?.(e) }}
+        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart?.() }}
+        onDragOver={onDragOver}
+        onDrop={(e) => { e.preventDefault(); onDrop?.() }}
+        onDragEnd={onDragEnd}
         className={cn(
           'flex items-center gap-1.5 h-full px-4 text-sm font-medium cursor-pointer border-b-2 transition-colors select-none flex-shrink-0 min-w-0 w-[160px]',
           isActive
             ? 'text-zinc-100 bg-brand-panel/20'
             : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/40',
+          isDragOver && !isActive && 'bg-brand-green/10 border-b-brand-green/50',
           isExited && 'opacity-50'
         )}
         style={{
-          borderBottomColor: isActive ? color : 'transparent',
+          borderBottomColor: isActive ? color : isDragOver ? 'rgba(34,197,94,0.4)' : 'transparent',
           WebkitAppRegion: 'no-drag'
         } as React.CSSProperties}
       >

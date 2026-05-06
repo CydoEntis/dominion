@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { TabBarContextMenu } from '../../../components/TabBarContextMenu'
+import { useStore } from '../../../store/root.store'
 import type { OpenFile } from '../../session/hooks/useFileTabs'
 
 interface CtxTarget {
@@ -21,7 +22,25 @@ function shortName(p: string): string {
   return p.replace(/\\/g, '/').split('/').pop() ?? p
 }
 
+function rootName(r: string): string {
+  return r.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? r
+}
+
+export const PROJECT_COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#06b6d4', '#eab308', '#84cc16']
+
+export function projectColorIndex(root: string, openProjects: string[]): number {
+  const norm = root.replace(/\\/g, '/')
+  const idx = openProjects.findIndex((p) => p.replace(/\\/g, '/') === norm)
+  return idx >= 0 ? idx % PROJECT_COLORS.length : 0
+}
+
+function deriveRoot(filePath: string, openProjects: string[]): string | null {
+  const norm = filePath.replace(/\\/g, '/')
+  return openProjects.find((p) => norm.startsWith(p.replace(/\\/g, '/'))) ?? null
+}
+
 export function FileTabBar({ openFiles, activeFilePath, onActivate, onClose }: Props): JSX.Element {
+  const openProjects = useStore((s) => s.settings.openProjects)
   const [ctx, setCtx] = useState<CtxTarget | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -47,6 +66,9 @@ export function FileTabBar({ openFiles, activeFilePath, onActivate, onClose }: P
 
   const paths = openFiles.map((f) => f.path)
 
+  const roots = openFiles.map((f) => deriveRoot(f.path, openProjects))
+  const multiRoot = new Set(roots.filter(Boolean)).size > 1
+
   if (openFiles.length === 0) {
     return <span className="text-xs text-zinc-600 px-3">No files open</span>
   }
@@ -54,23 +76,35 @@ export function FileTabBar({ openFiles, activeFilePath, onActivate, onClose }: P
   return (
     <>
       <div ref={scrollRef} className="flex items-center h-full overflow-x-scroll flex-1 min-w-0">
-        {openFiles.map((f) => {
+        {openFiles.map((f, i) => {
           const isActive = f.path === activeFilePath
+          const root = roots[i]
+          const colorIdx = root ? projectColorIndex(root, openProjects) : 0
+          const color = PROJECT_COLORS[colorIdx]
           return (
             <div
               key={f.path}
               onClick={() => onActivate(f.path)}
               onContextMenu={(e) => handleContextMenu(e, f.path)}
               title={f.path}
-              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              style={{
+                WebkitAppRegion: 'no-drag',
+                background: `linear-gradient(to right, ${color}${isActive ? '2e' : '12'}, transparent)`,
+              } as React.CSSProperties}
               className={cn(
-                'relative flex items-center gap-2 px-4 h-full border-r border-brand-panel cursor-pointer flex-shrink-0 min-w-[120px] max-w-[200px] group transition-colors',
-                isActive ? 'bg-brand-panel/60 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/30'
+                'relative flex items-center gap-2 px-4 h-full border-r border-brand-panel cursor-pointer flex-shrink-0 min-w-[120px] max-w-[200px] group transition-all',
+                isActive ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
               )}
             >
-              {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-green" />}
+              {/* Active bottom indicator */}
+              {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: color }} />}
               {f.hasChanges && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0" />}
-              <span className="text-sm font-medium truncate flex-1">{shortName(f.path)}</span>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-medium truncate leading-snug">{shortName(f.path)}</span>
+                {multiRoot && root && (
+                  <span className="text-[10px] truncate leading-tight" style={{ color }}>{rootName(root)}</span>
+                )}
+              </div>
               <button
                 onClick={(e) => { e.stopPropagation(); onClose(f.path) }}
                 className={cn(
