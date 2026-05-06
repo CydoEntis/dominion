@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, FolderOpen, FolderClosed, Plus, Terminal, Loader2, ExternalLink, Copy, ChevronDown, ChevronRight, Pencil, Check, Layers, Search } from 'lucide-react'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
@@ -134,7 +134,7 @@ function SessionGroupMenu({ x, y, meta, groups, onAssign, onNewGroup, onDismiss 
           onClick={dismiss(() => onAssign(g.id))}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors text-left"
         >
-          <Check size={11} className={cn('flex-shrink-0', meta.groupId === g.id ? 'text-brand-green' : 'opacity-0')} />
+          <Check size={11} className={cn('flex-shrink-0', meta.groupId === g.id ? 'text-brand-accent' : 'opacity-0')} />
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: g.color ?? '#71717a' }} />
           {g.name}
         </button>
@@ -215,7 +215,7 @@ function CreateGroupModal({ pendingSessionId, onConfirm, onDismiss }: CreateGrou
           <button
             onClick={confirm}
             disabled={!name.trim()}
-            className="px-3 py-1.5 text-xs bg-brand-green/20 text-brand-green hover:bg-brand-green/30 transition-colors rounded disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 text-xs bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 transition-colors rounded disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Create
           </button>
@@ -258,7 +258,7 @@ function ProjectSection({ path, name, colorIndex, refreshTick, activeFilePath, o
             : <FolderClosed size={15} className="flex-shrink-0" style={{ color }} />}
           <span className="text-sm font-semibold text-zinc-200 truncate">{name}</span>
         </div>
-        <button onClick={(e) => { e.stopPropagation(); onNewSession() }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-brand-light transition-colors" title="New session in this project"><Terminal size={12} /></button>
+        <button onClick={(e) => { e.stopPropagation(); onNewSession() }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-brand-muted transition-colors" title="New session in this project"><Terminal size={12} /></button>
         <button onClick={(e) => { e.stopPropagation(); onRemove() }} className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-400 transition-colors" title="Remove"><X size={12} /></button>
       </div>
       {expanded && <FileTree projectRoot={path} activeFilePath={activeFilePath} onFileClick={onFileClick} refreshTick={refreshTick} />}
@@ -415,7 +415,7 @@ function SessionRow({ meta, isFocused, tabId, onActivate, onClose, onContextMenu
               <button
                 onClick={handleSave}
                 disabled={!!nameError || !editName.trim()}
-                className="px-4 py-1.5 text-xs font-medium rounded bg-brand-green/20 text-brand-green hover:bg-brand-green/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-4 py-1.5 text-xs font-medium rounded bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Save
               </button>
@@ -682,7 +682,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
               <NewSessionForm variant="sidebar" />
               <button
                 onClick={() => setCreateGroupModal({})}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs text-zinc-500 hover:bg-brand-panel hover:text-brand-light transition-colors rounded"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs text-zinc-500 hover:bg-brand-panel hover:text-brand-muted transition-colors rounded"
                 title="New group"
               >
                 <Layers size={15} /> New Group
@@ -730,7 +730,7 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
           <div className="flex-shrink-0 border-t border-brand-panel/60 p-2">
             <button
               onClick={addProject}
-              className="w-full flex items-center justify-center gap-2 py-2 text-xs text-zinc-500 hover:bg-brand-panel hover:text-brand-light transition-colors rounded"
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs text-zinc-500 hover:bg-brand-panel hover:text-brand-muted transition-colors rounded"
             >
               <FolderOpen size={13} /> Open Project
             </button>

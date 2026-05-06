@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Plus, Trash2, Zap, FolderOpen, Pencil } from 'lucide-react'
 import { useStore } from '../../../store/root.store'
 import { createSession } from '../../session/session.service'
@@ -138,7 +138,7 @@ export function PresetsPanel(): JSX.Element {
       </div>
       <div className="flex gap-2">
         <button onClick={onCancel} className="flex-1 py-1.5 text-xs rounded bg-brand-surface hover:bg-brand-panel text-zinc-400 transition-colors">Cancel</button>
-        <button onClick={onSave} disabled={!f.name.trim()} className="flex-1 py-1.5 text-xs rounded bg-brand-green/20 text-brand-green hover:bg-brand-green/30 disabled:opacity-40 transition-colors">Save</button>
+        <button onClick={onSave} disabled={!f.name.trim()} className="flex-1 py-1.5 text-xs rounded bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 disabled:opacity-40 transition-colors">Save</button>
       </div>
     </div>
   )
@@ -170,7 +170,7 @@ export function PresetsPanel(): JSX.Element {
               className="w-full text-left px-3 py-2.5 border-b border-brand-panel/30 hover:bg-brand-panel/30 transition-colors group relative"
             >
               <div className="flex items-center gap-2 pr-14">
-                <Zap size={11} className="text-brand-light flex-shrink-0" />
+                <Zap size={11} className="text-brand-muted flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-zinc-200 font-medium truncate">{p.name}</p>
                   <p className="text-[10px] text-zinc-500 truncate">

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Plus, X } from 'lucide-react'
 import { marked } from 'marked'
 import { useStore } from '../store/root.store'
@@ -105,7 +105,7 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
               className={cn(
                 'flex items-center gap-2 px-4 h-full text-xs cursor-pointer flex-shrink-0 border-r border-brand-panel/40 group',
                 note.id === effectiveId
-                  ? 'text-zinc-200 bg-brand-bg border-t-2 border-t-brand-green'
+                  ? 'text-zinc-200 bg-brand-bg border-t-2 border-t-brand-accent'
                   : 'text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/30'
               )}
             >
@@ -132,13 +132,13 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
           <div className="flex items-center gap-1 px-3 flex-shrink-0 border-l border-brand-panel/40 h-full">
             <button
               onClick={() => setViewMode('raw')}
-              className={cn(btnBase, viewMode === 'raw' ? 'bg-brand-panel text-brand-light' : 'text-zinc-600 hover:text-zinc-300')}
+              className={cn(btnBase, viewMode === 'raw' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}
             >
               Raw
             </button>
             <button
               onClick={() => setViewMode('preview')}
-              className={cn(btnBase, viewMode === 'preview' ? 'bg-brand-panel text-brand-light' : 'text-zinc-600 hover:text-zinc-300')}
+              className={cn(btnBase, viewMode === 'preview' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}
             >
               Preview
             </button>

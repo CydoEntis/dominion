@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -116,7 +116,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {variant === 'sidebar' ? (
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 text-xs text-zinc-500 hover:bg-brand-panel hover:text-brand-light transition-colors rounded">
+          <button className="flex-1 flex items-center justify-center gap-2 py-2 text-xs text-zinc-500 hover:bg-brand-panel hover:text-brand-muted transition-colors rounded">
             <Plus size={15} /> New Session
           </button>
         ) : (
@@ -158,8 +158,8 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
                   className={cn(
                     'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
                     selectedPreset === preset.id
-                      ? 'bg-brand-green text-brand-bg border-brand-green'
-                      : 'bg-transparent text-zinc-400 border-brand-panel hover:border-brand-light hover:text-zinc-200'
+                      ? 'bg-brand-accent text-brand-bg border-brand-accent'
+                      : 'bg-transparent text-zinc-400 border-brand-panel hover:border-brand-muted hover:text-zinc-200'
                   )}
                 >
                   {preset.label}
@@ -214,7 +214,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-brand-green/20 text-brand-green hover:bg-brand-green/30 disabled:opacity-40">
+            <Button type="submit" disabled={loading} className="bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 disabled:opacity-40">
               {loading ? 'Launching...' : 'Launch'}
             </Button>
           </div>

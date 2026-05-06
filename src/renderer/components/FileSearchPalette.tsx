@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Search, FolderOpen, FileText } from 'lucide-react'
 import { findFiles } from '../features/fs/fs.service'
@@ -143,7 +143,7 @@ export function FileSearchPalette({ open, onClose, onOpenFile }: Props): JSX.Ele
               className={cn(
                 'flex items-center gap-1 px-2 py-0.5 rounded text-xs flex-shrink-0 transition-colors',
                 openProjects.length > 1
-                  ? 'bg-brand-green/20 text-brand-green hover:bg-brand-green/30 cursor-pointer'
+                  ? 'bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 cursor-pointer'
                   : 'bg-brand-panel/60 text-zinc-400 cursor-default'
               )}
             >
@@ -178,7 +178,7 @@ export function FileSearchPalette({ open, onClose, onOpenFile }: Props): JSX.Ele
               onClick={() => selectProject(p)}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors',
-                idx === clampedIdx ? 'bg-brand-green/20 text-zinc-100' : 'text-zinc-300 hover:bg-brand-panel/60'
+                idx === clampedIdx ? 'bg-brand-accent/20 text-zinc-100' : 'text-zinc-300 hover:bg-brand-panel/60'
               )}
             >
               <FolderOpen size={12} className="text-zinc-500 flex-shrink-0" />
@@ -202,7 +202,7 @@ export function FileSearchPalette({ open, onClose, onOpenFile }: Props): JSX.Ele
               onClick={() => confirm(path)}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-2 text-sm text-left transition-colors',
-                idx === clampedIdx ? 'bg-brand-green/20 text-zinc-100' : 'text-zinc-300 hover:bg-brand-panel/60'
+                idx === clampedIdx ? 'bg-brand-accent/20 text-zinc-100' : 'text-zinc-300 hover:bg-brand-panel/60'
               )}
             >
               <FileText size={12} className="text-zinc-500 flex-shrink-0" />

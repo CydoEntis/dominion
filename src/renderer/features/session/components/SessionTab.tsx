@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createPortal } from 'react-dom'
@@ -112,7 +112,7 @@ function EditModal({ meta, onSave, onDismiss }: EditModalProps): JSX.Element {
           <button
             onClick={handleSave}
             disabled={!!error || !name.trim()}
-            className="px-4 py-1.5 text-xs font-medium rounded bg-brand-green/20 text-brand-green hover:bg-brand-green/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 text-xs font-medium rounded bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Save
           </button>
@@ -183,7 +183,7 @@ export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMe
           isActive
             ? 'text-zinc-100 bg-brand-panel/20'
             : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/40',
-          isDragOver && !isActive && 'bg-brand-green/10 border-b-brand-green/50',
+          isDragOver && !isActive && 'bg-brand-accent/10 border-b-brand-accent/50',
           isExited && 'opacity-50'
         )}
         style={{

@@ -29,7 +29,7 @@ function norm(p: string): string {
 }
 
 function expandedKey(root: string): string {
-  return `dominion:tree-expanded:${root}`
+  return `orbit:tree-expanded:${root}`
 }
 
 function loadExpanded(root: string): Set<string> {

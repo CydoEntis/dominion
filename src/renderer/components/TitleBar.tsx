@@ -1,4 +1,4 @@
-import { Minus, Square, X } from 'lucide-react'
+﻿import { Minus, Square, X } from 'lucide-react'
 import { sendWindowControl } from '../features/window/window.service'
 import { useWindowMaximized } from '../features/window/hooks/useWindowMaximized'
 import { APP_NAME } from '@shared/constants'
@@ -20,7 +20,7 @@ export function TitleBar({ title, subtitle }: Props): JSX.Element {
       {/* Logo + name */}
       <div className="flex items-center gap-2 px-3 flex-shrink-0 w-44">
         <img src={logoUrl} alt="logo" className="w-6 h-6 object-contain flex-shrink-0" />
-        <span className="text-xs font-semibold text-brand-light tracking-wide whitespace-nowrap">
+        <span className="text-xs font-semibold text-brand-muted tracking-wide whitespace-nowrap">
           {APP_NAME}
         </span>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+﻿import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import { TitleBar } from './components/TitleBar'
@@ -75,8 +75,8 @@ function PaneTreeRenderer({
 
   const handleClass =
     node.direction === 'vertical'
-      ? 'h-1 bg-brand-panel hover:bg-brand-green transition-colors cursor-row-resize flex-shrink-0'
-      : 'w-1 bg-brand-panel hover:bg-brand-green transition-colors cursor-col-resize flex-shrink-0'
+      ? 'h-1 bg-brand-panel hover:bg-brand-accent transition-colors cursor-row-resize flex-shrink-0'
+      : 'w-1 bg-brand-panel hover:bg-brand-accent transition-colors cursor-col-resize flex-shrink-0'
 
   return (
     <PanelGroup orientation={node.direction} className="w-full h-full">
@@ -287,7 +287,7 @@ export function App(): JSX.Element {
               )}
             </div>
             <div
-              className="w-1 flex-shrink-0 bg-brand-panel hover:bg-brand-green transition-colors cursor-col-resize"
+              className="w-1 flex-shrink-0 bg-brand-panel hover:bg-brand-accent transition-colors cursor-col-resize"
               onMouseDown={handleSidebarDragStart}
             />
           </>
@@ -352,11 +352,11 @@ export function App(): JSX.Element {
             return (
               <>
                 {isMd && (
-                  <button onClick={() => setFileViewTab('preview')} className={cn(btnBase, fileViewTab === 'preview' ? 'bg-brand-panel text-brand-light' : 'text-zinc-600 hover:text-zinc-300')}>Preview</button>
+                  <button onClick={() => setFileViewTab('preview')} className={cn(btnBase, fileViewTab === 'preview' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}>Preview</button>
                 )}
-                <button onClick={() => setFileViewTab('content')} className={cn(btnBase, fileViewTab === 'content' ? 'bg-brand-panel text-brand-light' : 'text-zinc-600 hover:text-zinc-300')}>Raw</button>
+                <button onClick={() => setFileViewTab('content')} className={cn(btnBase, fileViewTab === 'content' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}>Raw</button>
                 {activeFile?.hasChanges && (
-                  <button onClick={() => setFileViewTab('diff')} className={cn(btnBase, fileViewTab === 'diff' ? 'bg-brand-panel text-brand-light' : 'text-zinc-600 hover:text-zinc-300')}>Diff</button>
+                  <button onClick={() => setFileViewTab('diff')} className={cn(btnBase, fileViewTab === 'diff' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}>Diff</button>
                 )}
                 <div className="w-px h-3 bg-brand-panel mx-1 flex-shrink-0" />
                 <div className="relative flex items-center">
@@ -367,7 +367,7 @@ export function App(): JSX.Element {
                       <div className="absolute bottom-full right-0 mb-1 z-50 bg-brand-surface border border-brand-panel rounded shadow-xl py-1 min-w-[160px]">
                       {VIEWER_THEMES.map((t) => (
                         <button key={t.id} onClick={() => { updateSettings({ fileViewerTheme: t.id }); setShowThemePicker(false) }}
-                          className={cn('w-full text-left px-3 py-1.5 text-xs transition-colors', t.id === fileViewerTheme ? 'text-brand-light bg-brand-panel' : 'text-zinc-300 hover:bg-brand-panel')}>
+                          className={cn('w-full text-left px-3 py-1.5 text-xs transition-colors', t.id === fileViewerTheme ? 'text-brand-muted bg-brand-panel' : 'text-zinc-300 hover:bg-brand-panel')}>
                           {t.label}
                         </button>
                       ))}

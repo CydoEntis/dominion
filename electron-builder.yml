@@ -1,5 +1,5 @@
-appId: com.cydoentis.shepherd
-productName: Shepherd
+appId: com.cydoentis.orbit
+productName: Orbit
 copyright: "Copyright © 2025 CydoEntis"
 
 directories:
@@ -35,7 +35,7 @@ linux:
   icon: build/icon.png
   category: Development
   maintainer: CydoEntis <cydoentis@gmail.com>
-  executableName: shepherd
+  executableName: orbit
   target:
     - target: AppImage
       arch: [x64]
@@ -52,4 +52,4 @@ nsis:
 publish:
   provider: github
   owner: CydoEntis
-  repo: shepherd
+  repo: orbit

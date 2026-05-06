@@ -1,5 +1,5 @@
 {
-  "name": "shepherd",
+  "name": "orbit",
   "version": "0.1.6",
   "description": "Multi-session terminal manager for AI coding agents",
   "main": "out/main/index.js",

@@ -1,5 +1,5 @@
 import { app } from 'electron'
-app.setName('Shepherd')
+app.setName('Orbit')
 import { createWindow } from './window-manager'
 import { registerSessionIpc } from './features/session/session-ipc'
 import { registerWindowIpc } from './features/window/window-ipc'

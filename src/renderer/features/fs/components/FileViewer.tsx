@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
+﻿import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { useStore } from '../../../store/root.store'
 import { useFilePane, EXT_LANG } from '../hooks/useFilePane'
@@ -157,7 +157,7 @@ function FilePane({ file, theme, tab, onTabChange }: PaneProps): JSX.Element {
                         className={cn('px-4 whitespace-pre',
                           type === 'add' && 'bg-green-950/50 text-green-300',
                           type === 'remove' && 'bg-red-950/50 text-red-300',
-                          type === 'hunk' && 'text-brand-light bg-brand-panel/20',
+                          type === 'hunk' && 'text-brand-muted bg-brand-panel/20',
                           type === 'meta' && 'text-zinc-500',
                           type === 'context' && 'text-zinc-400',
                         )}

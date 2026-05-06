@@ -1,4 +1,4 @@
-import { createPortal } from 'react-dom'
+﻿import { createPortal } from 'react-dom'
 import { Search, Terminal, Zap, Plus, FolderOpen, PanelLeft, X, Maximize2, NotebookPen } from 'lucide-react'
 import { useCommandPalette } from '../features/session/hooks/useCommandPalette'
 import { cn } from '../lib/utils'
@@ -56,7 +56,7 @@ export function CommandPalette({ open, onClose, onShowShortcuts }: Props): JSX.E
               onClick={() => item.action()}
               className={cn(
                 'w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors',
-                idx === selectedIdx ? 'bg-brand-green/20 text-zinc-100' : 'text-zinc-300 hover:bg-brand-panel/60'
+                idx === selectedIdx ? 'bg-brand-accent/20 text-zinc-100' : 'text-zinc-300 hover:bg-brand-panel/60'
               )}
             >
               <span className="text-zinc-400 flex-shrink-0 w-3.5 flex items-center justify-center">

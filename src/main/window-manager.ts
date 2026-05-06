@@ -3,7 +3,7 @@ import { join } from 'path'
 
 // Set Windows taskbar app ID so the icon shows correctly
 if (process.platform === 'win32') {
-  app.setAppUserModelId('Shepherd')
+  app.setAppUserModelId('Orbit')
 }
 import { IPC } from '@shared/ipc-channels'
 import type { WindowInitialSessionsPayload } from '@shared/ipc-types'

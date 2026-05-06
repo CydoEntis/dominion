@@ -1,4 +1,4 @@
-import { useStore } from '../store/root.store'
+﻿import { useStore } from '../store/root.store'
 
 const ASCII_LOGO = ` __ _                _                  _
 / _\\ |__   ___ _ __ | |__   ___ _ __ __| |
@@ -39,7 +39,7 @@ export function EmptyState(): JSX.Element {
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 select-none">
-      <pre className="font-mono text-brand-green text-[11px] leading-[1.3]">{ASCII_LOGO}</pre>
+      <pre className="font-mono text-brand-accent text-[11px] leading-[1.3]">{ASCII_LOGO}</pre>
 
       <div className="w-56 h-px bg-brand-panel" />
 

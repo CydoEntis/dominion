@@ -15,8 +15,8 @@ export interface UseFileTabsReturn {
   handleCloseFile: (path: string) => void
 }
 
-const FILES_KEY = 'dominion:open-files'
-const ACTIVE_KEY = 'dominion:active-file'
+const FILES_KEY = 'orbit:open-files'
+const ACTIVE_KEY = 'orbit:active-file'
 
 function loadFiles(): OpenFile[] {
   try {

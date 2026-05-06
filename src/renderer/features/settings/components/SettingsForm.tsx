@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+﻿import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { FolderOpen } from 'lucide-react'
@@ -62,7 +62,7 @@ function HotkeyInput({ value, onChange }: HotkeyInputProps): JSX.Element {
       className={cn(
         'flex items-center h-9 px-3 rounded-md border text-xs font-mono cursor-pointer select-none transition-colors outline-none flex-1',
         capturing
-          ? 'border-brand-green/60 bg-brand-green/5 text-brand-green'
+          ? 'border-brand-accent/60 bg-brand-accent/5 text-brand-accent'
           : 'border-input bg-background text-zinc-300 hover:border-zinc-600'
       )}
     >
@@ -292,7 +292,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
       {/* Sticky footer */}
       <div className="flex justify-end gap-2 pl-10 pr-16 py-4 border-t border-zinc-800 flex-shrink-0 bg-brand-bg">
         <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button type="submit" className="bg-brand-green/20 text-brand-green hover:bg-brand-green/30">Save</Button>
+        <Button type="submit" className="bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30">Save</Button>
       </div>
 
     </form>

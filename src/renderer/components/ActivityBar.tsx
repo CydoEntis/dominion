@@ -1,4 +1,4 @@
-import { Terminal, FolderOpen, NotebookPen, Settings, Zap } from 'lucide-react'
+﻿import { Terminal, FolderOpen, NotebookPen, Settings, Zap } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 type Activity = 'sessions' | 'projects' | 'notes' | 'presets' | 'settings'
@@ -31,7 +31,7 @@ function ActivityButton({ id, icon: Icon, title, isActive, onClick }: {
       className={cn(
         'flex items-center justify-center w-12 h-12 transition-colors border-l-2 flex-shrink-0',
         isActive
-          ? 'border-l-brand-green text-brand-light bg-brand-panel/40'
+          ? 'border-l-brand-accent text-brand-muted bg-brand-panel/40'
           : 'border-l-transparent text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/20'
       )}
     >

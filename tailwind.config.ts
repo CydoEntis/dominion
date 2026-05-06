@@ -15,12 +15,11 @@ const config: Config = {
       },
       colors: {
         brand: {
-          bg:      '#0B0D10',
-          surface: '#111318',
+          bg:      '#0f1117',
+          surface: '#131720',
           panel:   '#1c2028',
-          green:   '#3FAE6B',
-          light:   '#5EC480',
-          pale:    '#93D9AC',
+          accent:  '#e4e4e7',
+          muted:   '#a1a1aa',
         },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

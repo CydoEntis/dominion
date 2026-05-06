@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+﻿import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Zap, Trash2, Plus, FolderOpen } from 'lucide-react'
 import { useStore } from '../../../store/root.store'
@@ -74,7 +74,7 @@ function AddPresetForm({ onSave, onCancel }: { onSave: (data: AddFormState) => v
         <button
           onClick={() => form.name.trim() && onSave(form)}
           disabled={!form.name.trim()}
-          className="flex-1 py-2 text-sm rounded bg-brand-green/20 text-brand-green hover:bg-brand-green/30 disabled:opacity-40 transition-colors"
+          className="flex-1 py-2 text-sm rounded bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 disabled:opacity-40 transition-colors"
         >
           Save
         </button>
@@ -164,12 +164,12 @@ export function PresetsMenu({ iconOnly }: PresetsMenuProps = {}): JSX.Element {
           iconOnly
             ? cn('w-12 h-12 flex-shrink-0',
                 open
-                  ? 'border-l-brand-green text-brand-light bg-brand-panel/40'
+                  ? 'border-l-brand-accent text-brand-muted bg-brand-panel/40'
                   : 'border-l-transparent text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/20'
               )
             : cn('gap-1.5 px-2.5 h-7 rounded text-xs font-medium border-l-transparent',
                 open
-                  ? 'bg-brand-green/10 text-brand-light'
+                  ? 'bg-brand-accent/10 text-brand-muted'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
               )
         )}
@@ -197,7 +197,7 @@ export function PresetsMenu({ iconOnly }: PresetsMenuProps = {}): JSX.Element {
                   onClick={() => launchPreset(p)}
                   className="flex items-center gap-2 px-3 py-2 hover:bg-brand-panel group transition-colors cursor-pointer"
                 >
-                  <Zap size={11} className="text-brand-light flex-shrink-0" />
+                  <Zap size={11} className="text-brand-muted flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-zinc-200 font-medium truncate">{p.name}</p>
                     <p className="text-[10px] text-zinc-500 truncate">
