@@ -62,7 +62,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       fontSize: settings.fontSize,
       fontFamily: settings.fontFamily,
       theme: {
-        background: '#09090b',
+        background: '#0f1117',
         foreground: '#fafafa',
         cursor: '#fafafa',
         black: '#18181b',

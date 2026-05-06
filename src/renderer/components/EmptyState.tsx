@@ -1,11 +1,5 @@
 ﻿import { useStore } from '../store/root.store'
-
-const ASCII_LOGO = ` __ _                _                  _
-/ _\\ |__   ___ _ __ | |__   ___ _ __ __| |
-\\ \\| '_ \\ / _ \\ '_ \\| '_ \\ / _ \\ '__/ _\` |
-_\\ \\ | | |  __/ |_) | | | |  __/ | | (_| |
-\\__/_| |_|\\___| .__/|_| |_|\\___|_|  \\__,_|
-              |_|                         `
+import logoUrl from '../assets/logo.png'
 
 function Key({ label }: { label: string }): JSX.Element {
   return (
@@ -39,7 +33,11 @@ export function EmptyState(): JSX.Element {
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 select-none">
-      <pre className="font-mono text-brand-accent text-[11px] leading-[1.3]">{ASCII_LOGO}</pre>
+      <div className="flex flex-col items-center gap-1.5">
+        <img src={logoUrl} alt="Orbit" className="w-10 h-10 object-contain" />
+        <span className="text-base font-semibold text-zinc-200 tracking-widest uppercase">Orbit</span>
+        <span className="text-[11px] text-zinc-600 tracking-wide">Mission control for AI agents</span>
+      </div>
 
       <div className="w-56 h-px bg-brand-panel" />
 
@@ -56,7 +54,7 @@ export function EmptyState(): JSX.Element {
         <KeybindEntry hotkey="Ctrl+Shift+D" label="Detach pane to window" />
       </div>
 
-      <p className="text-[10px] text-zinc-700 tracking-wider">v0.1.4</p>
+      <p className="text-[10px] text-zinc-700 tracking-wider">v0.2.0</p>
     </div>
   )
 }
