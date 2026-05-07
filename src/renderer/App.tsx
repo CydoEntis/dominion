@@ -17,8 +17,6 @@ import { CommandPalette } from './components/CommandPalette'
 import { FileSearchPalette } from './components/FileSearchPalette'
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal'
 import { FileViewer, VIEWER_THEMES } from './features/fs/components/FileViewer'
-import { WorkspaceSidebar } from './features/workspace/components/WorkspaceSidebar'
-import { WorkspaceLayout } from './features/workspace/components/WorkspaceLayout'
 import type { FilePaneTab } from './features/fs/hooks/useFilePane'
 import { createSession, killSession } from './features/session/session.service'
 import { detachTab, reattachTab } from './features/window/window.service'
@@ -102,7 +100,6 @@ export function App(): JSX.Element {
   useAutoUpdater()
 
   const activeSessionId = useStore((s) => s.activeSessionId)
-  const focusedSessionId = useStore((s) => s.focusedSessionId)
   const tabOrder = useStore((s) => s.tabOrder)
   const paneTree = useStore((s) => s.paneTree)
   const isDashboardOpen = useStore((s) => s.isDashboardOpen)
@@ -112,8 +109,6 @@ export function App(): JSX.Element {
   const [fileSearchOpen, setFileSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [sidebarTab, setSidebarTab] = useState<'sessions' | 'projects' | 'notes' | 'presets' | 'settings' | 'workspace'>('sessions')
-  const [workspaceProject, setWorkspaceProject] = useState<string | null>(null)
-  const [workspaceSessionPanelOpen, setWorkspaceSessionPanelOpen] = useState(false)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [noteDrawerOpen, setNoteDrawerOpen] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
@@ -248,20 +243,6 @@ export function App(): JSX.Element {
     }
   }, [createNote])
 
-  // Ctrl+J → toggle workspace session panel
-  useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && e.key === 'j') {
-        if (sidebarTabRef.current === 'workspace') {
-          e.preventDefault()
-          setWorkspaceSessionPanelOpen((v) => !v)
-        }
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
-
   // File viewer keybinds: Alt+R → raw, Alt+P → preview (md only), Alt+D → diff (changed files)
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -329,15 +310,6 @@ export function App(): JSX.Element {
                 <NotepadPane activeNoteId={activeNoteId} onActivate={setActiveNoteId} onCreate={() => { const id = createNote(); setActiveNoteId(id) }} />
               ) : sidebarTab === 'presets' ? (
                 <PresetsPanel />
-              ) : sidebarTab === 'workspace' ? (
-                <WorkspaceSidebar
-                  activeProject={workspaceProject}
-                  onProjectChange={setWorkspaceProject}
-                  onFileClick={handleFileClick}
-                  activeFilePath={activeFilePath}
-                  focusedSessionId={focusedSessionId}
-                  onFocusSession={(id) => { useStore.getState().setFocusedSession(id); setWorkspaceSessionPanelOpen(true) }}
-                />
               ) : (
                 <SessionDashboard
                   onFileClick={handleFileClick}
@@ -355,23 +327,21 @@ export function App(): JSX.Element {
           </>
         )}
 
-        {/* Sessions content — pane area. Not rendered in workspace mode so WorkspaceLayout can own TerminalPane without conflict. */}
-        {sidebarTab !== 'workspace' && (
-          <div className={cn('flex-1 min-w-0 min-h-0', (isDashboardOpen && (sidebarTab === 'projects' || sidebarTab === 'notes' || sidebarTab === 'settings')) ? 'hidden' : 'flex flex-col')}>
-            <div className="flex-1 min-h-0 relative">
-              {tabOrder.length === 0 && <EmptyState />}
-              {tabOrder.map((tabId) => {
-                const tree = paneTree[tabId]
-                const isActive = activeSessionId === tabId
-                return (
-                  <div key={tabId} className={`absolute inset-0 ${isActive ? 'flex' : 'hidden'}`}>
-                    {tree && <PaneTreeRenderer node={tree} tabId={tabId} onContextMenu={handleContextMenu} />}
-                  </div>
-                )
-              })}
-            </div>
+        {/* Sessions content — pane area */}
+        <div className={cn('flex-1 min-w-0 min-h-0', (isDashboardOpen && (sidebarTab === 'projects' || sidebarTab === 'notes' || sidebarTab === 'settings' || sidebarTab === 'workspace')) ? 'hidden' : 'flex flex-col')}>
+          <div className="flex-1 min-h-0 relative">
+            {tabOrder.length === 0 && <EmptyState />}
+            {tabOrder.map((tabId) => {
+              const tree = paneTree[tabId]
+              const isActive = activeSessionId === tabId
+              return (
+                <div key={tabId} className={`absolute inset-0 ${isActive ? 'flex' : 'hidden'}`}>
+                  {tree && <PaneTreeRenderer node={tree} tabId={tabId} onContextMenu={handleContextMenu} />}
+                </div>
+              )
+            })}
           </div>
-        )}
+        </div>
 
         {/* Notes content — full editor */}
         {isDashboardOpen && sidebarTab === 'notes' && (
@@ -387,18 +357,11 @@ export function App(): JSX.Element {
           </div>
         )}
 
-        {/* Workspace preview — VS Code-style layout */}
+        {/* Agent monitor — placeholder until built */}
         {isDashboardOpen && sidebarTab === 'workspace' && (
-          <WorkspaceLayout
-            openFiles={openFiles}
-            activeFilePath={activeFilePath}
-            onActivateFile={setActiveFilePath}
-            onCloseFile={handleCloseFile}
-            sessionPanelOpen={workspaceSessionPanelOpen}
-            onToggleSessionPanel={() => setWorkspaceSessionPanelOpen((v) => !v)}
-            focusedSessionId={focusedSessionId}
-            activeProject={workspaceProject}
-          />
+          <div className="flex-1 min-w-0 min-h-0 flex items-center justify-center text-zinc-700 text-sm">
+            Agent monitor coming soon
+          </div>
         )}
 
         {/* Projects content — tab bar + file viewer */}

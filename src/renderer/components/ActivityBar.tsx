@@ -13,10 +13,10 @@ interface Props {
 }
 
 const TOP_ITEMS = [
-  { id: 'sessions'  as const, icon: Terminal,         title: 'Sessions' },
-  { id: 'projects'  as const, icon: FolderOpen,       title: 'Projects' },
-  { id: 'notes'     as const, icon: NotebookPen,      title: 'Notes' },
-  { id: 'workspace' as const, icon: LayoutDashboard,  title: 'Workspace (Preview)' },
+  { id: 'sessions'  as const, icon: Terminal,        title: 'Sessions' },
+  { id: 'projects'  as const, icon: FolderOpen,      title: 'Projects' },
+  { id: 'notes'     as const, icon: NotebookPen,     title: 'Notes' },
+  { id: 'workspace' as const, icon: LayoutDashboard, title: 'Agent Monitor (Preview)' },
 ]
 
 const BOTTOM_ITEMS = [
