@@ -41,6 +41,7 @@
 - Taskbar icon stale after update/reinstall
 - Toast notifications use old theme styling
 - Double paste in terminal
+- Clicking outside any modal should close it and discard/reset unsaved changes
 - Copy/paste loses terminal focus
 - Clickable URLs / file paths regression
 - Session rename regression
