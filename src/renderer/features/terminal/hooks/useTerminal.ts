@@ -50,7 +50,7 @@ const DARK_TERMINAL_THEME = {
 }
 
 const LIGHT_TERMINAL_THEME = {
-  background: '#fafafa', foreground: '#1c1c1c', cursor: '#333333',
+  background: '#f5f2e8', foreground: '#1c1c1c', cursor: '#4a4a4a',
   black: '#000000', brightBlack: '#767676',
   red: '#cd3131', brightRed: '#f14c4c',
   green: '#117700', brightGreen: '#23d18b',

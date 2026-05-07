@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 43 35% 96%;
     --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
+    --card: 43 30% 95%;
     --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
+    --popover: 43 30% 95%;
     --popover-foreground: 240 10% 3.9%;
     --primary: 240 5.9% 10%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
+    --secondary: 38 20% 92%;
     --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
+    --muted: 38 20% 92%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
+    --accent: 38 20% 92%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
+    --border: 35 15% 86%;
+    --input: 35 15% 86%;
     --ring: 240 5.9% 10%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
@@ -30,8 +30,8 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     /* Brand colors — light mode */
-    --brand-bg: 249 250 251;
-    --brand-surface: 255 255 255;
+    --brand-bg: 246 242 233;
+    --brand-surface: 250 246 238;
     --brand-panel: 156 163 175;
     --brand-accent: 24 24 27;
     --brand-muted: 71 85 105;
@@ -92,10 +92,10 @@
   }
 }
 
-/* Global dark scrollbars */
+/* Scrollbars — light mode defaults */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #2a2e38 transparent;
+  scrollbar-color: #c8c3b8 transparent;
 }
 
 *::-webkit-scrollbar {
@@ -108,11 +108,24 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #c8c3b8;
   border-radius: 3px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
+  background: #b5b0a4;
+}
+
+/* Scrollbars — dark mode */
+.dark * {
+  scrollbar-color: #2a2e38 transparent;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
   background: #52525b;
 }
 

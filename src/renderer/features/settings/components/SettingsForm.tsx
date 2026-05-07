@@ -208,7 +208,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
               <button
                 type="button"
                 onClick={pickShellStartDir}
-                className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0"
+                className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-foreground transition-colors flex-shrink-0"
                 title="Browse"
               >
                 <FolderOpen size={14} />
@@ -217,7 +217,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
           </div>
         </section>
 
-        <div className="h-px bg-zinc-800" />
+        <div className="h-px bg-border" />
 
         <section className="flex flex-col gap-3">
           <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Hotkeys</p>
@@ -234,7 +234,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
           </div>
         </section>
 
-        <div className="h-px bg-zinc-800" />
+        <div className="h-px bg-border" />
 
         <section className="flex flex-col gap-3">
           <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Notes</p>
@@ -250,7 +250,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
               <button
                 type="button"
                 onClick={pickNotesDir}
-                className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0"
+                className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-foreground transition-colors flex-shrink-0"
                 title="Browse"
               >
                 <FolderOpen size={14} />
@@ -259,12 +259,12 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
           </div>
         </section>
 
-        <div className="h-px bg-zinc-800" />
+        <div className="h-px bg-border" />
 
         <section className="flex flex-col gap-3">
           <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Sessions</p>
           <div className="flex items-center justify-between">
-            <Label htmlFor="confirm-close" className="text-sm text-zinc-300 font-normal cursor-pointer">
+            <Label htmlFor="confirm-close" className="text-sm text-foreground font-normal cursor-pointer">
               Confirm before closing a session
             </Label>
             <Checkbox
@@ -275,7 +275,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex flex-col gap-0.5">
-              <Label htmlFor="resume-on-startup" className="text-sm text-zinc-300 font-normal cursor-pointer">
+              <Label htmlFor="resume-on-startup" className="text-sm text-foreground font-normal cursor-pointer">
                 Resume on startup
               </Label>
               <span className="text-xs text-zinc-500">Re-launch agent sessions and send /resume on next app start</span>
@@ -291,7 +291,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
       </div>
 
       {/* Sticky footer */}
-      <div className="flex justify-end gap-2 pl-10 pr-16 py-4 border-t border-zinc-800 flex-shrink-0 bg-brand-bg">
+      <div className="flex justify-end gap-2 pl-10 pr-16 py-4 border-t border-border flex-shrink-0 bg-brand-bg">
         <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
         <Button type="submit" className="bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30">Save</Button>
       </div>

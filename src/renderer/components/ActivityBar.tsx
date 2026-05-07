@@ -1,10 +1,10 @@
 ﻿import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Terminal, FolderOpen, NotebookPen, Settings, Zap, Sun, Moon, Monitor } from 'lucide-react'
+import { Terminal, FolderOpen, NotebookPen, Settings, Zap, Sun, Moon, Monitor, LayoutDashboard } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useStore } from '../store/root.store'
 
-type Activity = 'sessions' | 'projects' | 'notes' | 'presets' | 'settings'
+type Activity = 'sessions' | 'projects' | 'notes' | 'presets' | 'settings' | 'workspace'
 
 interface Props {
   activity: Activity
@@ -13,9 +13,10 @@ interface Props {
 }
 
 const TOP_ITEMS = [
-  { id: 'sessions' as const, icon: Terminal,    title: 'Sessions' },
-  { id: 'projects' as const, icon: FolderOpen,  title: 'Projects' },
-  { id: 'notes'    as const, icon: NotebookPen, title: 'Notes' },
+  { id: 'sessions'  as const, icon: Terminal,         title: 'Sessions' },
+  { id: 'projects'  as const, icon: FolderOpen,       title: 'Projects' },
+  { id: 'notes'     as const, icon: NotebookPen,      title: 'Notes' },
+  { id: 'workspace' as const, icon: LayoutDashboard,  title: 'Workspace (Preview)' },
 ]
 
 const BOTTOM_ITEMS = [

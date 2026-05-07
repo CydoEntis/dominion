@@ -23,15 +23,20 @@ interface Props {
   onTabChange: (t: FilePaneTab) => void
 }
 
-export const VIEWER_THEMES: { id: BundledTheme; label: string }[] = [
-  { id: 'vitesse-dark', label: 'Vitesse Dark' },
-  { id: 'github-dark', label: 'GitHub Dark' },
-  { id: 'one-dark-pro', label: 'One Dark Pro' },
-  { id: 'dracula', label: 'Dracula' },
-  { id: 'nord', label: 'Nord' },
-  { id: 'tokyo-night', label: 'Tokyo Night' },
-  { id: 'catppuccin-mocha', label: 'Catppuccin Mocha' },
-  { id: 'ayu-dark', label: 'Ayu Dark' },
+export const VIEWER_THEMES: { id: BundledTheme; label: string; mode: 'light' | 'dark' }[] = [
+  { id: 'vitesse-dark', label: 'Vitesse Dark', mode: 'dark' },
+  { id: 'github-dark', label: 'GitHub Dark', mode: 'dark' },
+  { id: 'one-dark-pro', label: 'One Dark Pro', mode: 'dark' },
+  { id: 'dracula', label: 'Dracula', mode: 'dark' },
+  { id: 'nord', label: 'Nord', mode: 'dark' },
+  { id: 'tokyo-night', label: 'Tokyo Night', mode: 'dark' },
+  { id: 'catppuccin-mocha', label: 'Catppuccin Mocha', mode: 'dark' },
+  { id: 'ayu-dark', label: 'Ayu Dark', mode: 'dark' },
+  { id: 'github-light', label: 'GitHub Light', mode: 'light' },
+  { id: 'vitesse-light', label: 'Vitesse Light', mode: 'light' },
+  { id: 'catppuccin-latte', label: 'Catppuccin Latte', mode: 'light' },
+  { id: 'solarized-light', label: 'Solarized Light', mode: 'light' },
+  { id: 'one-light', label: 'One Light', mode: 'light' },
 ]
 
 function classifyDiffLine(line: string): 'add' | 'remove' | 'hunk' | 'meta' | 'context' {
@@ -180,9 +185,11 @@ export function FileViewer({ files, activeFilePath, tab, onTabChange }: Props): 
   }
 
   const activeFile = files.find((f) => f.path === activeFilePath) ?? files[0]
-  const currentTheme = (VIEWER_THEMES.some((t) => t.id === settings.fileViewerTheme)
+  const isDark = document.documentElement.classList.contains('dark')
+  const savedTheme = VIEWER_THEMES.find((t) => t.id === settings.fileViewerTheme)
+  const currentTheme = (savedTheme?.mode === (isDark ? 'dark' : 'light')
     ? settings.fileViewerTheme
-    : 'vitesse-dark') as BundledTheme
+    : isDark ? 'vitesse-dark' : 'github-light') as BundledTheme
 
   return (
     <div className="flex flex-col bg-brand-bg flex-1 min-h-0">
