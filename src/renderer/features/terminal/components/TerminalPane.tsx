@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Columns2, Rows2, ExternalLink, Copy, Clipboard } from 'lucide-react'
+import { X, Columns2, Rows2, ExternalLink, Copy, Clipboard, Search, ChevronUp, ChevronDown } from 'lucide-react'
 import { useTerminal } from '../hooks/useTerminal'
 import { FileViewer } from '../../fs/components/FileViewer'
 import { useStore } from '../../../store/root.store'
@@ -83,7 +83,17 @@ function SessionDiffView({ patch }: { patch: string }): JSX.Element {
 
 export function TerminalPane({ sessionId, paneItems }: Props): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { ctxMenu, dismissCtxMenu } = useTerminal(sessionId, containerRef)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const { ctxMenu, dismissCtxMenu, search } = useTerminal(sessionId, containerRef)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    if (search.visible) {
+      setTimeout(() => searchInputRef.current?.focus(), 0)
+    } else {
+      setSearchTerm('')
+    }
+  }, [search.visible])
 
   const touchedFiles = useStore((s) => s.touchedFiles[sessionId] ?? EMPTY_FILES)
   const touchedFilePatches = useStore((s) => s.touchedFilePatches[sessionId])
@@ -111,6 +121,37 @@ export function TerminalPane({ sessionId, paneItems }: Props): JSX.Element {
         className="xterm-container"
         style={{ width: '100%', height: '100%', padding: '4px 8px' }}
       />
+
+      {search.visible && (
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-brand-surface border border-brand-panel/80 rounded-md shadow-xl px-2 py-1">
+          <Search size={11} className="text-zinc-500 flex-shrink-0" />
+          <input
+            ref={searchInputRef}
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              if (e.target.value) search.findNext(e.target.value)
+              else searchInputRef.current && (searchInputRef.current.value = '')
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) search.findNext(searchTerm)
+              else if (e.key === 'Enter' && e.shiftKey) search.findPrevious(searchTerm)
+              else if (e.key === 'Escape') search.hide()
+            }}
+            placeholder="Find in terminal…"
+            className="w-48 bg-transparent text-xs text-zinc-200 placeholder:text-zinc-600 outline-none"
+          />
+          <button onClick={() => search.findPrevious(searchTerm)} title="Previous (Shift+Enter)" className="text-zinc-500 hover:text-zinc-300 transition-colors p-0.5">
+            <ChevronUp size={12} />
+          </button>
+          <button onClick={() => search.findNext(searchTerm)} title="Next (Enter)" className="text-zinc-500 hover:text-zinc-300 transition-colors p-0.5">
+            <ChevronDown size={12} />
+          </button>
+          <button onClick={search.hide} className="text-zinc-600 hover:text-zinc-300 transition-colors p-0.5 ml-0.5">
+            <X size={11} />
+          </button>
+        </div>
+      )}
 
       {touchedFiles.length > 0 && (
         <div className="absolute top-2 right-3 z-10">

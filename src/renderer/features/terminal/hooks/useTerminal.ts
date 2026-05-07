@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { SearchAddon } from '@xterm/addon-search'
 import { ipc } from '../../../lib/ipc'
 import { IPC } from '@shared/ipc-channels'
 import { replayRequest, writeToSession, resizeSession } from '../../session/session.service'
@@ -36,11 +37,59 @@ export interface TerminalCtxMenu {
   items: TerminalCtxItem[]
 }
 
+const DARK_TERMINAL_THEME = {
+  background: '#0f1117', foreground: '#fafafa', cursor: '#fafafa',
+  black: '#18181b', brightBlack: '#3f3f46',
+  red: '#ef4444', brightRed: '#f87171',
+  green: '#22c55e', brightGreen: '#4ade80',
+  yellow: '#eab308', brightYellow: '#facc15',
+  blue: '#3b82f6', brightBlue: '#60a5fa',
+  magenta: '#a855f7', brightMagenta: '#c084fc',
+  cyan: '#06b6d4', brightCyan: '#22d3ee',
+  white: '#d4d4d8', brightWhite: '#fafafa',
+}
+
+const LIGHT_TERMINAL_THEME = {
+  background: '#fafafa', foreground: '#1c1c1c', cursor: '#333333',
+  black: '#000000', brightBlack: '#767676',
+  red: '#cd3131', brightRed: '#f14c4c',
+  green: '#117700', brightGreen: '#23d18b',
+  yellow: '#795e26', brightYellow: '#ddb500',
+  blue: '#0451a5', brightBlue: '#2979ff',
+  magenta: '#bc05bc', brightMagenta: '#d670d6',
+  cyan: '#0598bc', brightCyan: '#29b8db',
+  white: '#555555', brightWhite: '#767676',
+}
+
+function resolveTerminalTheme(theme: string): typeof DARK_TERMINAL_THEME {
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  return isDark ? DARK_TERMINAL_THEME : LIGHT_TERMINAL_THEME
+}
+
+const SEARCH_DECORATIONS = {
+  matchBackground: '#3b3b00',
+  matchBorder: '#facc15',
+  matchOverviewRuler: '#facc15',
+  activeMatchBackground: '#5a4a00',
+  activeMatchBorder: '#fde047',
+  activeMatchColorOverviewRuler: '#fde047',
+}
+
+export interface TerminalSearch {
+  visible: boolean
+  show: () => void
+  hide: () => void
+  findNext: (term: string) => void
+  findPrevious: (term: string) => void
+}
+
 export function useTerminal(sessionId: string, containerRef: React.RefObject<HTMLDivElement>): {
   ctxMenu: TerminalCtxMenu | null
   dismissCtxMenu: () => void
+  search: TerminalSearch
 } {
   const settings = useStore((s) => s.settings)
+  const appTheme = useStore((s) => s.settings.theme)
   const registerTerminal = useStore((s) => s.registerTerminal)
   const unregisterTerminal = useStore((s) => s.unregisterTerminal)
   const setTerminalReady = useStore((s) => s.setTerminalReady)
@@ -50,9 +99,24 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
 
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const searchAddonRef = useRef<SearchAddon | null>(null)
   const [ctxMenu, setCtxMenu] = useState<TerminalCtxMenu | null>(null)
+  const [searchVisible, setSearchVisible] = useState(false)
 
   const dismissCtxMenu = (): void => setCtxMenu(null)
+
+  const showSearch = useCallback((): void => setSearchVisible(true), [])
+  const hideSearch = useCallback((): void => {
+    setSearchVisible(false)
+    searchAddonRef.current?.clearDecorations()
+    terminalRef.current?.focus()
+  }, [])
+  const findNext = useCallback((term: string): void => {
+    searchAddonRef.current?.findNext(term, { caseSensitive: false, incremental: true, decorations: SEARCH_DECORATIONS })
+  }, [])
+  const findPrevious = useCallback((term: string): void => {
+    searchAddonRef.current?.findPrevious(term, { caseSensitive: false, decorations: SEARCH_DECORATIONS })
+  }, [])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -61,34 +125,17 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     const terminal = new Terminal({
       fontSize: settings.fontSize,
       fontFamily: settings.fontFamily,
-      theme: {
-        background: '#0f1117',
-        foreground: '#fafafa',
-        cursor: '#fafafa',
-        black: '#18181b',
-        brightBlack: '#3f3f46',
-        red: '#ef4444',
-        brightRed: '#f87171',
-        green: '#22c55e',
-        brightGreen: '#4ade80',
-        yellow: '#eab308',
-        brightYellow: '#facc15',
-        blue: '#3b82f6',
-        brightBlue: '#60a5fa',
-        magenta: '#a855f7',
-        brightMagenta: '#c084fc',
-        cyan: '#06b6d4',
-        brightCyan: '#22d3ee',
-        white: '#d4d4d8',
-        brightWhite: '#fafafa'
-      },
+      theme: resolveTerminalTheme(useStore.getState().settings.theme),
       cursorBlink: true,
       allowProposedApi: true
     })
 
     const fitAddon = new FitAddon()
+    const searchAddon = new SearchAddon()
     terminal.loadAddon(fitAddon)
+    terminal.loadAddon(searchAddon)
     terminal.open(container)
+    searchAddonRef.current = searchAddon
     // Double-RAF: first frame starts layout, second frame has real dimensions
     requestAnimationFrame(() => requestAnimationFrame(() => {
       fitAddon.fit()
@@ -101,16 +148,26 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     const { cols, rows } = terminal
     registerTerminal(sessionId, cols, rows)
 
-    // Ctrl+Shift+V → paste; Ctrl+C → copy selection if non-empty, otherwise SIGINT
+    // Ctrl+Shift+V → paste via IPC (Linux-compatible); Ctrl+V → handled by paste DOM event below;
+    // Ctrl+C → copy selection if non-empty, otherwise SIGINT
     terminal.attachCustomKeyEventHandler((e) => {
+      if (e.ctrlKey && !e.shiftKey && e.key === 'f' && e.type === 'keydown') {
+        setSearchVisible(true)
+        return false
+      }
       if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
-        readClipboard().then((text) => { terminal.paste(text); terminal.focus() }).catch(() => {})
+        readClipboard().then((text) => { terminal.paste(text); terminal.focus() }).catch(() => terminal.focus())
+        return false
+      }
+      if (e.ctrlKey && !e.shiftKey && e.key === 'v' && e.type === 'keydown') {
+        // Block ^V from going to PTY; the paste DOM event (fired by browser for Ctrl+V)
+        // is handled by handlePaste below, giving exactly one paste.
         return false
       }
       if (e.ctrlKey && !e.shiftKey && e.key === 'c' && e.type === 'keydown') {
         const sel = terminal.getSelection()
         if (sel) {
-          navigator.clipboard.writeText(sel).then(() => terminal.focus()).catch(() => {})
+          navigator.clipboard.writeText(sel).then(() => terminal.focus()).catch(() => terminal.focus())
           return false
         }
       }
@@ -222,8 +279,19 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       })
     }
 
-    container.addEventListener('mouseup', handleMouseUp)
+    // Capture-phase paste: intercept before xterm's textarea handler fires, giving one paste per Ctrl+V.
+    // stopPropagation prevents the event reaching xterm's own textarea listener (which would paste again).
+    const handlePaste = (e: ClipboardEvent): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      const text = e.clipboardData?.getData('text/plain') ?? ''
+      if (text) { terminal.paste(text); terminal.focus() }
+    }
+
+    // Capture phase so xterm's internal stopPropagation can't swallow Shift+click
+    container.addEventListener('mouseup', handleMouseUp, true)
     container.addEventListener('contextmenu', handleContextMenu)
+    container.addEventListener('paste', handlePaste, true)
 
     const safeRefit = (): void => {
       try {
@@ -261,8 +329,11 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       offData()
       observer.disconnect()
       visibilityObserver.disconnect()
-      container.removeEventListener('mouseup', handleMouseUp)
+      container.removeEventListener('mouseup', handleMouseUp, true)
       container.removeEventListener('contextmenu', handleContextMenu)
+      container.removeEventListener('paste', handlePaste, true)
+      searchAddon.dispose()
+      searchAddonRef.current = null
       terminal.dispose()
       unregisterTerminal(sessionId)
     }
@@ -293,5 +364,16 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     }
   }, [settings.fontSize, settings.fontFamily])
 
-  return { ctxMenu, dismissCtxMenu }
+  // Update terminal theme when app theme changes
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.options.theme = resolveTerminalTheme(appTheme)
+    }
+  }, [appTheme])
+
+  return {
+    ctxMenu,
+    dismissCtxMenu,
+    search: { visible: searchVisible, show: showSearch, hide: hideSearch, findNext, findPrevious }
+  }
 }

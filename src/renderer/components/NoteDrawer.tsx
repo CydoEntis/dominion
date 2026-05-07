@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { X } from 'lucide-react'
+import { X, Eye, Code } from 'lucide-react'
+import { marked } from 'marked'
 import { useStore } from '../store/root.store'
 import type { Note } from '@shared/ipc-types'
 
@@ -23,6 +24,7 @@ export function NoteDrawer({ open, onClose, activeNoteId, onCreate }: Props): JS
   const effectiveId = activeNote?.id ?? null
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [mode, setMode] = useState<'raw' | 'preview'>('raw')
   const [displayContent, setDisplayContent] = useState(activeNote?.content ?? '')
   const localContentRef = useRef(activeNote?.content ?? '')
   const prevIdRef = useRef<string | null>(effectiveId)
@@ -67,6 +69,9 @@ export function NoteDrawer({ open, onClose, activeNoteId, onCreate }: Props): JS
           <span className="text-xs text-zinc-400 truncate flex-1">
             {activeNote ? noteTitle(activeNote) : 'Notes'}
           </span>
+          <button onClick={() => setMode(m => m === 'raw' ? 'preview' : 'raw')} className="text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0 mr-2" title={mode === 'raw' ? 'Preview (Ctrl+P)' : 'Raw (Ctrl+R)'}>
+            {mode === 'raw' ? <Eye size={13} /> : <Code size={13} />}
+          </button>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 transition-colors ml-2 flex-shrink-0">
             <X size={14} />
           </button>
@@ -77,7 +82,7 @@ export function NoteDrawer({ open, onClose, activeNoteId, onCreate }: Props): JS
             <p className="text-xs text-zinc-600">No notes yet</p>
             <button onClick={onCreate} className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors">Create one →</button>
           </div>
-        ) : (
+        ) : mode === 'raw' ? (
           <textarea
             value={displayContent}
             onChange={handleChange}
@@ -85,6 +90,11 @@ export function NoteDrawer({ open, onClose, activeNoteId, onCreate }: Props): JS
             className="flex-1 w-full bg-transparent text-zinc-200 text-sm resize-none outline-none px-5 py-4 placeholder-zinc-600 leading-relaxed"
             spellCheck={false}
             ref={textareaRef}
+          />
+        ) : (
+          <div
+            className="flex-1 overflow-y-auto px-5 py-4 markdown-body select-text"
+            dangerouslySetInnerHTML={{ __html: marked.parse(displayContent || '') as string }}
           />
         )}
       </div>

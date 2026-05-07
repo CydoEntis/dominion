@@ -5,6 +5,14 @@ import { useStore } from '../store/root.store'
 import { cn } from '../lib/utils'
 import type { Note } from '@shared/ipc-types'
 
+const NOTE_COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#06b6d4', '#14b8a6', '#f59e0b']
+
+function noteColorFromId(id: string): string {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash) + id.charCodeAt(i)
+  return NOTE_COLORS[Math.abs(hash) % NOTE_COLORS.length]
+}
+
 function noteTitle(note: Note): string {
   const first = note.content.split('\n').find(l => l.trim())
   return first?.trim().slice(0, 40) || 'Untitled'
@@ -62,8 +70,40 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
 
   const previewHtml = useMemo(() => {
     if (viewMode !== 'preview') return ''
-    try { return marked.parse(displayContent) as string } catch { return '' }
+    try {
+      const html = marked.parse(displayContent) as string
+      // Remove disabled so task-list checkboxes are clickable
+      return html.replace(/(<input[^>]*?) disabled(="")?/g, '$1')
+    } catch { return '' }
   }, [viewMode, displayContent])
+
+  // Click handler for interactive task-list checkboxes in preview
+  const handlePreviewClick = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
+    const target = e.target as HTMLInputElement
+    if (target.tagName !== 'INPUT' || target.type !== 'checkbox') return
+    e.preventDefault()
+
+    const container = e.currentTarget
+    const boxes = Array.from(container.querySelectorAll('input[type="checkbox"]'))
+    const idx = boxes.indexOf(target)
+    if (idx === -1) return
+
+    // Toggle the idx-th [ ] / [x] marker in the raw markdown
+    const TASK_RE = /^(\s*[-*+] \[)([xX ]?)(\])/gm
+    let count = 0
+    const updated = localContentRef.current.replace(TASK_RE, (_, pre, mark, post) => {
+      const result = count === idx
+        ? `${pre}${mark.toLowerCase() === 'x' ? ' ' : 'x'}${post}`
+        : `${pre}${mark}${post}`
+      count++
+      return result
+    })
+
+    if (updated === localContentRef.current) return
+    localContentRef.current = updated
+    setDisplayContent(updated)
+    if (effectiveId) flushSave(effectiveId, updated)
+  }, [effectiveId, flushSave])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     const value = e.target.value
@@ -98,15 +138,20 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         <div className="flex items-center flex-1 min-w-0 overflow-x-auto h-full">
-          {sorted.map(note => (
+          {sorted.map(note => {
+            const nc = noteColorFromId(note.id)
+            const isActive = note.id === effectiveId
+            return (
             <div
               key={note.id}
               onClick={() => onActivate(note.id)}
+              style={{
+                borderTopColor: isActive ? nc : 'transparent',
+                background: isActive ? `linear-gradient(to right, ${nc}2e, transparent)` : undefined,
+              }}
               className={cn(
-                'flex items-center gap-2 px-4 h-full text-xs cursor-pointer flex-shrink-0 border-r border-brand-panel/40 group',
-                note.id === effectiveId
-                  ? 'text-zinc-200 bg-brand-bg border-t-2 border-t-brand-accent'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/30'
+                'flex items-center gap-2 px-4 h-full text-xs cursor-pointer flex-shrink-0 border-r border-brand-panel/40 group border-t-2',
+                isActive ? 'text-zinc-200' : 'text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/30'
               )}
             >
               <span className="max-w-[140px] truncate">{noteTitle(note)}</span>
@@ -118,7 +163,8 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
                 <X size={10} />
               </button>
             </div>
-          ))}
+            )
+          })}
           <button
             onClick={onCreate}
             className="flex items-center justify-center w-10 h-full text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/30 transition-colors flex-shrink-0"
@@ -149,7 +195,7 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
       {activeNote && viewMode === 'preview' && (
         <div className="flex-1 overflow-auto select-text cursor-text">
           {previewHtml
-            ? <div className="markdown-body px-8 py-6" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+            ? <div className="markdown-body px-8 py-6" dangerouslySetInnerHTML={{ __html: previewHtml }} onClick={handlePreviewClick} />
             : <p className="text-zinc-500 text-xs px-8 py-6">Nothing to preview.</p>
           }
         </div>
