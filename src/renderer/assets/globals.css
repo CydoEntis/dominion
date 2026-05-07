@@ -29,6 +29,12 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    /* Brand colors — light mode */
+    --brand-bg: 249 250 251;
+    --brand-surface: 255 255 255;
+    --brand-panel: 156 163 175;
+    --brand-accent: 24 24 27;
+    --brand-muted: 71 85 105;
   }
 
   .dark {
@@ -56,6 +62,12 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    /* Brand colors — dark mode (RGB channels for Tailwind opacity support) */
+    --brand-bg: 15 17 23;
+    --brand-surface: 19 23 32;
+    --brand-panel: 28 32 40;
+    --brand-accent: 228 228 231;
+    --brand-muted: 161 161 170;
   }
 }
 
@@ -216,37 +228,49 @@
 .markdown-body hr { border: none; border-top: 1px solid #3f3f46; margin: 1.5em 0; }
 .markdown-body img { max-width: 100%; border-radius: 4px; }
 
+/* Task list checkboxes */
+.markdown-body li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.25em;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.markdown-body input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #52525b;
+  border-radius: 3px;
+  display: inline-block;
+  flex-shrink: 0;
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+  transition: border-color 0.12s, background 0.12s;
+  margin-top: 3px;
+}
+.markdown-body input[type="checkbox"]:hover {
+  border-color: #a1a1aa;
+}
+.markdown-body input[type="checkbox"]:checked {
+  background: #e4e4e7;
+  border-color: #e4e4e7;
+}
+.markdown-body input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 4px;
+  height: 8px;
+  border: 2px solid #0f1117;
+  border-top: none;
+  border-left: none;
+  transform: rotate(40deg);
+}
 
-/* Sonner toast branding */
-[data-sonner-toaster] [data-sonner-toast] {
-  background: #141720 !important;
-  border-color: #1e2433 !important;
-  color: #e4e4e7 !important;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="success"] {
-  background: rgba(228, 228, 231, 0.04) !important;
-  border-color: rgba(228, 228, 231, 0.12) !important;
-  color: #e4e4e7 !important;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="success"] svg {
-  color: #e4e4e7 !important;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="error"] {
-  background: rgba(239, 68, 68, 0.06) !important;
-  border-color: rgba(239, 68, 68, 0.2) !important;
-  color: #f87171 !important;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="error"] svg {
-  color: #f87171 !important;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="warning"] {
-  background: rgba(251, 191, 36, 0.06) !important;
-  border-color: rgba(251, 191, 36, 0.2) !important;
-  color: #fbbf24 !important;
-}
-[data-sonner-toaster] [data-sonner-toast][data-type="warning"] svg {
-  color: #fbbf24 !important;
-}
 
 /* xterm.js container */
 .xterm-container {
@@ -260,10 +284,17 @@
   height: 100%;
 }
 
+/* Ensure viewport scrollbar is accessible: reserve gutter so canvas doesn't overlap it */
 .xterm-container .xterm-viewport {
   overflow-y: scroll !important;
   scrollbar-width: thin;
-  scrollbar-color: #2a2e38 transparent;
+  scrollbar-color: #52525b transparent;
+  scrollbar-gutter: stable;
+}
+
+/* Keep the screen canvas from eating scrollbar mouse events */
+.xterm-container .xterm-screen {
+  pointer-events: auto;
 }
 
 .xterm-container .xterm-viewport::-webkit-scrollbar {
@@ -282,3 +313,20 @@
 .xterm-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
   background: #52525b;
 }
+
+/* ─── Light mode: remap hardcoded zinc text to dark equivalents ──────────────
+   The custom components use text-zinc-* directly instead of shadcn semantic
+   classes. These unlayered rules (higher cascade priority than @layer utilities)
+   flip them to dark values when the .dark class is absent.               ── */
+html:not(.dark) .text-zinc-100 { color: rgb(24 24 27); }
+html:not(.dark) .text-zinc-200 { color: rgb(39 39 42); }
+html:not(.dark) .text-zinc-300 { color: rgb(63 63 70); }
+html:not(.dark) .text-zinc-400 { color: rgb(82 82 91); }
+html:not(.dark) .text-zinc-500 { color: rgb(113 113 122); }
+html:not(.dark) .text-zinc-600 { color: rgb(161 161 170); }
+html:not(.dark) .hover\:text-zinc-100:hover { color: rgb(24 24 27); }
+html:not(.dark) .hover\:text-zinc-200:hover { color: rgb(39 39 42); }
+html:not(.dark) .hover\:text-zinc-300:hover { color: rgb(63 63 70); }
+html:not(.dark) .hover\:text-zinc-400:hover { color: rgb(82 82 91); }
+html:not(.dark) .hover\:text-zinc-500:hover { color: rgb(113 113 122); }
+html:not(.dark) .hover\:text-zinc-600:hover { color: rgb(161 161 170); }

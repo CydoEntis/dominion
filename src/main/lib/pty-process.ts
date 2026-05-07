@@ -16,11 +16,15 @@ interface PtyOptions {
   onConversationId?: (id: string) => void
 }
 
-// Claude Code activity signals:
-// - Braille spinner chars (Unix)
-// - "* Word" pattern: asterisk + space + capitalized word (Windows Claude Code status)
-// - "executing |" from tool-use progress bar
-const AGENT_RUNNING_RE = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|\* [A-Z][a-z]|executing \|/
+// Claude Code activity signals.
+// On Windows, the spinner is rendered as CR + "*" + CR (cursor then repositioned via escape sequence
+// to print the word). After ANSI stripping the pattern is literally \r*\r — match that directly.
+// "thinking" covers extended-thinking pauses where \r*\r updates slow to >3s intervals.
+// "esc to interrupt" appears as plain text during tool execution.
+const AGENT_RUNNING_RE = /\r[*]\r|thinking|esc to interrupt/
+
+// Strips ANSI escape sequences (standard + DEC private mode) so color codes don't break pattern matching.
+const ANSI_RE = /\x1b\[[\x3c-\x3f]?[0-9;]*[A-Za-z]|\x1b[()][AB012]/g
 
 // UUID v4 pattern — used to detect Claude conversation IDs from PTY output
 const UUID_V4_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i
@@ -70,8 +74,9 @@ export class PtyProcess {
   }
 
   private detectAgentStatus(chunk: string): void {
-    this.detectionBuffer = (this.detectionBuffer + chunk).slice(-300)
-    if (!AGENT_RUNNING_RE.test(this.detectionBuffer)) return
+    this.detectionBuffer = (this.detectionBuffer + chunk).slice(-600)
+    const plain = this.detectionBuffer.replace(ANSI_RE, '')
+    if (!AGENT_RUNNING_RE.test(plain)) return
     this.detectionBuffer = ''
 
     this.setAgentStatus('running')
@@ -80,14 +85,14 @@ export class PtyProcess {
     if (this.waitingTimer) { clearTimeout(this.waitingTimer); this.waitingTimer = null }
     if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null }
 
-    // After 10s of no spinner/executing activity → waiting-input
+    // After 8s of no spinner/thinking activity → waiting-input
     this.waitingTimer = setTimeout(() => {
       this.setAgentStatus('waiting-input')
-      // After 20s of waiting with no new activity → idle
+      // After 10s of waiting with no new activity → idle
       this.idleTimer = setTimeout(() => {
         this.setAgentStatus('idle')
-      }, 20_000)
-    }, 10_000)
+      }, 10_000)
+    }, 8_000)
   }
 
   private appendScrollback(chunk: string): void {

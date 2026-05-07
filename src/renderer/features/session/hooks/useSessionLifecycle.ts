@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { ipc } from '../../../lib/ipc'
 import { IPC } from '@shared/ipc-channels'
 import { useStore } from '../../../store/root.store'
@@ -63,6 +64,7 @@ export function useSessionLifecycle(): void {
 
     const offMeta = ipc.on(IPC.SESSION_META_UPDATE, (payload) => {
       const meta = payload as SessionMeta
+      // Agent status toasts disabled — detection unreliable, revisit in roadmap
       upsertSession(meta)
     })
 
@@ -70,6 +72,12 @@ export function useSessionLifecycle(): void {
       const { sessionId, exitCode } = payload as SessionExitPayload
       markSessionExited(sessionId, exitCode)
       removePaneBySessionId(sessionId)
+      const sessionName = useStore.getState().sessions[sessionId]?.name ?? 'Session'
+      if (exitCode === 0) {
+        toast.success(`${sessionName} finished`)
+      } else {
+        toast.error(`${sessionName} exited (code ${exitCode})`)
+      }
     })
 
     const offReattached = ipc.on(IPC.WINDOW_TAB_REATTACHED, (payload) => {

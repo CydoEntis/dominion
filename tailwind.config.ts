@@ -15,11 +15,11 @@ const config: Config = {
       },
       colors: {
         brand: {
-          bg:      '#0f1117',
-          surface: '#131720',
-          panel:   '#1c2028',
-          accent:  '#e4e4e7',
-          muted:   '#a1a1aa',
+          bg:      'rgb(var(--brand-bg) / <alpha-value>)',
+          surface: 'rgb(var(--brand-surface) / <alpha-value>)',
+          panel:   'rgb(var(--brand-panel) / <alpha-value>)',
+          accent:  'rgb(var(--brand-accent) / <alpha-value>)',
+          muted:   'rgb(var(--brand-muted) / <alpha-value>)',
         },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

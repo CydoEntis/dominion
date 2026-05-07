@@ -191,16 +191,11 @@ export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMe
           WebkitAppRegion: 'no-drag'
         } as React.CSSProperties}
       >
-        {!isExited && agentStatus === 'running' ? (
-          <Loader2 size={12} className="flex-shrink-0 animate-spin" style={{ color }} />
-        ) : !isExited && agentStatus === 'waiting-input' ? (
-          <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ backgroundColor: color }} />
-        ) : (
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: isExited ? '#71717a' : color }}
-          />
-        )}
+        {/* Agent status indicators disabled — detection unreliable, revisit in roadmap */}
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ backgroundColor: isExited ? '#71717a' : color }}
+        />
 
         <span className="flex-1 truncate min-w-0 text-sm">{meta.name}</span>
 
