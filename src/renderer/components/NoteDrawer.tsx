@@ -412,6 +412,18 @@ export function NoteDrawer({
 
   const [showTree, setShowTree] = useState(false)
   const [editorMode, setEditorMode] = useState<'raw' | 'preview'>('raw')
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowTree((v) => !v)
+      }
+    }
+    document.addEventListener('keydown', handler, { capture: true })
+    return () => document.removeEventListener('keydown', handler, { capture: true })
+  }, [])
   const [displayContent, setDisplayContent] = useState(activeNote?.content ?? '')
   const localContentRef = useRef(activeNote?.content ?? '')
   const prevIdRef = useRef<string | null>(activeNote?.id ?? null)
@@ -538,7 +550,7 @@ export function NoteDrawer({
           onClick={() => setShowTree(v => !v)}
           title={showTree ? 'Hide file tree' : 'Browse notes'}
           className={cn(
-            'absolute bottom-4 right-4 w-9 h-9 rounded-full flex items-center justify-center shadow-lg border transition-colors',
+            'absolute bottom-4 right-4 w-9 h-9 rounded-lg flex items-center justify-center shadow-lg border transition-colors',
             showTree
               ? 'bg-brand-panel border-brand-muted/30 text-brand-muted hover:bg-brand-panel/80'
               : 'bg-brand-panel border-brand-panel/60 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600'
