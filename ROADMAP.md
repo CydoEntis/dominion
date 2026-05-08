@@ -6,12 +6,14 @@
 
 | Priority | Item | Notes |
 |----------|------|-------|
+| High | Git commit & push | Blocked on Windows shell quoting bug — `execFile` fix attempted but untested; needs debug pass |
+| High | Git staging / unstaging | UI stripped for v0.3.0 beta — stage/unstage individual files and stage-all/unstage-all |
+| High | Better diff view | Side-by-side diff with clear add/remove/change highlighting; current inline view is minimal |
 | High | Workspace management | Group sessions + projects into named workspaces; save, switch, restore |
-| High | PR review panel | Diff view alongside terminal — changed files, +/- counts, approve/comment |
+| Medium | PR review panel | Full PR review alongside terminal — comments, approve, request changes |
 | Medium | Inline git status in file tree | Show +/- line counts next to changed files in project file tree |
 | Medium | Remote session support | Connect to agents on remote machines over SSH |
 | Medium | Terminal grid view | Small live previews of all running terminals in a grid — explore feasibility |
-| Medium | Better diff views | Side-by-side diff with clear add/remove/change highlighting |
 | Low | Docker sandbox sessions | Isolate agent sessions in containers |
 
 ---
@@ -94,6 +96,15 @@
 - Theme picker opens a menu with Dark / Light / System options
 - Light mode: proper white UI with dark text
 - Terminal respects light/dark theme (live-updates on switch)
+
+**v0.3.0**
+- Agent monitor sidebar — session list, project context, task status in one panel
+- Git diff viewer — status bar badge + panel with clickable inline diffs (read-only)
+- Side panel overlay system — Git, Notes, Settings open as overlays over the workspace
+- Settings: hotkey rebinding, shell auto-detection picker, notes/session dir pickers, resume on startup, confirm close toggle
+- Space theme (dark purple/indigo); terminal and UI live-update on theme switch
+- ORBIT empty state screen with keyboard shortcut reference when no session is active
+- Shell integration: OSC 7 directory tracking for bash, zsh, fish, PowerShell
 
 **Features**
 - Notes raw / preview toggle (Alt+R / Alt+P)
