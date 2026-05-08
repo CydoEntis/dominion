@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useStore } from '../../../store/root.store'
 import { pickFolder } from '../../window/window.service'
 import { createSession, killSession } from '../session.service'
+import { removeWorktree } from '../../fs/fs.service'
 import { findTabForSession } from '../../terminal/pane-tree'
 
 const MAX_PROJECTS = 10
@@ -69,13 +70,18 @@ export function useProjects(): UseProjectsReturn {
 
   const removeProject = async (root: string): Promise<void> => {
     const normalized = root.replace(/\\/g, '/')
-    const projectSessions = Object.values(sessions).filter(
-      (m) => m.cwd?.replace(/\\/g, '/').startsWith(normalized)
-    )
+    const projectSessions = Object.values(sessions).filter((m) => {
+      const cwd = m.cwd?.replace(/\\/g, '/') ?? ''
+      const projectRoot = m.projectRoot?.replace(/\\/g, '/') ?? ''
+      return cwd.startsWith(normalized) || projectRoot === normalized
+    })
     for (const m of projectSessions) {
       const tabId = findTabForSession(paneTree, m.sessionId)
       try { await killSession(m.sessionId) } catch {}
       if (tabId) closePane(tabId, m.sessionId)
+      if (m.worktreePath && m.projectRoot) {
+        removeWorktree(m.projectRoot, m.worktreePath).catch(() => {})
+      }
     }
     await updateSettings({
       openProjects: settings.openProjects.filter((p) => p.replace(/\\/g, '/') !== normalized),

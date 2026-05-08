@@ -11,6 +11,7 @@ export interface TerminalSlice {
   mountedTerminals: Record<string, TerminalInfo>
   touchedFiles: Record<string, string[]>
   touchedFilePatches: Record<string, Record<string, string>>
+  terminalThemes: Record<string, string>
 
   registerTerminal: (sessionId: string, cols: number, rows: number) => void
   unregisterTerminal: (sessionId: string) => void
@@ -18,12 +19,14 @@ export interface TerminalSlice {
   addTouchedFile: (sessionId: string, filePath: string) => void
   appendTouchedFilePatch: (sessionId: string, filePath: string, patch: string) => void
   clearTouchedFiles: (sessionId: string) => void
+  setTerminalTheme: (sessionId: string, themeId: string) => void
 }
 
 export const createTerminalSlice: StateCreator<RootStore, [['zustand/immer', never]], [], TerminalSlice> = (set) => ({
   mountedTerminals: {},
   touchedFiles: {},
   touchedFilePatches: {},
+  terminalThemes: {},
 
   registerTerminal: (sessionId, cols, rows) =>
     set((state) => {
@@ -60,5 +63,10 @@ export const createTerminalSlice: StateCreator<RootStore, [['zustand/immer', nev
     set((state) => {
       delete state.touchedFiles[sessionId]
       delete state.touchedFilePatches[sessionId]
-    })
+    }),
+
+  setTerminalTheme: (sessionId, themeId) =>
+    set((state) => {
+      state.terminalThemes[sessionId] = themeId
+    }),
 })

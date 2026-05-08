@@ -73,10 +73,129 @@ const SPACE_TERMINAL_THEME = {
   white: '#c8c0e8', brightWhite: '#e8e0ff',
 }
 
-function resolveTerminalTheme(theme: string): typeof DARK_TERMINAL_THEME {
-  if (theme === 'space') return SPACE_TERMINAL_THEME
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+const DRACULA_TERMINAL_THEME = {
+  background: '#282a36', foreground: '#f8f8f2', cursor: '#f8f8f2',
+  black: '#21222c', brightBlack: '#6272a4',
+  red: '#ff5555', brightRed: '#ff6e6e',
+  green: '#50fa7b', brightGreen: '#69ff94',
+  yellow: '#f1fa8c', brightYellow: '#ffffa5',
+  blue: '#bd93f9', brightBlue: '#d6acff',
+  magenta: '#ff79c6', brightMagenta: '#ff92df',
+  cyan: '#8be9fd', brightCyan: '#a4ffff',
+  white: '#f8f8f2', brightWhite: '#ffffff',
+}
+
+const ONE_DARK_TERMINAL_THEME = {
+  background: '#282c34', foreground: '#abb2bf', cursor: '#528bff',
+  black: '#1e2127', brightBlack: '#5c6370',
+  red: '#e06c75', brightRed: '#e06c75',
+  green: '#98c379', brightGreen: '#98c379',
+  yellow: '#e5c07b', brightYellow: '#e5c07b',
+  blue: '#61afef', brightBlue: '#61afef',
+  magenta: '#c678dd', brightMagenta: '#c678dd',
+  cyan: '#56b6c2', brightCyan: '#56b6c2',
+  white: '#abb2bf', brightWhite: '#ffffff',
+}
+
+const NORD_TERMINAL_THEME = {
+  background: '#2e3440', foreground: '#d8dee9', cursor: '#d8dee9',
+  black: '#3b4252', brightBlack: '#4c566a',
+  red: '#bf616a', brightRed: '#bf616a',
+  green: '#a3be8c', brightGreen: '#a3be8c',
+  yellow: '#ebcb8b', brightYellow: '#ebcb8b',
+  blue: '#81a1c1', brightBlue: '#81a1c1',
+  magenta: '#b48ead', brightMagenta: '#b48ead',
+  cyan: '#88c0d0', brightCyan: '#8fbcbb',
+  white: '#e5e9f0', brightWhite: '#eceff4',
+}
+
+const SOLARIZED_DARK_TERMINAL_THEME = {
+  background: '#002b36', foreground: '#839496', cursor: '#839496',
+  black: '#073642', brightBlack: '#586e75',
+  red: '#dc322f', brightRed: '#cb4b16',
+  green: '#859900', brightGreen: '#586e75',
+  yellow: '#b58900', brightYellow: '#657b83',
+  blue: '#268bd2', brightBlue: '#839496',
+  magenta: '#d33682', brightMagenta: '#6c71c4',
+  cyan: '#2aa198', brightCyan: '#93a1a1',
+  white: '#eee8d5', brightWhite: '#fdf6e3',
+}
+
+const MONOKAI_TERMINAL_THEME = {
+  background: '#272822', foreground: '#f8f8f2', cursor: '#f8f8f0',
+  black: '#272822', brightBlack: '#75715e',
+  red: '#f92672', brightRed: '#f92672',
+  green: '#a6e22e', brightGreen: '#a6e22e',
+  yellow: '#f4bf75', brightYellow: '#f4bf75',
+  blue: '#66d9e8', brightBlue: '#66d9e8',
+  magenta: '#ae81ff', brightMagenta: '#ae81ff',
+  cyan: '#a1efe4', brightCyan: '#a1efe4',
+  white: '#f8f8f2', brightWhite: '#f9f8f5',
+}
+
+const NEBULA_TERMINAL_THEME = {
+  background: '#080514', foreground: '#c8f0ff', cursor: '#64dcff',
+  black: '#0c0920', brightBlack: '#1a1240',
+  red: '#ff6b8a', brightRed: '#ff9aad',
+  green: '#64ffda', brightGreen: '#96ffe8',
+  yellow: '#ffe07a', brightYellow: '#fff0a0',
+  blue: '#64dcff', brightBlue: '#96e8ff',
+  magenta: '#c084fc', brightMagenta: '#d8b4fe',
+  cyan: '#64dcff', brightCyan: '#96e8ff',
+  white: '#c8f0ff', brightWhite: '#e8f8ff',
+}
+
+const SOLAR_TERMINAL_THEME = {
+  background: '#0c0804', foreground: '#fff0d0', cursor: '#ffb900',
+  black: '#1a1008', brightBlack: '#3d2a10',
+  red: '#ff6b47', brightRed: '#ff8c6a',
+  green: '#a8e063', brightGreen: '#c4f07d',
+  yellow: '#ffb900', brightYellow: '#ffd040',
+  blue: '#63c0f5', brightBlue: '#8dd4ff',
+  magenta: '#d9a0ff', brightMagenta: '#ebb8ff',
+  cyan: '#4ecdc4', brightCyan: '#7ae0d8',
+  white: '#fff0d0', brightWhite: '#ffffff',
+}
+
+const AURORA_TERMINAL_THEME = {
+  background: '#040c0e', foreground: '#d0fff0', cursor: '#00e6a0',
+  black: '#061a1e', brightBlack: '#0a2830',
+  red: '#ff6b8a', brightRed: '#ff9aad',
+  green: '#00e6a0', brightGreen: '#40ffc0',
+  yellow: '#ffe566', brightYellow: '#fff0a0',
+  blue: '#60c8ff', brightBlue: '#90daff',
+  magenta: '#c084ff', brightMagenta: '#d8b0ff',
+  cyan: '#00e6a0', brightCyan: '#40ffc0',
+  white: '#d0fff0', brightWhite: '#f0fff8',
+}
+
+const NAMED_THEMES: Record<string, typeof DARK_TERMINAL_THEME> = {
+  dracula: DRACULA_TERMINAL_THEME,
+  'one-dark': ONE_DARK_TERMINAL_THEME,
+  nord: NORD_TERMINAL_THEME,
+  'solarized-dark': SOLARIZED_DARK_TERMINAL_THEME,
+  monokai: MONOKAI_TERMINAL_THEME,
+}
+
+export const TERMINAL_THEME_LIST: { id: string; label: string }[] = [
+  { id: 'dracula', label: 'Dracula' },
+  { id: 'one-dark', label: 'One Dark' },
+  { id: 'nord', label: 'Nord' },
+  { id: 'solarized-dark', label: 'Solarized Dark' },
+  { id: 'monokai', label: 'Monokai' },
+]
+
+function resolveTerminalTheme(appTheme: string): typeof DARK_TERMINAL_THEME {
+  if (appTheme === 'space')  return SPACE_TERMINAL_THEME
+  if (appTheme === 'nebula') return NEBULA_TERMINAL_THEME
+  if (appTheme === 'solar')  return SOLAR_TERMINAL_THEME
+  if (appTheme === 'aurora') return AURORA_TERMINAL_THEME
+  const isDark = appTheme === 'dark' || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   return isDark ? DARK_TERMINAL_THEME : LIGHT_TERMINAL_THEME
+}
+
+function getThemeById(id: string, appTheme: string): typeof DARK_TERMINAL_THEME {
+  return NAMED_THEMES[id] ?? resolveTerminalTheme(appTheme)
 }
 
 const SEARCH_DECORATIONS = {
@@ -103,6 +222,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
 } {
   const settings = useStore((s) => s.settings)
   const appTheme = useStore((s) => s.settings.theme)
+  const sessionTerminalTheme = useStore((s) => s.terminalThemes[sessionId])
   const registerTerminal = useStore((s) => s.registerTerminal)
   const unregisterTerminal = useStore((s) => s.unregisterTerminal)
   const setTerminalReady = useStore((s) => s.setTerminalReady)
@@ -149,11 +269,13 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     terminal.loadAddon(searchAddon)
     terminal.open(container)
     searchAddonRef.current = searchAddon
-    // Double-RAF: first frame starts layout, second frame has real dimensions
+    // Double-RAF: first frame starts layout, second frame has real dimensions.
+    // Fallback at 200ms for split panes where panel layout settles after mount.
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      fitAddon.fit()
+      try { fitAddon.fit() } catch {}
       terminal.focus()
     }))
+    const fallbackFitTimer = setTimeout(() => { try { fitAddon.fit() } catch {} }, 200)
 
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
@@ -340,6 +462,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
 
     return () => {
       cancelAnimationFrame(rafId)
+      clearTimeout(fallbackFitTimer)
       offData()
       observer.disconnect()
       visibilityObserver.disconnect()
@@ -378,12 +501,14 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     }
   }, [settings.fontSize, settings.fontFamily])
 
-  // Update terminal theme when app theme changes
+  // Update terminal theme when app theme or per-session override changes
   useEffect(() => {
     if (terminalRef.current) {
-      terminalRef.current.options.theme = resolveTerminalTheme(appTheme)
+      terminalRef.current.options.theme = sessionTerminalTheme
+        ? getThemeById(sessionTerminalTheme, appTheme)
+        : resolveTerminalTheme(appTheme)
     }
-  }, [appTheme])
+  }, [appTheme, sessionTerminalTheme])
 
   return {
     ctxMenu,

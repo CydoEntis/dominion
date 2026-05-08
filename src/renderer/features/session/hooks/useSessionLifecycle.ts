@@ -70,9 +70,12 @@ export function useSessionLifecycle(): void {
 
     const offExit = ipc.on(IPC.SESSION_EXIT, (payload) => {
       const { sessionId, exitCode } = payload as SessionExitPayload
+      const session = useStore.getState().sessions[sessionId]
+      // Session already removed from store means it was intentionally closed — skip toast
+      if (!session) return
+      const sessionName = session.name
       markSessionExited(sessionId, exitCode)
       removePaneBySessionId(sessionId)
-      const sessionName = useStore.getState().sessions[sessionId]?.name ?? 'Session'
       if (exitCode === 0) {
         toast.success(`${sessionName} finished`)
       } else {

@@ -138,10 +138,12 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
     values: settings
   })
 
-  const defaultShell      = watch('defaultShell') ?? ''
-  const shellStartDir     = watch('shellStartDir') ?? ''
-  const notesDirectory    = watch('notesDirectory') ?? ''
-  const defaultSessionDir = watch('defaultSessionDir') ?? ''
+  const defaultShell       = watch('defaultShell') ?? ''
+  const shellStartDir      = watch('shellStartDir') ?? ''
+  const dataDirectory      = watch('dataDirectory') ?? ''
+  const notesDirectory     = watch('notesDirectory') ?? ''
+  const worktreesDirectory = watch('worktreesDirectory') ?? ''
+  const defaultSessionDir  = watch('defaultSessionDir') ?? ''
   const confirmClose      = watch('confirmCloseSession')
   const resumeOnStartup   = watch('resumeOnStartup')
   const hotkeys           = watch('hotkeys')
@@ -156,9 +158,19 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
     if (picked !== null) setValue('shellStartDir', picked)
   }
 
+  const pickDataDir = async (): Promise<void> => {
+    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    if (picked !== null) setValue('dataDirectory', picked)
+  }
+
   const pickNotesDir = async (): Promise<void> => {
     const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
     if (picked !== null) setValue('notesDirectory', picked)
+  }
+
+  const pickWorktreesDir = async (): Promise<void> => {
+    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    if (picked !== null) setValue('worktreesDirectory', picked)
   }
 
   const pickSessionDir = async (): Promise<void> => {
@@ -237,24 +249,36 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
         <div className="h-px bg-border" />
 
         <section className="flex flex-col gap-3">
-          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Notes</p>
+          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Storage</p>
+
           <div className="flex flex-col gap-1.5">
-            <Label>Notes directory</Label>
+            <Label>Data directory</Label>
+            <p className="text-[11px] text-zinc-600 -mt-1">Where Orbit stores notes, worktrees, and session layout. Defaults to ~/Orbit/.orbit</p>
             <div className="flex gap-2">
-              <Input
-                readOnly
-                value={notesDirectory}
-                placeholder="Default (userData/notes)"
-                className="flex-1 text-xs text-zinc-400 cursor-default"
-              />
-              <button
-                type="button"
-                onClick={pickNotesDir}
-                className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-foreground transition-colors flex-shrink-0"
-                title="Browse"
-              >
+              <Input readOnly value={dataDirectory} placeholder="~/Orbit/.orbit" className="flex-1 text-xs text-zinc-400 cursor-default" />
+              <Button type="button" variant="outline" size="icon" onClick={pickDataDir} title="Browse" className="flex-shrink-0 h-9 w-9">
                 <FolderOpen size={14} />
-              </button>
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Notes directory <span className="text-zinc-600 font-normal">(override)</span></Label>
+            <div className="flex gap-2">
+              <Input readOnly value={notesDirectory} placeholder="~/Orbit/.orbit/notes" className="flex-1 text-xs text-zinc-400 cursor-default" />
+              <Button type="button" variant="outline" size="icon" onClick={pickNotesDir} title="Browse" className="flex-shrink-0 h-9 w-9">
+                <FolderOpen size={14} />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>Worktrees directory <span className="text-zinc-600 font-normal">(override)</span></Label>
+            <div className="flex gap-2">
+              <Input readOnly value={worktreesDirectory} placeholder="~/Orbit/.orbit/worktrees" className="flex-1 text-xs text-zinc-400 cursor-default" />
+              <Button type="button" variant="outline" size="icon" onClick={pickWorktreesDir} title="Browse" className="flex-shrink-0 h-9 w-9">
+                <FolderOpen size={14} />
+              </Button>
             </div>
           </div>
         </section>

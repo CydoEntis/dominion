@@ -1,12 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
-import { NotebookPen, Settings, Moon, Sun, Monitor, Sparkles, GitBranch } from 'lucide-react'
+import { NotebookPen, Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { TitleBar } from './components/TitleBar'
 import { NoteDrawer } from './components/NoteDrawer'
 import { PaneContextMenu } from './features/session/components/PaneContextMenu'
 import { CommandPalette } from './components/CommandPalette'
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal'
+import { NewSessionForm } from './features/session/components/NewSessionForm'
 import { SettingsForm } from './features/settings/components/SettingsForm'
 import { EmptyState } from './components/EmptyState'
 import { AgentMonitorSidebar } from './features/workspace/components/AgentMonitorSidebar'
@@ -20,6 +21,7 @@ import { usePaneActions } from './features/session/hooks/usePaneActions'
 import { useAutoUpdater } from './features/updater/hooks/useAutoUpdater'
 import { useGitReview } from './features/workspace/hooks/useGitReview'
 import { useStore } from './store/root.store'
+import { TERMINAL_THEME_LIST } from './features/terminal/hooks/useTerminal'
 import { cn } from './lib/utils'
 
 interface ContextMenuTarget {
@@ -78,6 +80,61 @@ function StatusThemeToggle(): JSX.Element {
                 )}
               >
                 <Icon size={12} className="flex-shrink-0" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  )
+}
+
+function StatusTerminalThemeToggle({ sessionId }: { sessionId: string }): JSX.Element {
+  const activeTheme = useStore((s) => s.terminalThemes[sessionId])
+  const setTerminalTheme = useStore((s) => s.setTerminalTheme)
+  const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [menuPos, setMenuPos] = useState<{ right: number; bottom: number }>({ right: 0, bottom: 32 })
+
+  const handleOpen = (): void => {
+    const rect = btnRef.current?.getBoundingClientRect()
+    if (rect) setMenuPos({ right: window.innerWidth - rect.right, bottom: window.innerHeight - rect.top + 4 })
+    setOpen(true)
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={open ? () => setOpen(false) : handleOpen}
+        title="Terminal theme"
+        className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', open ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
+      >
+        <Palette size={15} />
+        <span className="text-[11px] font-medium">Terminal</span>
+      </button>
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-50 bg-brand-surface border border-brand-panel/60 rounded-md shadow-2xl py-1 w-44"
+            style={{ right: menuPos.right, bottom: menuPos.bottom }}
+          >
+            <button
+              onClick={() => { setTerminalTheme(sessionId, ''); setOpen(false) }}
+              className={cn('w-full text-left px-3 py-1.5 text-xs transition-colors', !activeTheme ? 'text-zinc-200 bg-brand-panel/40' : 'text-zinc-400 hover:bg-brand-panel hover:text-zinc-200')}
+            >
+              Auto (app theme)
+            </button>
+            <div className="my-1 border-t border-brand-panel/40" />
+            {TERMINAL_THEME_LIST.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => { setTerminalTheme(sessionId, id); setOpen(false) }}
+                className={cn('w-full text-left px-3 py-1.5 text-xs transition-colors', activeTheme === id ? 'text-zinc-200 bg-brand-panel/40' : 'text-zinc-400 hover:bg-brand-panel hover:text-zinc-200')}
+              >
                 {label}
               </button>
             ))}
@@ -355,6 +412,9 @@ export function App(): JSX.Element {
             <NotebookPen size={15} />
             <span className="text-[11px] font-medium">Notes</span>
           </button>
+          {workspaceSessionId !== null && (
+            <StatusTerminalThemeToggle sessionId={workspaceSessionId} />
+          )}
           <StatusThemeToggle />
           <button
             onClick={() => setSidePanel(p => p === 'settings' ? null : 'settings')}
@@ -381,6 +441,7 @@ export function App(): JSX.Element {
         />
       )}
 
+      <NewSessionForm variant="none" />
       <CommandPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}

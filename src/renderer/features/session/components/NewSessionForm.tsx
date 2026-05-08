@@ -11,12 +11,22 @@ import {
   DialogTitle,
   DialogTrigger
 } from '../../../components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '../../../components/ui/select'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
+import { Switch } from '../../../components/ui/switch'
 import { createSession } from '../session.service'
+import { createWorktree } from '../../fs/fs.service'
 import { useStore } from '../../../store/root.store'
 import { IPC } from '@shared/ipc-channels'
 import { cn } from '../../../lib/utils'
+import { toast } from 'sonner'
 
 const PRESETS = [
   { id: 'shell', label: 'Shell', command: undefined },
@@ -28,6 +38,8 @@ const PRESETS = [
 
 type PresetId = (typeof PRESETS)[number]['id']
 
+const NO_GROUP = '__none__'
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required').max(64),
   preset: z.string(),
@@ -36,29 +48,48 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sidebar' }): JSX.Element {
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sidebar' | 'none' }): JSX.Element {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<PresetId>('claude')
   const [selectedDir, setSelectedDir] = useState<string>('')
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(NO_GROUP)
   const [yoloMode, setYoloMode] = useState(false)
+  const [workspacePath, setWorkspacePath] = useState<string | null>(null)
   const upsertSession = useStore((s) => s.upsertSession)
   const addTab = useStore((s) => s.addTab)
   const settings = useStore((s) => s.settings)
   const groups = settings.sessionGroups ?? []
 
   useEffect(() => {
-    const handler = (): void => setOpen(true)
+    const handler = (): void => {
+      setWorkspacePath(null)
+      setOpen(true)
+    }
     document.addEventListener('acc:new-session', handler)
     return () => document.removeEventListener('acc:new-session', handler)
   }, [])
 
   useEffect(() => {
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent<{ projectPath: string }>).detail
+      setWorkspacePath(detail.projectPath)
+      setOpen(true)
+    }
+    document.addEventListener('acc:new-task', handler)
+    return () => document.removeEventListener('acc:new-task', handler)
+  }, [])
+
+  useEffect(() => {
     if (open) {
       setSelectedDir(settings.shellStartDir || '')
-      setSelectedGroupId('')
+      setSelectedGroupId(NO_GROUP)
       setYoloMode(false)
+      setSelectedPreset('claude')
     }
   }, [open])
 
@@ -86,24 +117,55 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           ? data.customCommand?.trim() || undefined
           : preset?.command
 
-      const meta = await createSession({
-        name: data.name,
-        agentCommand,
-        cwd: selectedDir || undefined,
-        cols: 80,
-        rows: 24,
-        groupId: selectedGroupId || undefined,
-        yoloMode: yoloMode || undefined
-      })
-      upsertSession(meta)
-      addTab(meta.sessionId)
+      if (workspacePath) {
+        const projectName = workspacePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'session'
+        const task = data.name.trim()
+        const branchName = `orbit/${slugify(projectName)}-${task ? slugify(task) : Date.now().toString(36).slice(-4)}`
+        let worktreeResult: { worktreePath: string; branchName: string; baseBranch: string }
+        try {
+          worktreeResult = await createWorktree(workspacePath, branchName)
+        } catch (err) {
+          toast.error(`Worktree failed: ${err instanceof Error ? err.message : String(err)}`)
+          return
+        }
+        const meta = await createSession({
+          name: task || projectName,
+          agentCommand,
+          cwd: worktreeResult.worktreePath,
+          cols: 80,
+          rows: 24,
+          yoloMode: yoloMode || undefined,
+          worktreePath: worktreeResult.worktreePath,
+          worktreeBranch: worktreeResult.branchName,
+          worktreeBaseBranch: worktreeResult.baseBranch,
+          projectRoot: workspacePath
+        })
+        upsertSession(meta)
+        addTab(meta.sessionId)
+      } else {
+        const groupId = selectedGroupId === NO_GROUP ? undefined : selectedGroupId || undefined
+        const meta = await createSession({
+          name: data.name,
+          agentCommand,
+          cwd: selectedDir || undefined,
+          cols: 80,
+          rows: 24,
+          groupId,
+          yoloMode: yoloMode || undefined
+        })
+        upsertSession(meta)
+        addTab(meta.sessionId)
+      }
+
       reset()
       setSelectedPreset('claude')
-      setSelectedGroupId('')
+      setSelectedGroupId(NO_GROUP)
       setYoloMode(false)
+      setWorkspacePath(null)
       setOpen(false)
     } catch (err) {
       console.error('Failed to create session:', err)
+      toast.error(`Failed: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setLoading(false)
     }
@@ -114,6 +176,142 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
     : ''
 
   const supportsYolo = selectedPreset === 'claude'
+  const isWorkspaceMode = workspacePath !== null
+  const projectLabel = isWorkspaceMode
+    ? workspacePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? workspacePath
+    : null
+
+  const dialogContent = (
+    <DialogContent className="sm:max-w-sm" onCloseAutoFocus={(e) => e.preventDefault()}>
+      <DialogHeader>
+        <DialogTitle>{isWorkspaceMode ? 'New Task' : 'New Session'}</DialogTitle>
+        {projectLabel && (
+          <p className="text-xs text-zinc-500 mt-0.5">{projectLabel}</p>
+        )}
+      </DialogHeader>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="name">{isWorkspaceMode ? 'Task name' : 'Name'}</Label>
+          <Input
+            id="name"
+            placeholder={isWorkspaceMode ? 'e.g. fix-auth' : 'my-agent'}
+            autoFocus
+            {...register('name')}
+          />
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label>Agent</Label>
+          <Select value={selectedPreset} onValueChange={(v) => setSelectedPreset(v as PresetId)}>
+            <SelectTrigger className="text-xs h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRESETS.map((preset) => (
+                <SelectItem key={preset.id} value={preset.id} className="text-xs">
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedPreset === 'custom' && (
+            <Input placeholder="e.g. aider, continue, ollama" {...register('customCommand')} className="mt-1" />
+          )}
+        </div>
+
+        {supportsYolo && (
+          <div className={cn(
+            'flex items-center justify-between px-3 py-2.5 rounded-md border transition-colors',
+            yoloMode ? 'border-amber-500/40 bg-amber-500/5' : 'border-brand-panel'
+          )}>
+            <div className="flex items-center gap-2 min-w-0">
+              <Zap size={12} className={cn('flex-shrink-0', yoloMode ? 'text-amber-400' : 'text-zinc-500')} />
+              <span className={cn('text-xs font-medium', yoloMode ? 'text-amber-300' : 'text-zinc-300')}>
+                YOLO Mode
+              </span>
+              <span className="text-xs text-zinc-600 truncate">— skip permission prompts</span>
+            </div>
+            <Switch
+              checked={yoloMode}
+              onCheckedChange={setYoloMode}
+              className={yoloMode ? 'data-[state=checked]:bg-amber-500' : ''}
+            />
+          </div>
+        )}
+
+        {!isWorkspaceMode && (
+          <div className="flex flex-col gap-1.5">
+            <Label>Working directory</Label>
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-center gap-2 px-3 h-9 rounded-md border border-input bg-background text-xs text-zinc-400 min-w-0">
+                {selectedDir ? (
+                  <>
+                    <span className="truncate flex-1" title={selectedDir}>…/{shortDir}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDir('')}
+                      className="flex-shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors"
+                    >
+                      <X size={11} />
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-zinc-600">Home directory</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={pickDir}
+                className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0"
+                title="Browse"
+              >
+                <FolderOpen size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isWorkspaceMode && groups.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <Label>Group <span className="text-zinc-600 font-normal">(optional)</span></Label>
+            <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+              <SelectTrigger className="text-xs h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_GROUP} className="text-xs">None</SelectItem>
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id} className="text-xs">{g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-1">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 disabled:opacity-40"
+          >
+            {loading ? 'Launching...' : 'Launch'}
+          </Button>
+        </div>
+      </form>
+    </DialogContent>
+  )
+
+  if (variant === 'none') {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        {dialogContent}
+      </Dialog>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -132,103 +330,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           </button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm" onCloseAutoFocus={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle>New Session</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" placeholder="my-agent" autoFocus {...register('name')} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label>Command</Label>
-            <div className="flex gap-1.5 flex-wrap">
-              {PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => setSelectedPreset(preset.id)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors',
-                    selectedPreset === preset.id
-                      ? 'bg-brand-accent text-brand-bg border-brand-accent'
-                      : 'bg-transparent text-zinc-400 border-brand-panel hover:border-brand-muted hover:text-zinc-200'
-                  )}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            {selectedPreset === 'custom' && (
-              <Input placeholder="e.g. aider, continue, ollama" {...register('customCommand')} className="mt-1" />
-            )}
-          </div>
-
-          {supportsYolo && (
-            <button
-              type="button"
-              onClick={() => setYoloMode((v) => !v)}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-md text-xs border transition-colors text-left',
-                yoloMode
-                  ? 'bg-amber-500/10 border-amber-500/40 text-amber-400'
-                  : 'bg-transparent border-brand-panel text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
-              )}
-            >
-              <Zap size={12} className="flex-shrink-0" />
-              <span>
-                <span className="font-medium">YOLO Mode</span>
-                <span className="ml-1 opacity-70">— skip permission prompts</span>
-              </span>
-            </button>
-          )}
-
-          <div className="flex flex-col gap-1.5">
-            <Label>Working directory</Label>
-            <div className="flex gap-2">
-              <div className="flex-1 flex items-center gap-2 px-3 h-9 rounded-md border border-input bg-background text-xs text-zinc-400 min-w-0">
-                {selectedDir ? (
-                  <>
-                    <span className="truncate flex-1" title={selectedDir}>…/{shortDir}</span>
-                    <button type="button" onClick={() => setSelectedDir('')} className="flex-shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors"><X size={11} /></button>
-                  </>
-                ) : (
-                  <span className="text-zinc-600">Home directory</span>
-                )}
-              </div>
-              <button type="button" onClick={pickDir} className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0" title="Browse">
-                <FolderOpen size={14} />
-              </button>
-            </div>
-          </div>
-
-          {groups.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <Label>Group <span className="text-zinc-600 font-normal">(optional)</span></Label>
-              <select
-                value={selectedGroupId}
-                onChange={(e) => setSelectedGroupId(e.target.value)}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-zinc-300 outline-none focus:border-brand-accent/50 transition-colors"
-              >
-                <option value="">None</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 mt-1">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={loading}>Cancel</Button>
-            <Button type="submit" disabled={loading} className="bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 disabled:opacity-40">
-              {loading ? 'Launching...' : 'Launch'}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
+      {dialogContent}
     </Dialog>
   )
 }

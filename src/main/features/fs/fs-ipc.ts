@@ -1,10 +1,11 @@
 import { ipcMain, shell, clipboard } from 'electron'
 import { promises as fs } from 'fs'
-import { join, dirname, resolve } from 'path'
+import { join, dirname, resolve, basename } from 'path'
 import { exec, execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import { IPC } from '@shared/ipc-channels'
 import type { FsEntry, GitStatusEntry } from '@shared/ipc-types'
+import { getWorktreesDir } from '../../lib/paths'
 
 const CANDIDATE_EDITORS = [
   { name: 'VS Code', command: 'code' },
@@ -303,12 +304,15 @@ export function registerFsIpc(): void {
     const { stdout: baseOut } = await execAsync('git rev-parse --abbrev-ref HEAD', { cwd: projectRoot })
     const baseBranch = baseOut.trim() || 'main'
     const suffix = branchName.split('/').pop() ?? 'session'
+    const projectName = basename(projectRoot)
 
-    // Find an available worktree directory path
-    let worktreePath = resolve(join(projectRoot, '..', `orbit-${suffix}`))
+    // Place worktrees under the Orbit data dir, grouped by project
+    const worktreesBase = join(getWorktreesDir(), projectName)
+    await fs.mkdir(worktreesBase, { recursive: true })
+    let worktreePath = join(worktreesBase, suffix)
     let counter = 2
     while (true) {
-      try { await fs.access(worktreePath); worktreePath = resolve(join(projectRoot, '..', `orbit-${suffix}-${counter++}`)) }
+      try { await fs.access(worktreePath); worktreePath = join(worktreesBase, `${suffix}-${counter++}`) }
       catch { break }
     }
 

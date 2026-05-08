@@ -197,7 +197,14 @@ export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMe
           style={{ backgroundColor: isExited ? '#71717a' : color }}
         />
 
-        <span className="flex-1 truncate min-w-0 text-sm">{meta.name}</span>
+        <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+          <span className="truncate text-sm leading-snug">{meta.name}</span>
+          {meta.cwd && (
+            <span className="truncate text-[10px] text-zinc-600 leading-tight">
+              {meta.cwd.replace(/\\/g, '/').split('/').filter(Boolean).at(-1) ?? meta.cwd}
+            </span>
+          )}
+        </div>
 
         <button
           onClick={handleClose}

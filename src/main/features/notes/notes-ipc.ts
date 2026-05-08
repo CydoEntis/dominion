@@ -4,11 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, unlinkSy
 import { IPC } from '@shared/ipc-channels'
 import type { Note } from '@shared/ipc-types'
 import { getSettings, setSettings } from '../settings/settings-store'
-
-function getNotesDir(): string {
-  const dir = getSettings().notesDirectory
-  return dir || join(app.getPath('userData'), 'notes')
-}
+import { getNotesDir } from '../../lib/paths'
 
 function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true })
@@ -36,9 +32,18 @@ export function registerNotesIpc(): void {
     const dir = getNotesDir()
     ensureDir(dir)
 
-    // One-time migration: if no .md files exist yet, move notes out of settings.json
     const existingFiles = readdirSync(dir).filter(f => f.endsWith('.md'))
     if (existingFiles.length === 0) {
+      // Migrate from old userData/notes location
+      const oldDir = join(app.getPath('userData'), 'notes')
+      if (oldDir !== dir && existsSync(oldDir)) {
+        const oldFiles = readdirSync(oldDir).filter(f => f.endsWith('.md'))
+        for (const file of oldFiles) {
+          try { writeFileSync(join(dir, file), readFileSync(join(oldDir, file), 'utf-8'), 'utf-8') } catch {}
+        }
+        if (oldFiles.length > 0) return readAllNotes(dir)
+      }
+      // Migrate from legacy settings.json notes array
       const { notes: legacy } = getSettings()
       if (legacy.length > 0) {
         for (const note of legacy) {

@@ -64,7 +64,11 @@ export function createSession(
     color: payload.color,
     agentStatus: 'idle',
     groupId: payload.groupId,
-    yoloMode: payload.yoloMode
+    yoloMode: payload.yoloMode,
+    worktreePath: payload.worktreePath,
+    worktreeBranch: payload.worktreeBranch,
+    worktreeBaseBranch: payload.worktreeBaseBranch,
+    projectRoot: payload.projectRoot
   }
 
   const pty = new PtyProcess({
