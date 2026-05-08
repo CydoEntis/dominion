@@ -16,6 +16,33 @@
 
 ---
 
+## Bug Backlog
+
+### Easy
+| Bug | Notes |
+|-----|-------|
+| Need physical buttons for all keyboard shortcuts | Toolbar/button equivalents for keyboard-illiterate users |
+
+### Medium
+| Bug | Notes |
+|-----|-------|
+| Shift+Enter should insert a newline, not send message | Requires agent message input bar (On Hold) — nothing to intercept yet |
+| Session tabs don't update working directory path on `cd` | OSC 7 + shell integration injection is in place for bash/zsh/fish/pwsh. CMD has a prompt-parsing fallback but it's fragile with custom prompts. Best long-term fix: rely on Claude Code / Codex emitting OSC 7 when agent takes over, which covers the most important case. |
+
+### Hard
+| Bug | Notes |
+|-----|-------|
+| Untitled notes mass-created on new note or panel reopen | State management bug — note creation firing multiple times |
+| Notes not saving to disk | Persist layer broken or missing; may need full note system rethink |
+| Terminal renders garbled characters on vertical scroll | xterm.js rendering artifact — investigate scroll buffer / renderer settings |
+| Terminal color schemes missing on macOS | Platform-specific theme gap; needs investigation on Mac build |
+| Auto-update broken on new release / patch | Electron updater misconfigured or signature mismatch; needs full debug pass |
+| Terminal theme selector (like file viewer) | New feature — add per-session color scheme picker similar to file viewer |
+| Session spinner / activity indicator | Research OSC title-change detection or Claude Code hook for reliable signal |
+| Orbit mobile management | Research-only — assess feasibility of phone-based session control |
+
+---
+
 ## On Hold
 
 | Item | Reason |
@@ -48,6 +75,10 @@
 - EmptyState shows hardcoded version
 - Detached window close leaves tab gray and unresumable
 - Show Shortcuts hotkey not persisting (was stuck on `?` / `Shift+?`)
+- Right-click session tab context menu with Close (was already implemented in SessionTabBar)
+- Right-click paste double-insert — contextmenu listener moved to capture phase; xterm.js no longer sees the event
+- Note deletion / folder deletion leaving NoteEditor blank — stale openNoteIds cleaned via sync effect; visible falls back to full sorted list when filter returns empty
+- Note tab X closes tab without deleting (openNoteIds set tracks open tabs; NotepadPane delete is separate)
 
 **UI / Polish**
 - Session group headers: gradient background + Layers icon

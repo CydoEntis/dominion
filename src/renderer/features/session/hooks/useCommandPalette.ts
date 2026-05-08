@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useStore } from '../../../store/root.store'
 import { findTabForSession } from '../../terminal/pane-tree'
-import { createSession } from '../session.service'
-import type { Preset } from '@shared/ipc-types'
 
 export interface PaletteItem {
   id: string
@@ -26,9 +24,6 @@ export function useCommandPalette(open: boolean, onClose: () => void, onShowShor
   const paneTree = useStore((s) => s.paneTree)
   const setActiveSession = useStore((s) => s.setActiveSession)
   const setFocusedSession = useStore((s) => s.setFocusedSession)
-  const upsertSession = useStore((s) => s.upsertSession)
-  const addTab = useStore((s) => s.addTab)
-  const toggleDashboard = useStore((s) => s.toggleDashboard)
 
   useEffect(() => {
     if (!open) { setQuery(''); setSelectedIdx(0) }
@@ -54,33 +49,12 @@ export function useCommandPalette(open: boolean, onClose: () => void, onShowShor
       }
     }))
 
-  ;(settings.presets ?? [])
-    .filter((p: Preset) => !q || p.name.toLowerCase().includes(q))
-    .forEach((p: Preset) => items.push({
-      id: `preset-${p.id}`,
-      label: p.name,
-      description: p.agentCommand ?? 'shell',
-      iconName: 'Zap',
-      action: async () => {
-        try {
-          const meta = await createSession({ name: p.name, agentCommand: p.agentCommand, cwd: p.cwd, cols: 80, rows: 24 })
-          upsertSession(meta)
-          addTab(meta.sessionId)
-        } catch {}
-        onClose()
-      }
-    }))
-
   const hk = settings.hotkeys
   const actions: PaletteItem[] = [
-    { id: 'new-session',   label: 'New Session',           description: hk.newSession,   iconName: 'Plus',        action: () => { document.dispatchEvent(new CustomEvent('acc:new-session'));   onClose() } },
-    { id: 'open-project',  label: 'Open Project',          description: hk.openProject,  iconName: 'FolderOpen',  action: () => { document.dispatchEvent(new CustomEvent('acc:open-project'));  onClose() } },
-    { id: 'toggle-sidebar',label: 'Toggle Sidebar',        description: hk.toggleDashboard, iconName: 'PanelLeft', action: () => { toggleDashboard();                                          onClose() } },
-    { id: 'new-note',      label: 'New Note',              description: hk.newNote,      iconName: 'NotebookPen', action: () => { document.dispatchEvent(new CustomEvent('acc:new-note'));     onClose() } },
-    { id: 'quick-note',    label: 'Quick Note',            description: hk.quickNote,    iconName: 'NotebookPen', action: () => { document.dispatchEvent(new CustomEvent('acc:quick-note'));   onClose() } },
-    { id: 'close-tab',     label: 'Close Active Tab',      description: hk.closeSession, iconName: 'X',           action: () => { document.dispatchEvent(new CustomEvent('acc:close-tab'));   onClose() } },
-    { id: 'detach-pane',   label: 'Detach Pane to Window', description: 'Ctrl+Shift+D', iconName: 'Maximize2',   action: () => { document.dispatchEvent(new CustomEvent('acc:detach-pane')); onClose() } },
-    { id: 'show-shortcuts',label: 'Keyboard Shortcuts',    description: '?',            iconName: 'Terminal',    action: () => { onShowShortcuts?.(); onClose() } },
+    { id: 'new-session',   label: 'New Session',        description: hk.newSession,   iconName: 'Plus',        action: () => { document.dispatchEvent(new CustomEvent('acc:new-session'));  onClose() } },
+    { id: 'open-project',  label: 'Open Project',       description: hk.openProject,  iconName: 'FolderOpen',  action: () => { document.dispatchEvent(new CustomEvent('acc:open-project')); onClose() } },
+    { id: 'toggle-notes',  label: 'Toggle Notes',       description: hk.quickNote,    iconName: 'NotebookPen', action: () => { document.dispatchEvent(new CustomEvent('acc:quick-note'));   onClose() } },
+    { id: 'show-shortcuts',label: 'Keyboard Shortcuts', description: hk.showShortcuts, iconName: 'Keyboard',   action: () => { onShowShortcuts?.(); onClose() } },
   ].filter((a) => !q || a.label.toLowerCase().includes(q))
 
   actions.forEach((a) => items.push(a))

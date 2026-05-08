@@ -1,4 +1,5 @@
-﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+﻿// test comment
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Plus, X } from 'lucide-react'
 import { marked } from 'marked'
 import { useStore } from '../store/root.store'
@@ -21,27 +22,33 @@ function noteTitle(note: Note): string {
 interface Props {
   activeNoteId: string | null
   onActivate: (id: string) => void
+  onCloseNote: (id: string) => void
+  openNoteIds: Set<string>
   onCreate: () => void
 }
 
-export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.Element {
+export function NoteEditor({ activeNoteId, onActivate, onCloseNote, openNoteIds, onCreate }: Props): JSX.Element {
   const notes = useStore((s) => s.notes)
   const saveNote = useStore((s) => s.saveNote)
-  const deleteNote = useStore((s) => s.deleteNote)
 
   const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-  const activeNote = notes.find(n => n.id === activeNoteId) ?? sorted[0] ?? null
+  const filtered = openNoteIds.size === 0 ? sorted : sorted.filter(n => openNoteIds.has(n.id))
+  const visible = filtered.length > 0 ? filtered : sorted
+  const activeNote = notes.find(n => n.id === activeNoteId) ?? visible[0] ?? null
   const effectiveId = activeNote?.id ?? null
 
   const [displayContent, setDisplayContent] = useState(activeNote?.content ?? '')
   const [viewMode, setViewMode] = useState<'raw' | 'preview'>('raw')
   const localContentRef = useRef(activeNote?.content ?? '')
   const prevIdRef = useRef<string | null>(effectiveId)
+  const effectiveIdRef = useRef<string | null>(effectiveId)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const flushSave = useCallback((id: string, content: string): void => {
     saveNote(id, content)
   }, [saveNote])
+
+  useEffect(() => { effectiveIdRef.current = effectiveId }, [effectiveId])
 
   useEffect(() => {
     if (prevIdRef.current !== effectiveId) {
@@ -55,7 +62,11 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
     }
   }, [effectiveId, flushSave])
 
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
+  // Flush pending save on unmount so content is never lost
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (effectiveIdRef.current) flushSave(effectiveIdRef.current, localContentRef.current)
+  }, [flushSave])
 
   // Alt+R → raw, Alt+P → preview
   useEffect(() => {
@@ -113,9 +124,9 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
     debounceRef.current = setTimeout(() => { if (effectiveId) flushSave(effectiveId, value) }, 400)
   }
 
-  const handleDelete = (id: string, e: React.MouseEvent): void => {
+  const handleCloseTab = (id: string, e: React.MouseEvent): void => {
     e.stopPropagation()
-    deleteNote(id)
+    onCloseNote(id)
   }
 
   const btnBase = 'inline-flex items-center px-2 h-5 text-[10px] rounded transition-colors'
@@ -138,7 +149,7 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         <div className="flex items-center flex-1 min-w-0 overflow-x-auto h-full">
-          {sorted.map(note => {
+          {visible.map(note => {
             const nc = noteColorFromId(note.id)
             const isActive = note.id === effectiveId
             return (
@@ -156,9 +167,9 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
             >
               <span className="max-w-[140px] truncate">{noteTitle(note)}</span>
               <button
-                onClick={(e) => handleDelete(note.id, e)}
+                onClick={(e) => handleCloseTab(note.id, e)}
                 className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 transition-all flex-shrink-0"
-                title="Delete note"
+                title="Close tab"
               >
                 <X size={10} />
               </button>
@@ -206,7 +217,7 @@ export function NoteEditor({ activeNoteId, onActivate, onCreate }: Props): JSX.E
           value={displayContent}
           onChange={handleChange}
           placeholder="Start typing..."
-          className="flex-1 w-full bg-transparent text-zinc-200 text-sm resize-none outline-none px-8 py-6 placeholder-zinc-600 leading-relaxed"
+          className="flex-1 w-full bg-transparent text-zinc-200 text-sm resize-none outline-none px-8 py-6 placeholder-zinc-600 leading-relaxed select-text"
           spellCheck={false}
           autoFocus
         />

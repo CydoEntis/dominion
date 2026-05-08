@@ -42,7 +42,11 @@ export function useLayoutPersistence(): void {
           cwd: m.cwd,
           color: m.color,
           conversationId: m.conversationId,
-          groupId: m.groupId
+          groupId: m.groupId,
+          worktreePath: m.worktreePath,
+          worktreeBranch: m.worktreeBranch,
+          worktreeBaseBranch: m.worktreeBaseBranch,
+          projectRoot: m.projectRoot,
         })),
         tabs: [
           ...state.tabOrder

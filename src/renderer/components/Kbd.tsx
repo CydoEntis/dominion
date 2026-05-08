@@ -1,8 +1,8 @@
 export const kbdStyle: React.CSSProperties = {
-  backgroundColor: '#1e2433',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderBottomColor: 'rgba(0,0,0,0.3)',
-  boxShadow: '0 3px 0 rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)',
+  background: 'rgb(var(--brand-panel))',
+  border: '1px solid rgb(var(--brand-accent) / 0.14)',
+  borderBottomColor: 'rgba(0,0,0,0.25)',
+  boxShadow: '0 2px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgb(var(--brand-accent) / 0.07)',
   borderRadius: 5,
 }
 

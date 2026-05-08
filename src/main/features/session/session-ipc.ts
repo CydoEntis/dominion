@@ -30,13 +30,17 @@ export function registerSessionIpc(): void {
     return { chunks }
   })
 
-  ipcMain.handle(IPC.SESSION_PATCH, (_event, payload: { sessionId: string; name?: string; color?: string; groupId?: string | null; taskStatus?: string | null }) => {
-    const patch: { name?: string; color?: string; groupId?: string; taskStatus?: string } = {}
+  ipcMain.handle(IPC.SESSION_PATCH, (_event, payload: { sessionId: string; name?: string; color?: string; groupId?: string | null; taskStatus?: string | null; worktreePath?: string; worktreeBranch?: string; worktreeBaseBranch?: string; projectRoot?: string }) => {
+    const patch: Record<string, unknown> = {}
     if (payload.name !== undefined) patch.name = payload.name
     if (payload.color !== undefined) patch.color = payload.color
     if (payload.groupId !== undefined) patch.groupId = payload.groupId ?? undefined
     if (payload.taskStatus !== undefined) patch.taskStatus = payload.taskStatus ?? undefined
-    return patchSession(payload.sessionId, patch)
+    if (payload.worktreePath !== undefined) patch.worktreePath = payload.worktreePath
+    if (payload.worktreeBranch !== undefined) patch.worktreeBranch = payload.worktreeBranch
+    if (payload.worktreeBaseBranch !== undefined) patch.worktreeBaseBranch = payload.worktreeBaseBranch
+    if (payload.projectRoot !== undefined) patch.projectRoot = payload.projectRoot
+    return patchSession(payload.sessionId, patch as any)
   })
 
   ipcMain.on(IPC.SESSION_WRITE, (_event, payload) => {

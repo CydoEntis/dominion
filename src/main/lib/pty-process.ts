@@ -3,6 +3,7 @@ import { webContents } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import { SCROLLBACK_BYTE_LIMIT } from '@shared/constants'
 import type { AgentStatus, SessionDataPayload } from '@shared/ipc-types'
+import { getShellIntegrationSequence } from './shell-integration'
 
 interface PtyOptions {
   sessionId: string
@@ -43,6 +44,7 @@ export class PtyProcess {
   private waitingTimer: ReturnType<typeof setTimeout> | null = null
   private idleTimer: ReturnType<typeof setTimeout> | null = null
   private detectionBuffer = ''
+  private cwdBuffer = ''
   readonly sessionId: string
   readonly subscriberIds = new Set<number>()
 
@@ -65,6 +67,16 @@ export class PtyProcess {
       this.detectAgentStatus(data)
       this.fanOut(data)
     })
+
+    // Inject shell integration ~300 ms after the shell has initialised its
+    // RC files.  We do this here rather than in session-service so the PTY
+    // class owns the full lifecycle of the underlying process.
+    const integrationSeq = getShellIntegrationSequence(opts.command, process.platform)
+    if (integrationSeq) {
+      setTimeout(() => {
+        try { this.pty.write(integrationSeq) } catch { /* pty may have exited already */ }
+      }, 300)
+    }
   }
 
   private setAgentStatus(status: AgentStatus): void {
@@ -118,6 +130,20 @@ export class PtyProcess {
         if (process.platform === 'win32' && /^\/[A-Za-z]:/.test(cwd)) cwd = cwd.slice(1)
         this.onCwdChange?.(cwd)
       } catch { /* ignore malformed URI */ }
+      this.cwdBuffer = ''
+    } else {
+      // Fallback for CMD and other shells that don't emit OSC 7:
+      // detect prompt lines of the form "C:\path>" at the start of a line.
+      this.cwdBuffer = (this.cwdBuffer + chunk.replace(ANSI_RE, '')).slice(-512)
+      const lines = this.cwdBuffer.split(/\r?\n/)
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim()
+        // Match a bare Windows path prompt: "C:\something>" or Unix "~/path$" style
+        const winMatch = /^([A-Za-z]:[^>]*)>$/.exec(line)
+        if (winMatch) { this.onCwdChange?.(winMatch[1]); this.cwdBuffer = ''; break }
+        const unixMatch = /^([/~][^$#]*)\s*[$#]$/.exec(line)
+        if (unixMatch) { this.onCwdChange?.(unixMatch[1].trim()); this.cwdBuffer = ''; break }
+      }
     }
   }
 

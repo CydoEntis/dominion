@@ -2,23 +2,57 @@ import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { useStore } from '../store/root.store'
+import { cn } from '../lib/utils'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
+const MODIFIERS = new Set(['ctrl', 'shift', 'alt', 'cmd', 'meta', 'win'])
+
+function useKbdVariant(): 'dark' | 'light' | 'space' {
+  const theme = useStore((s) => s.settings.theme)
+  if (theme === 'space') return 'space'
+  if (theme === 'light') return 'light'
+  if (theme === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return 'dark'
+}
+
+function kbdColor(isMod: boolean, variant: 'dark' | 'light' | 'space'): string {
+  if (variant === 'space') return isMod
+    ? 'bg-indigo-950 border-indigo-700/50 border-b-indigo-900 text-indigo-300'
+    : 'bg-violet-950 border-violet-700/50 border-b-violet-900 text-violet-200'
+  if (variant === 'light') return isMod
+    ? 'bg-slate-300 border-slate-400/70 border-b-slate-500/50 text-slate-700'
+    : 'bg-white border-slate-300/80 border-b-slate-400/60 text-slate-800'
+  return isMod
+    ? 'bg-brand-panel border-brand-panel/60 text-brand-muted'
+    : 'bg-brand-surface border-brand-panel/60 text-brand-accent'
+}
+
 function Kbd({ keys }: { keys: string }): JSX.Element {
+  const variant = useKbdVariant()
   return (
     <span className="inline-flex items-center gap-1">
-      {keys.split('+').map((k, i) => (
-        <kbd
-          key={i}
-          className="inline-flex items-center px-1.5 py-0.5 rounded border border-brand-panel bg-brand-surface text-[10px] text-zinc-300 font-mono"
-        >
-          {k.trim()}
-        </kbd>
-      ))}
+      {keys.split('+').map((k, i) => {
+        const key = k.trim()
+        const isMod = MODIFIERS.has(key.toLowerCase())
+        return (
+          <kbd
+            key={i}
+            className={cn(
+              'inline-flex items-center justify-center font-semibold font-mono rounded-md',
+              'border border-b-[3px] shadow-sm select-none px-2 py-1.5',
+              'text-[10px] leading-none',
+              isMod ? 'min-w-[40px]' : 'min-w-[26px]',
+              kbdColor(isMod, variant)
+            )}
+          >
+            {key}
+          </kbd>
+        )
+      })}
     </span>
   )
 }
@@ -45,9 +79,8 @@ export function KeyboardShortcutsModal({ open, onClose }: Props): JSX.Element | 
       title: 'Global',
       rows: [
         { label: 'Command Palette',    binding: hk.commandPalette },
-        { label: 'File Search',        binding: hk.fileSearch },
-        { label: 'Toggle Sidebar',     binding: hk.toggleDashboard },
         { label: 'Show Shortcuts',     binding: hk.showShortcuts },
+        { label: 'Open Project',       binding: hk.openProject },
       ]
     },
     {
@@ -55,19 +88,15 @@ export function KeyboardShortcutsModal({ open, onClose }: Props): JSX.Element | 
       rows: [
         { label: 'New Session',        binding: hk.newSession },
         { label: 'Close Session',      binding: hk.closeSession },
-        { label: 'Open Project',       binding: hk.openProject },
-        { label: 'Rename Session',     binding: 'Double-click tab' },
-        { label: 'Split Horizontal',   binding: 'Right-click pane' },
-        { label: 'Detach Pane',        binding: 'Ctrl+Shift+D' },
+        { label: 'Rename / Recolor',   binding: 'Double-click session' },
+        { label: 'Session options',    binding: 'Right-click session' },
+        { label: 'Split / Detach',     binding: 'Right-click pane' },
       ]
     },
     {
       title: 'Notes',
       rows: [
-        { label: 'New Note (sidebar)', binding: hk.newNote },
-        { label: 'Quick Note (drawer)',binding: hk.quickNote },
-        { label: 'Raw view',           binding: 'Alt+R' },
-        { label: 'Preview',            binding: 'Alt+P' },
+        { label: 'Toggle Notes',       binding: hk.quickNote },
       ]
     },
     {
@@ -76,14 +105,6 @@ export function KeyboardShortcutsModal({ open, onClose }: Props): JSX.Element | 
         { label: 'Copy selection',     binding: 'Ctrl+C (with selection)' },
         { label: 'Paste',              binding: 'Ctrl+Shift+V' },
         { label: 'Open URL / file',    binding: 'Select text, Shift+click' },
-      ]
-    },
-    {
-      title: 'File Viewer',
-      rows: [
-        { label: 'Raw view',           binding: 'Alt+R' },
-        { label: 'Markdown preview',   binding: 'Alt+P' },
-        { label: 'Diff view',          binding: 'Alt+D' },
       ]
     },
   ]

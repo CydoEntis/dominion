@@ -50,7 +50,7 @@ const DARK_TERMINAL_THEME = {
 }
 
 const LIGHT_TERMINAL_THEME = {
-  background: '#fafafa', foreground: '#1c1c1c', cursor: '#333333',
+  background: '#f5f2e8', foreground: '#1c1c1c', cursor: '#4a4a4a',
   black: '#000000', brightBlack: '#767676',
   red: '#cd3131', brightRed: '#f14c4c',
   green: '#117700', brightGreen: '#23d18b',
@@ -61,7 +61,20 @@ const LIGHT_TERMINAL_THEME = {
   white: '#555555', brightWhite: '#767676',
 }
 
+const SPACE_TERMINAL_THEME = {
+  background: '#090616', foreground: '#e8e0ff', cursor: '#bf8cff',
+  black: '#0d0a26', brightBlack: '#2a2050',
+  red: '#ff6b8a', brightRed: '#ff9aad',
+  green: '#78ffd6', brightGreen: '#a0ffe6',
+  yellow: '#ffd166', brightYellow: '#ffe299',
+  blue: '#82a8ff', brightBlue: '#aac4ff',
+  magenta: '#bf8cff', brightMagenta: '#d8b4ff',
+  cyan: '#78d8ff', brightCyan: '#a8e8ff',
+  white: '#c8c0e8', brightWhite: '#e8e0ff',
+}
+
 function resolveTerminalTheme(theme: string): typeof DARK_TERMINAL_THEME {
+  if (theme === 'space') return SPACE_TERMINAL_THEME
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   return isDark ? DARK_TERMINAL_THEME : LIGHT_TERMINAL_THEME
 }
@@ -288,9 +301,10 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       if (text) { terminal.paste(text); terminal.focus() }
     }
 
-    // Capture phase so xterm's internal stopPropagation can't swallow Shift+click
+    // All three in capture phase: prevents xterm.js internal handlers from swallowing Shift+click,
+    // right-click paste, or Ctrl+V before we've had a chance to handle them.
     container.addEventListener('mouseup', handleMouseUp, true)
-    container.addEventListener('contextmenu', handleContextMenu)
+    container.addEventListener('contextmenu', handleContextMenu, true)
     container.addEventListener('paste', handlePaste, true)
 
     const safeRefit = (): void => {
@@ -330,7 +344,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       observer.disconnect()
       visibilityObserver.disconnect()
       container.removeEventListener('mouseup', handleMouseUp, true)
-      container.removeEventListener('contextmenu', handleContextMenu)
+      container.removeEventListener('contextmenu', handleContextMenu, true)
       container.removeEventListener('paste', handlePaste, true)
       searchAddon.dispose()
       searchAddonRef.current = null

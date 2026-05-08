@@ -1,11 +1,34 @@
 ﻿import { useStore } from '../store/root.store'
+import { cn } from '../lib/utils'
 import logoUrl from '../assets/logo.png'
 
 declare const __APP_VERSION__: string
 
+const MODIFIERS = new Set(['ctrl', 'shift', 'alt', 'cmd', 'meta', 'win'])
+
+function useKbdVariant(): 'dark' | 'light' | 'space' {
+  const theme = useStore((s) => s.settings.theme)
+  if (theme === 'space') return 'space'
+  if (theme === 'light') return 'light'
+  if (theme === 'system') return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  return 'dark'
+}
+
 function Key({ label }: { label: string }): JSX.Element {
+  const variant = useKbdVariant()
+  const isMod = MODIFIERS.has(label.toLowerCase())
+  const themed = variant === 'space'
+    ? isMod ? 'bg-indigo-950 border-indigo-700/50 border-b-indigo-900 text-indigo-300' : 'bg-violet-950 border-violet-700/50 border-b-violet-900 text-violet-200'
+    : variant === 'light'
+      ? isMod ? 'bg-slate-300 border-slate-400/70 border-b-slate-500/50 text-slate-700' : 'bg-white border-slate-300/80 border-b-slate-400/60 text-slate-800'
+      : isMod ? 'bg-brand-panel border-brand-panel/60 text-brand-muted' : 'bg-brand-surface border-brand-panel/60 text-brand-accent'
   return (
-    <kbd className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-brand-panel border border-brand-panel/80 shadow-[0_2px_0_rgba(0,0,0,0.5)] font-mono text-[11px] text-zinc-300 leading-5 min-w-[1.75rem]">
+    <kbd className={cn(
+      'inline-flex items-center justify-center font-semibold font-mono rounded-md',
+      'border border-b-[3px] shadow-sm select-none text-[10px] leading-none px-2 py-1.5',
+      isMod ? 'min-w-[40px]' : 'min-w-[26px]',
+      themed
+    )}>
       {label}
     </kbd>
   )
@@ -47,13 +70,8 @@ export function EmptyState(): JSX.Element {
         <KeybindEntry hotkey={hotkeys.newSession} label="New session" action={() => document.dispatchEvent(new CustomEvent('acc:new-session'))} />
         <KeybindEntry hotkey="Ctrl+O" label="Open project" action={() => document.dispatchEvent(new CustomEvent('acc:open-project'))} />
         <KeybindEntry hotkey={hotkeys.commandPalette} label="Command palette" action={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true }))} />
-        <KeybindEntry hotkey={hotkeys.toggleDashboard} label="Toggle sidebar" action={() => document.dispatchEvent(new CustomEvent('acc:toggle-sidebar'))} />
         <div className="h-px bg-brand-panel/50 mx-3 my-1" />
-        <KeybindEntry hotkey={hotkeys.newNote} label="New note" action={() => document.dispatchEvent(new CustomEvent('acc:new-note'))} />
-        <KeybindEntry hotkey={hotkeys.quickNote} label="Quick note" action={() => document.dispatchEvent(new CustomEvent('acc:quick-note'))} />
-        <div className="h-px bg-brand-panel/50 mx-3 my-1" />
-        <KeybindEntry hotkey={hotkeys.closeSession} label="Close active tab" />
-        <KeybindEntry hotkey="Ctrl+Shift+D" label="Detach pane to window" />
+        <KeybindEntry hotkey={hotkeys.quickNote} label="Toggle notes" action={() => document.dispatchEvent(new CustomEvent('acc:quick-note'))} />
       </div>
 
       <p className="text-[10px] text-zinc-700 tracking-wider">v{__APP_VERSION__}</p>

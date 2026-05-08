@@ -1,35 +1,26 @@
-﻿import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
-import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
+import { NotebookPen, Settings, Moon, Sun, Monitor, Sparkles, GitBranch } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { TitleBar } from './components/TitleBar'
-import { TabBar } from './components/TabBar'
-import { EmptyState } from './components/EmptyState'
-import { TerminalPane } from './features/terminal/components/TerminalPane'
-import { PaneContextMenu } from './features/session/components/PaneContextMenu'
-import { SessionDashboard } from './features/session/components/SessionDashboard'
-import { NotepadPane } from './components/NotepadPane'
-import { NoteEditor } from './components/NoteEditor'
 import { NoteDrawer } from './components/NoteDrawer'
-import { ActivityBar } from './components/ActivityBar'
-import { SettingsForm } from './features/settings/components/SettingsForm'
-import { PresetsPanel } from './features/settings/components/PresetsPanel'
+import { PaneContextMenu } from './features/session/components/PaneContextMenu'
 import { CommandPalette } from './components/CommandPalette'
-import { FileSearchPalette } from './components/FileSearchPalette'
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal'
-import { FileViewer, VIEWER_THEMES } from './features/fs/components/FileViewer'
-import type { FilePaneTab } from './features/fs/hooks/useFilePane'
-import { createSession, killSession } from './features/session/session.service'
-import { detachTab, reattachTab } from './features/window/window.service'
+import { SettingsForm } from './features/settings/components/SettingsForm'
+import { EmptyState } from './components/EmptyState'
+import { AgentMonitorSidebar } from './features/workspace/components/AgentMonitorSidebar'
+import { AgentMonitorLayout } from './features/workspace/components/AgentMonitorLayout'
+import { GitReviewPanel } from './features/workspace/components/GitReviewPanel'
 import { useSessionLifecycle } from './features/session/hooks/useSessionLifecycle'
 import { useLayoutPersistence } from './features/session/hooks/useLayoutPersistence'
 import { useLayoutRestore } from './features/session/hooks/useLayoutRestore'
 import { useKeyboardShortcuts } from './features/session/hooks/useKeyboardShortcuts'
 import { usePaneActions } from './features/session/hooks/usePaneActions'
-import { useFileTabs } from './features/session/hooks/useFileTabs'
 import { useAutoUpdater } from './features/updater/hooks/useAutoUpdater'
+import { useGitReview } from './features/workspace/hooks/useGitReview'
 import { useStore } from './store/root.store'
 import { cn } from './lib/utils'
-import type { PaneNode } from './features/terminal/pane-tree'
 
 interface ContextMenuTarget {
   x: number
@@ -38,58 +29,63 @@ interface ContextMenuTarget {
   tabId: string
 }
 
-function PaneTreeRenderer({
-  node,
-  tabId,
-  onContextMenu
-}: {
-  node: PaneNode
-  tabId: string
-  onContextMenu: (e: React.MouseEvent, sessionId: string, tabId: string) => void
-}): JSX.Element {
-  const sessions = useStore((s) => s.sessions)
-  const focusedSessionId = useStore((s) => s.focusedSessionId)
-  const setFocusedSession = useStore((s) => s.setFocusedSession)
-  const isMainWindow = useStore((s) => s.isMainWindow)
-  const windowId = useStore((s) => s.windowId)
+const THEMES = [
+  { id: 'dark'   as const, label: 'Dark',   icon: Moon      },
+  { id: 'light'  as const, label: 'Light',  icon: Sun       },
+  { id: 'system' as const, label: 'System', icon: Monitor   },
+  { id: 'space'  as const, label: 'Space',  icon: Sparkles  },
+]
 
-  if (node.type === 'leaf') {
-    const sid = node.sessionId
-    const splitPane = useStore.getState().splitPane
-    const closePane = useStore.getState().closePane
-    const detachPane = useStore.getState().detachPane
-    const paneItems = [
-      { label: 'Split Horizontal', action: async () => { const m = await createSession({ name: `${useStore.getState().sessions[sid]?.name ?? 'pane'} split`, cols: 80, rows: 24 }); splitPane(tabId, sid, 'horizontal', m) } },
-      { label: 'Split Vertical', action: async () => { const m = await createSession({ name: `${useStore.getState().sessions[sid]?.name ?? 'pane'} split`, cols: 80, rows: 24 }); splitPane(tabId, sid, 'vertical', m) } },
-      isMainWindow
-        ? { label: 'Detach to Window', action: async () => { detachPane(tabId, sid); if (windowId) await detachTab(sid, windowId) } }
-        : { label: 'Reattach to Main', action: async () => { await reattachTab(sid, windowId ?? undefined) } },
-      { label: 'Close Pane', action: async () => { await killSession(sid); closePane(tabId, sid) } },
-    ]
-    return (
-      <div
-        className="flex flex-col w-full h-full"
-        onMouseDown={() => setFocusedSession(sid)}
-      >
-        <TerminalPane sessionId={sid} paneItems={paneItems} />
-      </div>
-    )
+function StatusThemeToggle(): JSX.Element {
+  const theme = useStore((s) => s.settings.theme)
+  const updateSettings = useStore((s) => s.updateSettings)
+  const [open, setOpen] = useState(false)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [menuPos, setMenuPos] = useState<{ right: number; bottom: number }>({ right: 0, bottom: 32 })
+  const CurrentIcon = THEMES.find((t) => t.id === theme)?.icon ?? Moon
+
+  const handleOpen = (): void => {
+    const rect = btnRef.current?.getBoundingClientRect()
+    if (rect) setMenuPos({ right: window.innerWidth - rect.right, bottom: window.innerHeight - rect.top + 4 })
+    setOpen(true)
   }
 
-  const handleClass =
-    node.direction === 'vertical'
-      ? 'h-1 bg-brand-panel hover:bg-brand-accent transition-colors cursor-row-resize flex-shrink-0'
-      : 'w-1 bg-brand-panel hover:bg-brand-accent transition-colors cursor-col-resize flex-shrink-0'
-
   return (
-    <PanelGroup orientation={node.direction} className="w-full h-full">
-      {node.children.map((child, idx) => [
-        idx > 0 && <PanelResizeHandle key={`handle-${node.id}-${idx}`} className={handleClass} />,
-        <Panel key={child.type === 'leaf' ? child.sessionId : child.id} defaultSize={Math.floor(100 / node.children.length)} minSize={10}>
-          <PaneTreeRenderer node={child} tabId={tabId} onContextMenu={onContextMenu} />
-        </Panel>
-      ])}
-    </PanelGroup>
+    <>
+      <button
+        ref={btnRef}
+        onClick={open ? () => setOpen(false) : handleOpen}
+        title="Theme"
+        className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', open ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
+      >
+        <CurrentIcon size={15} />
+        <span className="text-[11px] font-medium">Theme</span>
+      </button>
+      {open && createPortal(
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-50 bg-brand-surface border border-brand-panel/60 rounded-md shadow-2xl py-1 w-36"
+            style={{ right: menuPos.right, bottom: menuPos.bottom }}
+          >
+            {THEMES.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => { updateSettings({ theme: id }); setOpen(false) }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 py-1.5 text-xs transition-colors text-left',
+                  theme === id ? 'text-zinc-200 bg-brand-panel/40' : 'text-zinc-400 hover:bg-brand-panel hover:text-zinc-200'
+                )}
+              >
+                <Icon size={12} className="flex-shrink-0" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
+    </>
   )
 }
 
@@ -99,23 +95,45 @@ export function App(): JSX.Element {
   useLayoutRestore()
   useAutoUpdater()
 
-  const activeSessionId = useStore((s) => s.activeSessionId)
   const tabOrder = useStore((s) => s.tabOrder)
-  const paneTree = useStore((s) => s.paneTree)
-  const isDashboardOpen = useStore((s) => s.isDashboardOpen)
+  const sessions = useStore((s) => s.sessions)
+  const appTheme = useStore((s) => s.settings.theme)
 
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [fileSearchOpen, setFileSearchOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const [sidebarTab, setSidebarTab] = useState<'sessions' | 'projects' | 'notes' | 'presets' | 'settings'>('sessions')
+  const [sidePanel, setSidePanel] = useState<'notes' | 'settings' | 'git' | null>(null)
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
-  const [noteDrawerOpen, setNoteDrawerOpen] = useState(false)
-  const [refreshTick, setRefreshTick] = useState(0)
-  const [fileViewTab, setFileViewTab] = useState<FilePaneTab>('content')
-  const [showThemePicker, setShowThemePicker] = useState(false)
+  const [openNoteIds, setOpenNoteIds] = useState<Set<string>>(new Set())
+  const [workspaceSessionId, setWorkspaceSessionId] = useState<string | null>(null)
+  const [workspaceProject, setWorkspaceProject] = useState<string | null>(
+    () => localStorage.getItem('orbit:workspaceProject') ?? null
+  )
   const [sidebarWidth, setSidebarWidth] = useState(224)
   const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null)
+
+  const selectedSession = useStore((s) => workspaceSessionId ? s.sessions[workspaceSessionId] : null)
+  const gitRoot = selectedSession?.worktreePath ?? workspaceProject
+  const gitReview = useGitReview(gitRoot, selectedSession?.worktreeBaseBranch)
+  const totalChanges =
+    (gitReview.data?.staged.length ?? 0) +
+    (gitReview.data?.unstaged.length ?? 0) +
+    (gitReview.data?.untracked.length ?? 0)
+
+  useEffect(() => {
+    const handler = (): void => { if (gitRoot) setSidePanel(p => p === 'git' ? null : 'git') }
+    document.addEventListener('acc:toggle-git-review', handler)
+    return () => document.removeEventListener('acc:toggle-git-review', handler)
+  }, [gitRoot])
+
+  useEffect(() => { setSidePanel(null) }, [workspaceProject])
+
+  const handleWorkspaceProjectChange = useCallback((path: string | null) => {
+    setWorkspaceProject(path)
+    setWorkspaceSessionId(null)
+    if (path) localStorage.setItem('orbit:workspaceProject', path)
+    else localStorage.removeItem('orbit:workspaceProject')
+  }, [])
 
   const handleSidebarDragStart = useCallback((e: React.MouseEvent) => {
     sidebarDragRef.current = { startX: e.clientX, startWidth: sidebarWidth }
@@ -132,287 +150,220 @@ export function App(): JSX.Element {
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
   }, [sidebarWidth])
-  const updateSettings = useStore((s) => s.updateSettings)
-  const fileViewerTheme = useStore((s) => s.settings.fileViewerTheme)
-  const commandPaletteHotkey = useStore((s) => s.settings.hotkeys.commandPalette)
-  const appTheme = useStore((s) => s.settings.theme)
 
   useEffect(() => {
     const html = document.documentElement
-    const applyDark = (): void => {
-      const isDark = appTheme === 'dark' || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    const applyTheme = (): void => {
+      const isDark = appTheme === 'dark' || appTheme === 'space' || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
       html.classList.toggle('dark', isDark)
+      html.classList.toggle('space', appTheme === 'space')
     }
-    applyDark()
+    applyTheme()
     if (appTheme === 'system') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)')
-      mq.addEventListener('change', applyDark)
-      return () => mq.removeEventListener('change', applyDark)
+      mq.addEventListener('change', applyTheme)
+      return () => mq.removeEventListener('change', applyTheme)
     }
     return undefined
   }, [appTheme])
 
-  const { openFiles, activeFilePath, setActiveFilePath, handleFileClick, handleCloseFile } = useFileTabs()
-  const { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClose } = usePaneActions(contextMenu)
-
   const addNote = useStore((s) => s.addNote)
   const storeSaveNote = useStore((s) => s.saveNote)
+  const notes = useStore((s) => s.notes)
+
+  const notesInitRef = useRef(false)
+  useEffect(() => {
+    if (!notesInitRef.current && notes.length > 0) {
+      notesInitRef.current = true
+      const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+      setOpenNoteIds(new Set([sorted[0].id]))
+      setActiveNoteId(sorted[0].id)
+    }
+  }, [notes])
+
+  useEffect(() => {
+    const existingIds = new Set(notes.map(n => n.id))
+    setOpenNoteIds(prev => {
+      const cleaned = [...prev].filter(id => existingIds.has(id))
+      if (cleaned.length === prev.size) return prev
+      return new Set(cleaned)
+    })
+  }, [notes])
 
   const createNote = useCallback((): string => {
+    const { notes: current } = useStore.getState()
+    const sorted = current.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+    if (sorted.length > 0 && sorted[0].content.trim() === '') {
+      const existing = sorted[0].id
+      setOpenNoteIds((prev) => { const next = new Set(prev); next.add(existing); return next })
+      return existing
+    }
     const id = crypto.randomUUID()
     addNote(id)
     storeSaveNote(id, '')
+    setOpenNoteIds((prev) => { const next = new Set(prev); next.add(id); return next })
     return id
   }, [addNote, storeSaveNote])
 
+  const handleNoteActivate = useCallback((id: string): void => {
+    setActiveNoteId(id)
+    setOpenNoteIds((prev) => { const next = new Set(prev); next.add(id); return next })
+  }, [])
+
+  const handleNoteClose = useCallback((id: string): void => {
+    setOpenNoteIds((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+    setActiveNoteId((prev) => {
+      if (prev !== id) return prev
+      const remaining = [...openNoteIds].filter((nid) => nid !== id)
+      return remaining.length > 0 ? remaining[remaining.length - 1] : null
+    })
+  }, [openNoteIds])
+
   useKeyboardShortcuts({
     onTogglePalette: () => setPaletteOpen((v) => !v),
-    onFileSearch: () => setFileSearchOpen((v) => !v),
     onShowShortcuts: () => setShortcutsOpen((v) => !v),
-    onNewNote: useCallback(() => {
-      const id = createNote()
-      setActiveNoteId(id)
-      if (!isDashboardOpen) useStore.getState().toggleDashboard()
-      setSidebarTab('notes')
-    }, [createNote, isDashboardOpen]),
     onNewNoteDrawer: useCallback(() => {
-      if (noteDrawerOpen) { setNoteDrawerOpen(false); return }
-      const { notes } = useStore.getState()
-      if (notes.length > 0) {
-        const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-        setActiveNoteId(sorted[0].id)
-        setNoteDrawerOpen(true)
-        return
-      }
-      const id = createNote()
-      setActiveNoteId(id)
-      setNoteDrawerOpen(true)
-    }, [createNote, noteDrawerOpen]),
+      setSidePanel(p => {
+        if (p === 'notes') return null
+        const { notes: n } = useStore.getState()
+        const sorted = n.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+        if (sorted.length > 0) setActiveNoteId(sorted[0].id)
+        else createNote()
+        return 'notes'
+      })
+    }, [createNote]),
   })
 
-  // Keep refs so the one-time effects below always see current values
-  const sidebarTabRef = useRef(sidebarTab)
-  const isDashboardOpenRef = useRef(isDashboardOpen)
-  const openFilesRef = useRef(openFiles)
-  const activeFilePathRef = useRef(activeFilePath)
-  const handleFileClickRef = useRef(handleFileClick)
-  useEffect(() => { sidebarTabRef.current = sidebarTab }, [sidebarTab])
-  useEffect(() => { isDashboardOpenRef.current = isDashboardOpen }, [isDashboardOpen])
-  useEffect(() => { openFilesRef.current = openFiles }, [openFiles])
-  useEffect(() => { activeFilePathRef.current = activeFilePath }, [activeFilePath])
-  useEffect(() => { handleFileClickRef.current = handleFileClick }, [handleFileClick])
+  const { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClose } = usePaneActions(contextMenu)
 
-  // Terminal → file viewer: open a file path dispatched from the terminal context menu
-  useEffect(() => {
-    const handler = (e: Event): void => {
-      const path = (e as CustomEvent<{ path: string }>).detail?.path
-      if (!path) return
-      if (!isDashboardOpenRef.current) useStore.getState().toggleDashboard()
-      setSidebarTab('projects')
-      handleFileClickRef.current(path, undefined)
-    }
-    document.addEventListener('acc:open-file', handler)
-    return () => document.removeEventListener('acc:open-file', handler)
+  const handleContextMenu = useCallback((e: React.MouseEvent, sessionId: string, tabId: string) => {
+    setContextMenu({ x: e.clientX, y: e.clientY, sessionId, tabId })
   }, [])
 
-  // Note creation events dispatched by EmptyState and CommandPalette
-  useEffect(() => {
-    const handleNewNote = (): void => {
-      const id = createNote()
-      setActiveNoteId(id)
-      if (!isDashboardOpenRef.current) useStore.getState().toggleDashboard()
-      setSidebarTab('notes')
-    }
-    const handleQuickNote = (): void => {
-      const { notes } = useStore.getState()
-      if (notes.length > 0) {
-        const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-        setActiveNoteId(sorted[0].id)
-        setNoteDrawerOpen(true)
-        return
-      }
-      const id = createNote()
-      setActiveNoteId(id)
-      setNoteDrawerOpen(true)
-    }
-    document.addEventListener('acc:new-note', handleNewNote)
-    document.addEventListener('acc:quick-note', handleQuickNote)
-    return () => {
-      document.removeEventListener('acc:new-note', handleNewNote)
-      document.removeEventListener('acc:quick-note', handleQuickNote)
-    }
+  const activeMeta = workspaceSessionId ? sessions[workspaceSessionId] : null
+  const titleBarTitle = sidePanel === 'settings' ? 'Settings' : (activeMeta?.name ?? 'Orbit')
+  const titleBarSubtitle = sidePanel === 'settings' ? '' : (activeMeta?.cwd ?? '')
+
+  const handleNotesToggle = useCallback((): void => {
+    setSidePanel(p => {
+      if (p === 'notes') return null
+      const { notes: n } = useStore.getState()
+      const sorted = n.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+      if (sorted.length > 0) setActiveNoteId(sorted[0].id)
+      else createNote()
+      return 'notes'
+    })
   }, [createNote])
-
-  // File viewer keybinds: Alt+R → raw, Alt+P → preview (md only), Alt+D → diff (changed files)
-  useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      if (!e.altKey || e.ctrlKey || e.shiftKey || e.metaKey) return
-      if (sidebarTabRef.current !== 'projects' || !openFilesRef.current.length) return
-      const path = activeFilePathRef.current
-      const isMd = path?.replace(/\\/g, '/').split('/').pop()?.split('.').pop()?.toLowerCase() === 'md'
-      const activeFile = openFilesRef.current.find((f) => f.path === path)
-      if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault(); setFileViewTab('content')
-      } else if ((e.key === 'p' || e.key === 'P') && isMd) {
-        e.preventDefault(); setFileViewTab('preview')
-      } else if ((e.key === 'd' || e.key === 'D') && activeFile?.hasChanges) {
-        e.preventDefault(); setFileViewTab('diff')
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
-
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, sessionId: string, tabId: string) => {
-      setContextMenu({ x: e.clientX, y: e.clientY, sessionId, tabId })
-    },
-    []
-  )
-
-  const handleActivityChange = (next: 'sessions' | 'projects' | 'notes' | 'presets' | 'settings'): void => {
-    if (next === sidebarTab && isDashboardOpen) {
-      useStore.getState().toggleDashboard()
-    } else {
-      if (!isDashboardOpen) useStore.getState().toggleDashboard()
-      setSidebarTab(next)
-    }
-  }
-
-  const sessions = useStore((s) => s.sessions)
-  const activeMeta = activeSessionId ? sessions[activeSessionId] : null
-  const titleBarTitle = sidebarTab === 'sessions'
-    ? (activeMeta?.name ?? 'No session')
-    : sidebarTab === 'notes'
-      ? 'Notes'
-      : sidebarTab === 'settings'
-        ? 'Settings'
-        : sidebarTab === 'presets'
-          ? (activeMeta?.name ?? 'Presets')
-          : (activeFilePath ? activeFilePath.replace(/\\/g, '/').split('/').pop() ?? activeFilePath : 'Projects')
-  const titleBarSubtitle = sidebarTab === 'sessions'
-    ? (activeMeta?.cwd ?? '')
-    : sidebarTab === 'notes' || sidebarTab === 'settings'
-      ? ''
-      : (activeFilePath ? activeFilePath.replace(/\\/g, '/') : '')
 
   return (
     <div className="flex flex-col h-screen bg-brand-bg text-zinc-100 overflow-hidden">
       <TitleBar title={titleBarTitle} subtitle={titleBarSubtitle} />
 
       <div className="flex flex-1 min-h-0">
-        <ActivityBar activity={sidebarTab} panelOpen={isDashboardOpen} onChange={handleActivityChange} />
-
-        {isDashboardOpen && sidebarTab !== 'settings' && (
-          <>
-            <div style={{ width: sidebarWidth, flexShrink: 0 }} className="flex flex-col h-full">
-              {sidebarTab === 'notes' ? (
-                <NotepadPane activeNoteId={activeNoteId} onActivate={setActiveNoteId} onCreate={() => { const id = createNote(); setActiveNoteId(id) }} />
-              ) : sidebarTab === 'presets' ? (
-                <PresetsPanel />
-              ) : (
-                <SessionDashboard
-                  onFileClick={handleFileClick}
-                  activeTab={sidebarTab}
-                  activeFilePath={activeFilePath}
-                  externalRefreshTick={refreshTick}
-                  onSwitchToSessions={() => setSidebarTab('sessions')}
-                />
-              )}
-            </div>
-            <div
-              className="w-1 flex-shrink-0 bg-brand-panel hover:bg-brand-accent transition-colors cursor-col-resize"
-              onMouseDown={handleSidebarDragStart}
-            />
-          </>
-        )}
-
-        {/* Sessions content — pane area (no tab bar; sessions are managed from the sidebar) */}
-        <div className={cn('flex-1 min-w-0 min-h-0', (isDashboardOpen && (sidebarTab === 'projects' || sidebarTab === 'notes' || sidebarTab === 'settings')) ? 'hidden' : 'flex flex-col')}>
-          <div className="flex-1 min-h-0 relative">
-            {tabOrder.length === 0 && <EmptyState />}
-            {tabOrder.map((tabId) => {
-              const tree = paneTree[tabId]
-              const isActive = activeSessionId === tabId
-              return (
-                <div key={tabId} className={`absolute inset-0 ${isActive ? 'flex' : 'hidden'}`}>
-                  {tree && <PaneTreeRenderer node={tree} tabId={tabId} onContextMenu={handleContextMenu} />}
-                </div>
-              )
-            })}
-          </div>
+        {/* Sidebar — always visible */}
+        <div style={{ width: sidebarWidth, flexShrink: 0 }} className="flex flex-col h-full border-r border-brand-panel">
+          <AgentMonitorSidebar
+            activeProject={workspaceProject}
+            onProjectChange={handleWorkspaceProjectChange}
+            activeSessionId={workspaceSessionId}
+            onSelectSession={setWorkspaceSessionId}
+          />
         </div>
+        <div
+          className="w-1 flex-shrink-0 bg-brand-panel hover:bg-brand-accent transition-colors cursor-col-resize"
+          onMouseDown={handleSidebarDragStart}
+        />
 
-        {/* Notes content — full editor */}
-        {isDashboardOpen && sidebarTab === 'notes' && (
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-            <NoteEditor activeNoteId={activeNoteId} onActivate={setActiveNoteId} onCreate={() => { const id = createNote(); setActiveNoteId(id) }} />
-          </div>
-        )}
+        {/* Main content */}
+        <div className="flex-1 min-w-0 min-h-0 relative">
+          {workspaceSessionId === null ? (
+            <div className="absolute inset-0">
+              <EmptyState />
+            </div>
+          ) : (
+            <AgentMonitorLayout
+              sessionId={workspaceSessionId}
+              onSessionClose={() => setWorkspaceSessionId(null)}
+            />
+          )}
 
-        {/* Settings content — full-width form */}
-        {isDashboardOpen && sidebarTab === 'settings' && (
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-            <SettingsForm onClose={() => useStore.getState().toggleDashboard()} />
-          </div>
-        )}
-
-        {/* Projects content — tab bar + file viewer */}
-        {isDashboardOpen && sidebarTab === 'projects' && (
-          <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-            {openFiles.length > 0 && (
-              <TabBar
-                activity="projects"
-                openFiles={openFiles}
-                activeFilePath={activeFilePath}
-                onActivateFile={setActiveFilePath}
-                onCloseFile={handleCloseFile}
-              />
-            )}
-            <FileViewer files={openFiles} activeFilePath={activeFilePath} onActivate={setActiveFilePath} onClose={handleCloseFile} tab={fileViewTab} onTabChange={setFileViewTab} />
-          </div>
-        )}
+          {sidePanel !== null && (
+            <>
+              <div className="absolute inset-0 z-10" onClick={() => setSidePanel(null)} />
+              <div
+                className={cn(
+                  'absolute right-0 top-0 h-full z-20 border-l border-brand-panel bg-brand-surface flex flex-col shadow-2xl',
+                  sidePanel === 'notes' ? 'w-[640px]' : sidePanel === 'settings' ? 'w-[520px]' : 'w-[420px]'
+                )}
+              >
+                {sidePanel === 'notes' && (
+                  <NoteDrawer
+                    open={false}
+                    onClose={() => {}}
+                    activeNoteId={activeNoteId}
+                    onActivate={handleNoteActivate}
+                    onCreate={() => { const id = createNote(); setActiveNoteId(id) }}
+                    expanded={true}
+                    onToggleExpand={() => setSidePanel(null)}
+                  />
+                )}
+                {sidePanel === 'settings' && <SettingsForm onClose={() => setSidePanel(null)} />}
+                {sidePanel === 'git' && <GitReviewPanel projectRoot={gitRoot} gitReview={gitReview} />}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between h-8 px-3 bg-brand-surface border-t border-brand-panel flex-shrink-0">
+      {/* Status bar */}
+      <div className="flex items-center justify-between h-10 px-3 bg-brand-surface border-t border-brand-panel flex-shrink-0">
         <span className="text-xs text-zinc-500">
           {tabOrder.length === 0 ? 'No sessions' : `${tabOrder.length} session${tabOrder.length !== 1 ? 's' : ''}`}
         </span>
-        <div className="flex items-center gap-1 h-full">
-          {sidebarTab === 'projects' && activeFilePath && (() => {
-            const activeFile = openFiles.find((f) => f.path === activeFilePath)
-            const isMd = activeFilePath.replace(/\\/g, '/').split('/').pop()?.split('.').pop()?.toLowerCase() === 'md'
-            const btnBase = 'inline-flex items-center px-2 h-5 text-[10px] rounded transition-colors'
-            return (
-              <>
-                {isMd && (
-                  <button onClick={() => setFileViewTab('preview')} className={cn(btnBase, fileViewTab === 'preview' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}>Preview</button>
-                )}
-                <button onClick={() => setFileViewTab('content')} className={cn(btnBase, fileViewTab === 'content' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}>Raw</button>
-                {activeFile?.hasChanges && (
-                  <button onClick={() => setFileViewTab('diff')} className={cn(btnBase, fileViewTab === 'diff' ? 'bg-brand-panel text-brand-muted' : 'text-zinc-600 hover:text-zinc-300')}>Diff</button>
-                )}
-                <div className="w-px h-3 bg-brand-panel mx-1 flex-shrink-0" />
-                <div className="relative flex items-center">
-                  <button onClick={() => setShowThemePicker((v) => !v)} className={cn(btnBase, 'text-zinc-600 hover:text-zinc-300')}>Theme</button>
-                  {showThemePicker && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowThemePicker(false)} />
-                      <div className="absolute bottom-full right-0 mb-1 z-50 bg-brand-surface border border-brand-panel rounded shadow-xl py-1 min-w-[160px]">
-                      {VIEWER_THEMES.map((t) => (
-                        <button key={t.id} onClick={() => { updateSettings({ fileViewerTheme: t.id }); setShowThemePicker(false) }}
-                          className={cn('w-full text-left px-3 py-1.5 text-xs transition-colors', t.id === fileViewerTheme ? 'text-brand-muted bg-brand-panel' : 'text-zinc-300 hover:bg-brand-panel')}>
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                    </>
-                  )}
-                </div>
-                <div className="w-px h-3 bg-brand-panel mx-1 flex-shrink-0" />
-              </>
-            )
-          })()}
+        <div className="flex items-center gap-0.5">
+          {workspaceProject !== null && (
+            <button
+              onClick={() => { if (gitRoot) setSidePanel(p => p === 'git' ? null : 'git') }}
+              title="Review Changes (Ctrl+Shift+G)"
+              className={cn(
+                'relative flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors',
+                sidePanel === 'git'
+                  ? 'text-brand-muted bg-brand-panel'
+                  : totalChanges > 0
+                    ? 'text-zinc-300 hover:text-zinc-100'
+                    : 'text-zinc-500 hover:text-zinc-300'
+              )}
+            >
+              <GitBranch size={15} />
+              <span className="text-[11px] font-medium">Git</span>
+              {totalChanges > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[17px] h-[17px] px-1 rounded-full bg-brand-accent text-[9px] font-bold text-brand-bg leading-none border-2 border-brand-surface">
+                  {totalChanges > 99 ? '99+' : totalChanges}
+                </span>
+              )}
+            </button>
+          )}
+          <button
+            onClick={handleNotesToggle}
+            title="Notes"
+            className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', sidePanel === 'notes' ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
+          >
+            <NotebookPen size={15} />
+            <span className="text-[11px] font-medium">Notes</span>
+          </button>
+          <StatusThemeToggle />
+          <button
+            onClick={() => setSidePanel(p => p === 'settings' ? null : 'settings')}
+            title="Settings"
+            className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', sidePanel === 'settings' ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
+          >
+            <Settings size={15} />
+            <span className="text-[11px] font-medium">Settings</span>
+          </button>
         </div>
       </div>
 
@@ -430,9 +381,11 @@ export function App(): JSX.Element {
         />
       )}
 
-      <NoteDrawer open={noteDrawerOpen} onClose={() => setNoteDrawerOpen(false)} activeNoteId={activeNoteId} onCreate={() => { const id = createNote(); setActiveNoteId(id) }} />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onShowShortcuts={() => { setPaletteOpen(false); setShortcutsOpen(true) }} />
-      <FileSearchPalette open={fileSearchOpen} onClose={() => setFileSearchOpen(false)} onOpenFile={(path) => { if (!isDashboardOpen) useStore.getState().toggleDashboard(); setSidebarTab('projects'); handleFileClick(path, undefined) }} />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onShowShortcuts={() => { setPaletteOpen(false); setShortcutsOpen(true) }}
+      />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <Toaster position="bottom-right" theme="dark" richColors />
     </div>

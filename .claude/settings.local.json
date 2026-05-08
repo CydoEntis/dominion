@@ -65,7 +65,26 @@
       "Bash(Test-Path *)",
       "Skill(gsd-pause-work)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k: d[k] for k in ['name','version','scripts'] if k in d}, indent=2\\)\\)\")",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(python -c \"import sys,json; jobs=json.load\\(sys.stdin\\)['jobs']; [print\\(j['name'], j['status'], j['conclusion'], [\\(s['name'],s['conclusion'],s.get\\('log',''\\)\\) for s in j['steps'] if s['conclusion']=='failure']\\) for j in jobs]\")",
+      "Bash(ls *.png *.jpg *.ico)",
+      "Bash(dir *.png *.jpg *.ico /b)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path C:\\\\Programming\\\\command-center\\\\src\\\\renderer\\\\components -Recurse -File | Sort-Object FullName | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path C:\\\\Programming\\\\command-center\\\\src\\\\renderer\\\\features -Recurse -File | Sort-Object FullName | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path C:\\\\Programming\\\\command-center\\\\src\\\\renderer\\\\store -Recurse -File | Sort-Object FullName | ForEach-Object { $_.FullName })",
+      "Bash(Remove-Item \"C:\\\\Programming\\\\command-center\\\\ROADMAP.md\" -Force)",
+      "Bash(Remove-Item \"C:\\\\Programming\\\\command-center\\\\TODO.md\" -Force)",
+      "Bash(Write-Output \"Deleted\")",
+      "Bash(Select-Object -First 30)",
+      "Bash(xargs grep -l \"shiki\\\\|syntax\\\\|theme\")",
+      "PowerShell(magick *)",
+      "PowerShell(node -e \"require\\('png-to-ico'\\)\" 2>&1; node -e \"require\\('sharp'\\)\" 2>&1; node -e \"require\\('jimp'\\)\" 2>&1)",
+      "PowerShell(npx --yes png-to-ico \"build\\\\icon.png\" > \"build\\\\icon.ico\"; Write-Output \"ICO generated\")",
+      "Bash(npx vite *)",
+      "Bash(Find-ChildItem -Path \"C:\\\\Programming\\\\command-center\\\\src\\\\renderer\" -Recurse -Name \"*note*\" -Type f)",
+      "Bash(Select-Object -First 20)"
     ]
   }
 }

@@ -1,7 +1,7 @@
 import { ipcMain, shell, clipboard } from 'electron'
 import { promises as fs } from 'fs'
-import { join, dirname } from 'path'
-import { exec, spawn } from 'child_process'
+import { join, dirname, resolve } from 'path'
+import { exec, execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import { IPC } from '@shared/ipc-channels'
 import type { FsEntry, GitStatusEntry } from '@shared/ipc-types'
@@ -15,6 +15,7 @@ const CANDIDATE_EDITORS = [
 ]
 
 const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 const IGNORE = new Set(['.git', 'node_modules', 'dist', 'out', '.next', '__pycache__'])
 const MAX_FILE_BYTES = 5_000_000
 
@@ -157,6 +158,206 @@ export function registerFsIpc(): void {
     }
     await walk(rootPath)
     return results
+  })
+
+  ipcMain.handle(IPC.FS_GIT_REVIEW, async (_, { projectRoot }: { projectRoot: string }) => {
+    interface GitFileInfo { path: string; added: number; deleted: number }
+    try {
+      const [statusResult, stagedResult, unstagedResult] = await Promise.allSettled([
+        execAsync('git status --porcelain -u', { cwd: projectRoot }),
+        execAsync('git diff --cached --numstat', { cwd: projectRoot }),
+        execAsync('git diff --numstat', { cwd: projectRoot }),
+      ])
+
+      const statusLines = statusResult.status === 'fulfilled'
+        ? statusResult.value.stdout.trim().split('\n').filter(Boolean)
+        : []
+      const stagedLines = stagedResult.status === 'fulfilled'
+        ? stagedResult.value.stdout.trim().split('\n').filter(Boolean)
+        : []
+      const unstagedLines = unstagedResult.status === 'fulfilled'
+        ? unstagedResult.value.stdout.trim().split('\n').filter(Boolean)
+        : []
+
+      // Parse numstat: "<added>\t<deleted>\t<path>"
+      function parseNumstat(lines: string[]): Map<string, { added: number; deleted: number }> {
+        const m = new Map<string, { added: number; deleted: number }>()
+        for (const line of lines) {
+          const parts = line.split('\t')
+          if (parts.length < 3) continue
+          const added = parseInt(parts[0], 10) || 0
+          const deleted = parseInt(parts[1], 10) || 0
+          const p = parts.slice(2).join('\t').trim()
+          m.set(p, { added, deleted })
+        }
+        return m
+      }
+
+      const stagedStats = parseNumstat(stagedLines)
+      const unstagedStats = parseNumstat(unstagedLines)
+
+      const staged: GitFileInfo[] = []
+      const unstaged: GitFileInfo[] = []
+      const untracked: string[] = []
+
+      for (const line of statusLines) {
+        const xy = line.slice(0, 2)
+        const filePath = line.slice(3).trim().replace(/^"(.+)"$/, '$1')
+        if (xy === '??') {
+          untracked.push(filePath)
+        } else {
+          const x = xy[0]
+          const y = xy[1]
+          if (x !== ' ' && x !== '?') {
+            const stats = stagedStats.get(filePath) ?? { added: 0, deleted: 0 }
+            staged.push({ path: filePath, ...stats })
+          }
+          if (y !== ' ' && y !== '?') {
+            const stats = unstagedStats.get(filePath) ?? { added: 0, deleted: 0 }
+            unstaged.push({ path: filePath, ...stats })
+          }
+        }
+      }
+
+      return { staged, unstaged, untracked }
+    } catch {
+      return { staged: [], unstaged: [], untracked: [] }
+    }
+  })
+
+  ipcMain.handle(IPC.FS_GIT_STAGE, async (_, { projectRoot, filePath }: { projectRoot: string; filePath: string }) => {
+    await execAsync(`git add -- "${filePath}"`, { cwd: projectRoot })
+  })
+
+  ipcMain.handle(IPC.FS_GIT_STAGE_ALL, async (_, { projectRoot }: { projectRoot: string }) => {
+    await execAsync('git add -A', { cwd: projectRoot })
+  })
+
+  ipcMain.handle(IPC.FS_GIT_UNSTAGE_ALL, async (_, { projectRoot }: { projectRoot: string }) => {
+    await execAsync('git restore --staged .', { cwd: projectRoot })
+  })
+
+  ipcMain.handle(IPC.FS_GIT_BRANCH_INFO, async (_, { projectRoot }: { projectRoot: string }): Promise<{ current: string }> => {
+    try {
+      const { stdout } = await execAsync('git branch --show-current', { cwd: projectRoot })
+      return { current: stdout.trim() || 'HEAD' }
+    } catch {
+      return { current: 'HEAD' }
+    }
+  })
+
+  ipcMain.handle(IPC.FS_GIT_LOG, async (_, { projectRoot, baseBranch, limit }: { projectRoot: string; baseBranch?: string; limit?: number }): Promise<{ hash: string; subject: string; relativeDate: string }[]> => {
+    try {
+      const range = baseBranch ? `${baseBranch}..HEAD` : '-10'
+      const flag = baseBranch ? '' : '-n 10'
+      const cmd = baseBranch
+        ? `git log ${range} --format=%H|%s|%cr`
+        : `git log -n ${limit ?? 10} --format=%H|%s|%cr`
+      const { stdout } = await execAsync(cmd, { cwd: projectRoot })
+      return stdout.trim().split('\n').filter(Boolean).map((line) => {
+        const [hash, subject, relativeDate] = line.split('|')
+        return { hash: (hash ?? '').slice(0, 7), subject: subject ?? '', relativeDate: relativeDate ?? '' }
+      })
+    } catch {
+      return []
+    }
+  })
+
+  ipcMain.handle(IPC.FS_GIT_UNSTAGE, async (_, { projectRoot, filePath }: { projectRoot: string; filePath: string }) => {
+    await execAsync(`git restore --staged -- "${filePath}"`, { cwd: projectRoot })
+  })
+
+  ipcMain.handle(IPC.FS_GIT_COMMIT, async (_, { projectRoot, message }: { projectRoot: string; message: string }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await execFileAsync('git', ['commit', '-m', message], { cwd: projectRoot })
+      return { success: true }
+    } catch (err: unknown) {
+      const e = err as any
+      const stderr = (e.stderr as string | undefined)?.trim()
+      const stdout = (e.stdout as string | undefined)?.trim()
+      const msg = stderr || stdout || (err instanceof Error ? err.message : String(err))
+      return { success: false, error: msg }
+    }
+  })
+
+  ipcMain.handle(IPC.FS_GIT_PUSH, async (_, { projectRoot }: { projectRoot: string }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await execAsync('git push', { cwd: projectRoot })
+      return { success: true }
+    } catch {
+      try {
+        const { stdout } = await execAsync('git branch --show-current', { cwd: projectRoot })
+        const branch = stdout.trim()
+        if (branch) {
+          await execAsync(`git push --set-upstream origin ${branch}`, { cwd: projectRoot })
+          return { success: true }
+        }
+      } catch (innerErr: unknown) {
+        return { success: false, error: innerErr instanceof Error ? innerErr.message : String(innerErr) }
+      }
+      return { success: false, error: 'Push failed' }
+    }
+  })
+
+  ipcMain.handle(IPC.FS_GIT_WORKTREE_CREATE, async (_, { projectRoot, branchName }: { projectRoot: string; branchName: string }): Promise<{ worktreePath: string; branchName: string; baseBranch: string }> => {
+    const { stdout: baseOut } = await execAsync('git rev-parse --abbrev-ref HEAD', { cwd: projectRoot })
+    const baseBranch = baseOut.trim() || 'main'
+    const suffix = branchName.split('/').pop() ?? 'session'
+
+    // Find an available worktree directory path
+    let worktreePath = resolve(join(projectRoot, '..', `orbit-${suffix}`))
+    let counter = 2
+    while (true) {
+      try { await fs.access(worktreePath); worktreePath = resolve(join(projectRoot, '..', `orbit-${suffix}-${counter++}`)) }
+      catch { break }
+    }
+
+    try {
+      await execAsync(`git worktree add "${worktreePath}" -b "${branchName}"`, { cwd: projectRoot })
+    } catch (err: unknown) {
+      const msg = (err as any).stderr as string ?? String(err)
+      if (msg.includes('already exists')) {
+        // Branch exists from a prior session — check it out directly
+        await execAsync(`git worktree add "${worktreePath}" "${branchName}"`, { cwd: projectRoot })
+      } else {
+        throw err
+      }
+    }
+
+    return { worktreePath, branchName, baseBranch }
+  })
+
+  ipcMain.handle(IPC.FS_GIT_WORKTREE_REMOVE, async (_, { projectRoot, worktreePath }: { projectRoot: string; worktreePath: string }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await execAsync(`git worktree remove "${worktreePath}" --force`, { cwd: projectRoot })
+      return { success: true }
+    } catch (err: unknown) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  ipcMain.handle(IPC.FS_GIT_WORKTREE_STATS, async (_, { worktreePath, baseBranch }: { worktreePath: string; baseBranch: string }): Promise<{ added: number; deleted: number; commits: number }> => {
+    function parseShortstat(s: string): { added: number; deleted: number } {
+      return {
+        added: parseInt(s.match(/(\d+) insertion/)?.[1] ?? '0', 10),
+        deleted: parseInt(s.match(/(\d+) deletion/)?.[1] ?? '0', 10),
+      }
+    }
+    try {
+      const [branchRes, workRes, stageRes, countRes] = await Promise.allSettled([
+        execAsync(`git diff ${baseBranch}...HEAD --shortstat`, { cwd: worktreePath }),
+        execAsync('git diff --shortstat', { cwd: worktreePath }),
+        execAsync('git diff --cached --shortstat', { cwd: worktreePath }),
+        execAsync(`git rev-list ${baseBranch}..HEAD --count`, { cwd: worktreePath }),
+      ])
+      const branch = branchRes.status === 'fulfilled' ? parseShortstat(branchRes.value.stdout) : { added: 0, deleted: 0 }
+      const work = workRes.status === 'fulfilled' ? parseShortstat(workRes.value.stdout) : { added: 0, deleted: 0 }
+      const stage = stageRes.status === 'fulfilled' ? parseShortstat(stageRes.value.stdout) : { added: 0, deleted: 0 }
+      const commits = countRes.status === 'fulfilled' ? parseInt(countRes.value.stdout.trim(), 10) || 0 : 0
+      return { added: branch.added + work.added + stage.added, deleted: branch.deleted + work.deleted + stage.deleted, commits }
+    } catch {
+      return { added: 0, deleted: 0, commits: 0 }
+    }
   })
 
   ipcMain.handle(IPC.FS_GIT_DIFF_FILE, async (_, { projectRoot, filePath }: { projectRoot: string; filePath: string }): Promise<string | null> => {

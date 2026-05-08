@@ -13,6 +13,7 @@ export interface SessionSlice {
   focusedSessionId: string | null
   paneTree: Record<string, PaneNode>
   pendingRestore: PersistedLayout | null
+  isRestoringLayout: boolean
 
   upsertSession: (meta: SessionMeta) => void
   setActiveSession: (sessionId: string | null) => void
@@ -31,6 +32,7 @@ export interface SessionSlice {
   detachPane: (tabId: string, sessionId: string) => void
   removePaneBySessionId: (sessionId: string) => void
   setPendingRestore: (layout: PersistedLayout | null) => void
+  setIsRestoringLayout: (v: boolean) => void
   restoreTab: (tabId: string, tree: PaneNode, metas: SessionMeta[]) => void
   openGroupInSplits: (sessionIds: string[]) => void
 }
@@ -42,6 +44,7 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
   focusedSessionId: null,
   paneTree: {},
   pendingRestore: null,
+  isRestoringLayout: false,
 
   upsertSession: (meta) =>
     set((state) => {
@@ -163,6 +166,11 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
   setPendingRestore: (layout) =>
     set((state) => {
       state.pendingRestore = layout
+    }),
+
+  setIsRestoringLayout: (v) =>
+    set((state) => {
+      state.isRestoringLayout = v
     }),
 
   restoreTab: (tabId, tree, metas) =>

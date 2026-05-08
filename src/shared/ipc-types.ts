@@ -39,7 +39,11 @@ export const SessionMetaSchema = z.object({
   conversationId: z.string().optional(),
   groupId: z.string().optional(),
   taskStatus: TaskStatusSchema.optional(),
-  yoloMode: z.boolean().optional()
+  yoloMode: z.boolean().optional(),
+  worktreePath: z.string().optional(),
+  worktreeBranch: z.string().optional(),
+  worktreeBaseBranch: z.string().optional(),
+  projectRoot: z.string().optional(),
 })
 export type SessionMeta = z.infer<typeof SessionMetaSchema>
 
@@ -124,12 +128,11 @@ export const HotkeysSchema = z.object({
   newSession: z.string().default('Ctrl+T'),
   closeSession: z.string().default('Ctrl+W'),
   commandPalette: z.string().default('Ctrl+P'),
-  toggleDashboard: z.string().default('Ctrl+D'),
   openProject: z.string().default('Ctrl+O'),
   newNote: z.string().default('Ctrl+N'),
   quickNote: z.string().default('Ctrl+Shift+N'),
-  fileSearch: z.string().default('Ctrl+Shift+P'),
   showShortcuts: z.string().default('Ctrl+Shift+K'),
+  reviewChanges: z.string().default('Ctrl+Shift+G'),
 })
 export type Hotkeys = z.infer<typeof HotkeysSchema>
 
@@ -156,7 +159,7 @@ export const AppSettingsSchema = z.object({
   sessionGroups: z.array(z.object({ id: z.string(), name: z.string(), color: z.string().optional() })).default([]),
   fontSize: z.number().int().min(8).max(32).default(14),
   fontFamily: z.string().default("'Cascadia Code', 'JetBrains Mono', monospace"),
-  theme: z.enum(['system', 'light', 'dark']).default('dark'),
+  theme: z.enum(['system', 'light', 'dark', 'space']).default('dark'),
   fileViewerTheme: z.string().default('vitesse-dark'),
   scrollbackLines: z.number().int().min(100).max(100000).default(10000),
   presets: z.array(PresetSchema).default([]),
@@ -167,7 +170,8 @@ export const AppSettingsSchema = z.object({
   notes: z.array(z.object({ id: z.string(), content: z.string().default(''), updatedAt: z.number().default(0) })).default([]),
   noteFolders: z.array(NoteFolderSchema).default([]),
   noteFolderMap: z.record(z.string()).default({}),
-  lastActiveProject: z.string().default('')
+  lastActiveProject: z.string().default(''),
+  defaultSessionDir: z.string().default('')
 })
 
 export const NoteSchema = z.object({ id: z.string(), content: z.string().default(''), updatedAt: z.number().default(0) })
@@ -186,6 +190,10 @@ export interface PersistedSession {
   conversationId?: string
   color?: string
   groupId?: string
+  worktreePath?: string
+  worktreeBranch?: string
+  worktreeBaseBranch?: string
+  projectRoot?: string
 }
 
 export interface PersistedTab {

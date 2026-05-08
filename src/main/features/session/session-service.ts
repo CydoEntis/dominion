@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto'
+import { mkdirSync } from 'fs'
+import { join } from 'path'
 import { webContents } from 'electron'
 import { PtyProcess } from '../../lib/pty-process'
 import {
@@ -42,7 +44,10 @@ export function createSession(
   subscriberWebContentsId?: number
 ): SessionMeta {
   const sessionId = randomUUID()
-  const cwd = payload.cwd || process.env.USERPROFILE || process.env.HOME || process.cwd()
+  const home = process.env.USERPROFILE || process.env.HOME || process.cwd()
+  const defaultCwd = getSettings().defaultSessionDir || join(home, 'Orbit')
+  const cwd = payload.cwd || defaultCwd
+  try { mkdirSync(cwd, { recursive: true }) } catch {}
   const { command, args } = resolveShellSpawn(payload.agentCommand, payload.yoloMode)
 
   const meta: SessionMeta = {

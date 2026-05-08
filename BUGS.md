@@ -1,0 +1,20 @@
+- [ ] Copy and Paste not working while working in notes
+- [ ] Need to add Physical buttons for all keyboard shortcuts for those who are keyboard illiterate
+- [ ] Notes seem to spam open repeatedly all titled untitlted
+- [ ] Notes are not saving to disk (Might need to come up with a new note system)
+- [ ] Terminal does weird letters artification on vertical scrolling
+- [ ] Terminal missing color schemes when accessing from a mac
+- [ ] When you open a terminal in a specified path or project every terminal that is split from main should be at that path
+- [ ] Autoupdating when a new version is released or patch is pushed is broken
+- [ ] Session tabs dont update their working directory path when you CD into different directories
+- [ ] Cannot close note tabs via X inside of the tab
+- [ ] When creating a split terminal all splits and parent terminal should form their own group where splits are nested under the group (Group matches main terminal)
+- [ ] Add theme selector for terminal sessions like we have for file viewing
+- [ ] Session spinner proposed fix - When AI Agent is performing work update the tabs title repeatedly instead of trying to add a logo (Not sure if will work, research how powershell does it)
+- [ ] Untitled notes being mass created when one new note is made or the notes panel is closed/reopened
+- [ ] Keyboard controls pressing ctrl + c and ctrol + v no longer work 
+- [ ] Shift + enter should take you down to a new line not send the chat message in a terminal session
+- [ ] Right click copy and pasting is still pasting the copied content twice
+- [ ] Right clicking a session tab should open a context menu with the close option on it
+- [ ] Should be able to close all sessions or all sessions above or below the current session you are focused on
+- [ ] Look into how Orbit can be managed/used from a phone 
