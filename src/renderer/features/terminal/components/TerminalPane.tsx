@@ -1,8 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Columns2, Rows2, ExternalLink, Copy, Clipboard, Search, ChevronUp, ChevronDown, Palette } from 'lucide-react'
-import { useTerminal, TERMINAL_THEME_LIST } from '../hooks/useTerminal'
-import { useStore } from '../../../store/root.store'
+import { X, Columns2, Rows2, ExternalLink, Copy, Clipboard, Search, ChevronUp, ChevronDown } from 'lucide-react'
+import { useTerminal } from '../hooks/useTerminal'
 import { cn } from '../../../lib/utils'
 
 const CTX_ICONS: Record<string, JSX.Element> = {
@@ -31,9 +30,6 @@ export function TerminalPane({ sessionId, paneItems }: Props): JSX.Element {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { ctxMenu, dismissCtxMenu, search } = useTerminal(sessionId, containerRef)
   const [searchTerm, setSearchTerm] = useState('')
-  const [themePickerOpen, setThemePickerOpen] = useState(false)
-  const activeTheme = useStore((s) => s.terminalThemes[sessionId])
-  const setTerminalTheme = useStore((s) => s.setTerminalTheme)
 
   useEffect(() => {
     if (search.visible) {
@@ -50,44 +46,6 @@ export function TerminalPane({ sessionId, paneItems }: Props): JSX.Element {
         className="xterm-container"
         style={{ width: '100%', height: '100%', padding: '4px 8px' }}
       />
-
-      {themePickerOpen && (
-        <>
-          <div className="fixed inset-0 z-[9998]" onMouseDown={() => setThemePickerOpen(false)} />
-          <div className="absolute top-8 right-2 z-[9999] bg-brand-surface border border-brand-panel/60 rounded shadow-xl py-1 min-w-[160px]">
-            <button
-              onMouseDown={() => { setTerminalTheme(sessionId, ''); setThemePickerOpen(false) }}
-              className={cn(
-                'w-full text-left px-3 py-1.5 text-xs transition-colors',
-                !activeTheme ? 'text-zinc-100 bg-brand-panel' : 'text-zinc-400 hover:bg-brand-panel hover:text-zinc-100'
-              )}
-            >
-              Auto (app theme)
-            </button>
-            <div className="my-1 border-t border-brand-panel/60" />
-            {TERMINAL_THEME_LIST.map((t) => (
-              <button
-                key={t.id}
-                onMouseDown={() => { setTerminalTheme(sessionId, t.id); setThemePickerOpen(false) }}
-                className={cn(
-                  'w-full text-left px-3 py-1.5 text-xs transition-colors',
-                  activeTheme === t.id ? 'text-zinc-100 bg-brand-panel' : 'text-zinc-400 hover:bg-brand-panel hover:text-zinc-100'
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      <button
-        onMouseDown={() => setThemePickerOpen((o) => !o)}
-        title="Terminal theme"
-        className="absolute top-2 right-2 z-10 p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-white/10 transition-colors"
-      >
-        <Palette size={13} />
-      </button>
 
       {search.visible && (
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-brand-surface border border-brand-panel/80 rounded-md shadow-xl px-2 py-1">
