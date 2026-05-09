@@ -8,6 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '../../../components/ui/select'
 import type { Preset } from '@shared/ipc-types'
+import { DEFAULT_COLS, DEFAULT_ROWS } from '@shared/constants'
 
 const AGENT_OPTIONS = [
   { value: 'shell',  label: 'Shell (plain)' },
@@ -17,6 +18,55 @@ const AGENT_OPTIONS = [
 ]
 
 interface FormState { name: string; agentCommand: string; cwd: string }
+
+interface InlineFormProps {
+  f: FormState
+  setF: (fn: (prev: FormState) => FormState) => void
+  onSave: () => void
+  onCancel: () => void
+  onPickFolder: () => void
+}
+
+function InlineForm({ f, setF, onSave, onCancel, onPickFolder }: InlineFormProps): JSX.Element {
+  return (
+    <div className="border-b border-brand-panel p-3 flex flex-col gap-2.5 flex-shrink-0 bg-brand-surface/40">
+      <Input
+        autoFocus
+        placeholder="Name"
+        value={f.name}
+        onChange={(e) => setF((prev) => ({ ...prev, name: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel() }}
+      />
+      <Select value={f.agentCommand} onValueChange={(v) => setF((prev) => ({ ...prev, agentCommand: v }))}>
+        <SelectTrigger><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {AGENT_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div className="flex gap-2">
+        <Input
+          placeholder="Working dir (optional)"
+          value={f.cwd}
+          onChange={(e) => setF((prev) => ({ ...prev, cwd: e.target.value }))}
+          className="flex-1 text-xs"
+        />
+        <button
+          onClick={onPickFolder}
+          className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-zinc-200 transition-colors"
+          title="Browse folder"
+        >
+          <FolderOpen size={14} />
+        </button>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="flex-1 py-1.5 text-xs rounded bg-brand-surface hover:bg-brand-panel text-zinc-400 transition-colors">Cancel</button>
+        <button onClick={onSave} disabled={!f.name.trim()} className="flex-1 py-1.5 text-xs rounded bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 disabled:opacity-40 transition-colors">Save</button>
+      </div>
+    </div>
+  )
+}
 
 const EMPTY_FORM: FormState = { name: '', agentCommand: 'shell', cwd: '' }
 
@@ -55,8 +105,8 @@ export function PresetsPanel(): JSX.Element {
         name: preset.name,
         agentCommand: preset.agentCommand || undefined,
         cwd: preset.cwd || undefined,
-        cols: 80,
-        rows: 24,
+        cols: DEFAULT_COLS,
+        rows: DEFAULT_ROWS,
       })
       upsertSession(meta)
       addTab(meta.sessionId)
@@ -98,51 +148,6 @@ export function PresetsPanel(): JSX.Element {
     else setEditForm((f) => ({ ...f, cwd: folder }))
   }
 
-  const InlineForm = ({ f, setF, onSave, onCancel, pickTarget }: {
-    f: FormState
-    setF: (fn: (prev: FormState) => FormState) => void
-    onSave: () => void
-    onCancel: () => void
-    pickTarget: 'add' | 'edit'
-  }): JSX.Element => (
-    <div className="border-b border-brand-panel p-3 flex flex-col gap-2.5 flex-shrink-0 bg-brand-surface/40">
-      <Input
-        autoFocus
-        placeholder="Name"
-        value={f.name}
-        onChange={(e) => setF((prev) => ({ ...prev, name: e.target.value }))}
-        onKeyDown={(e) => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel() }}
-      />
-      <Select value={f.agentCommand} onValueChange={(v) => setF((prev) => ({ ...prev, agentCommand: v }))}>
-        <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {AGENT_OPTIONS.map((o) => (
-            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <div className="flex gap-2">
-        <Input
-          placeholder="Working dir (optional)"
-          value={f.cwd}
-          onChange={(e) => setF((prev) => ({ ...prev, cwd: e.target.value }))}
-          className="flex-1 text-xs"
-        />
-        <button
-          onClick={() => handlePickFolder(pickTarget)}
-          className="flex items-center justify-center px-3 rounded border border-brand-panel bg-brand-panel hover:bg-brand-panel/60 text-zinc-400 hover:text-zinc-200 transition-colors"
-          title="Browse folder"
-        >
-          <FolderOpen size={14} />
-        </button>
-      </div>
-      <div className="flex gap-2">
-        <button onClick={onCancel} className="flex-1 py-1.5 text-xs rounded bg-brand-surface hover:bg-brand-panel text-zinc-400 transition-colors">Cancel</button>
-        <button onClick={onSave} disabled={!f.name.trim()} className="flex-1 py-1.5 text-xs rounded bg-brand-accent/20 text-brand-accent hover:bg-brand-accent/30 disabled:opacity-40 transition-colors">Save</button>
-      </div>
-    </div>
-  )
-
   return (
     <div className="flex flex-col h-full bg-brand-bg">
       <div className="flex items-center justify-between px-3 h-10 border-b border-brand-panel flex-shrink-0">
@@ -153,7 +158,7 @@ export function PresetsPanel(): JSX.Element {
       </div>
 
       {showAdd && (
-        <InlineForm f={form} setF={setForm} onSave={savePreset} onCancel={cancelAdd} pickTarget="add" />
+        <InlineForm f={form} setF={setForm} onSave={savePreset} onCancel={cancelAdd} onPickFolder={() => handlePickFolder('add')} />
       )}
 
       <div className="flex-1 overflow-y-auto">
@@ -197,7 +202,7 @@ export function PresetsPanel(): JSX.Element {
               </div>
             </button>
             {editingId === p.id && (
-              <InlineForm f={editForm} setF={setEditForm} onSave={saveEdit} onCancel={cancelEdit} pickTarget="edit" />
+              <InlineForm f={editForm} setF={setEditForm} onSave={saveEdit} onCancel={cancelEdit} onPickFolder={() => handlePickFolder('edit')} />
             )}
           </div>
         ))}

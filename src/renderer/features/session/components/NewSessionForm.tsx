@@ -23,10 +23,11 @@ import { Label } from '../../../components/ui/label'
 import { Switch } from '../../../components/ui/switch'
 import { createSession } from '../session.service'
 import { createWorktree } from '../../fs/fs.service'
+import { pickFolder } from '../../window/window.service'
 import { useStore } from '../../../store/root.store'
-import { IPC } from '@shared/ipc-channels'
-import { cn } from '../../../lib/utils'
+import { cn, normalizePath, shortPath } from '../../../lib/utils'
 import { toast } from 'sonner'
+import { DEFAULT_COLS, DEFAULT_ROWS } from '@shared/constants'
 
 const PRESETS = [
   { id: 'shell', label: 'Shell', command: undefined },
@@ -110,7 +111,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
   }, [open])
 
   const pickDir = async (): Promise<void> => {
-    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    const picked = await pickFolder()
     if (picked !== null) setSelectedDir(picked)
   }
 
@@ -134,7 +135,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           : preset?.command
 
       if (workspacePath) {
-        const projectName = workspacePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'session'
+        const projectName = normalizePath(workspacePath).split('/').filter(Boolean).pop() ?? 'session'
         const task = data.name.trim()
         const branchName = `orbit/${slugify(projectName)}-${task ? slugify(task) : Date.now().toString(36).slice(-4)}`
         let worktreeResult: { worktreePath: string; branchName: string; baseBranch: string }
@@ -148,8 +149,8 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           name: task || projectName,
           agentCommand,
           cwd: worktreeResult.worktreePath,
-          cols: 80,
-          rows: 24,
+          cols: DEFAULT_COLS,
+          rows: DEFAULT_ROWS,
           yoloMode: yoloMode || undefined,
           worktreePath: worktreeResult.worktreePath,
           worktreeBranch: worktreeResult.branchName,
@@ -163,8 +164,8 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           name: data.name,
           agentCommand,
           cwd: selectedDir || undefined,
-          cols: 80,
-          rows: 24,
+          cols: DEFAULT_COLS,
+          rows: DEFAULT_ROWS,
           yoloMode: yoloMode || undefined
         })
         upsertSession(meta)
@@ -175,8 +176,8 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           name: data.name,
           agentCommand,
           cwd: selectedDir || undefined,
-          cols: 80,
-          rows: 24,
+          cols: DEFAULT_COLS,
+          rows: DEFAULT_ROWS,
           groupId,
           yoloMode: yoloMode || undefined
         })
@@ -192,22 +193,19 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
       setSplitTarget(null)
       setOpen(false)
     } catch (err) {
-      console.error('Failed to create session:', err)
       toast.error(`Failed: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setLoading(false)
     }
   }
 
-  const shortDir = selectedDir
-    ? selectedDir.replace(/\\/g, '/').split('/').slice(-2).join('/')
-    : ''
+  const shortDir = selectedDir ? shortPath(selectedDir) : ''
 
   const supportsYolo = selectedPreset === 'claude'
   const isWorkspaceMode = workspacePath !== null
   const isSplitMode = splitTarget !== null
   const projectLabel = isWorkspaceMode
-    ? workspacePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? workspacePath
+    ? normalizePath(workspacePath).split('/').filter(Boolean).pop() ?? workspacePath
     : null
 
   const dialogContent = (

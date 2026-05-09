@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useStore } from '../../../store/root.store'
 import { findTabForSession } from '../../layout/layout-tree'
 
@@ -33,31 +33,34 @@ export function useCommandPalette(open: boolean, onClose: () => void, onShowShor
 
   const q = query.toLowerCase()
 
-  const items: PaletteItem[] = []
+  const items = useMemo<PaletteItem[]>(() => {
+    const result: PaletteItem[] = []
+    const hk = settings.hotkeys
 
-  Object.values(sessions)
-    .filter((m) => m.status === 'running' && (!q || m.name.toLowerCase().includes(q)))
-    .forEach((m) => items.push({
-      id: `session-${m.sessionId}`,
-      label: m.name,
-      description: m.cwd,
-      iconName: 'Terminal',
-      action: () => {
-        const tabId = findTabForSession(paneTree, m.sessionId)
-        if (tabId) { setActiveSession(tabId); setFocusedSession(m.sessionId) }
-        onClose()
-      }
-    }))
+    Object.values(sessions)
+      .filter((m) => m.status === 'running' && (!q || m.name.toLowerCase().includes(q)))
+      .forEach((m) => result.push({
+        id: `session-${m.sessionId}`,
+        label: m.name,
+        description: m.cwd,
+        iconName: 'Terminal',
+        action: () => {
+          const tabId = findTabForSession(paneTree, m.sessionId)
+          if (tabId) { setActiveSession(tabId); setFocusedSession(m.sessionId) }
+          onClose()
+        }
+      }))
 
-  const hk = settings.hotkeys
-  const actions: PaletteItem[] = [
-    { id: 'new-session',   label: 'New Session',        description: hk.newSession,   iconName: 'Plus',        action: () => { document.dispatchEvent(new CustomEvent('acc:new-session'));  onClose() } },
-    { id: 'open-project',  label: 'Open Project',       description: hk.openProject,  iconName: 'FolderOpen',  action: () => { document.dispatchEvent(new CustomEvent('acc:open-project')); onClose() } },
-    { id: 'toggle-notes',  label: 'Toggle Notes',       description: hk.quickNote,    iconName: 'NotebookPen', action: () => { document.dispatchEvent(new CustomEvent('acc:quick-note'));   onClose() } },
-    { id: 'show-shortcuts',label: 'Keyboard Shortcuts', description: hk.showShortcuts, iconName: 'Keyboard',   action: () => { onShowShortcuts?.(); onClose() } },
-  ].filter((a) => !q || a.label.toLowerCase().includes(q))
+    const actions: PaletteItem[] = [
+      { id: 'new-session',    label: 'New Session',        description: hk.newSession,    iconName: 'Plus',        action: () => { document.dispatchEvent(new CustomEvent('acc:new-session'));  onClose() } },
+      { id: 'open-project',   label: 'Open Project',       description: hk.openProject,   iconName: 'FolderOpen',  action: () => { document.dispatchEvent(new CustomEvent('acc:open-project')); onClose() } },
+      { id: 'toggle-notes',   label: 'Toggle Notes',       description: hk.quickNote,     iconName: 'NotebookPen', action: () => { document.dispatchEvent(new CustomEvent('acc:quick-note'));   onClose() } },
+      { id: 'show-shortcuts', label: 'Keyboard Shortcuts', description: hk.showShortcuts, iconName: 'Keyboard',    action: () => { onShowShortcuts?.(); onClose() } },
+    ].filter((a) => !q || a.label.toLowerCase().includes(q))
 
-  actions.forEach((a) => items.push(a))
+    actions.forEach((a) => result.push(a))
+    return result
+  }, [sessions, settings.hotkeys, q, paneTree, setActiveSession, setFocusedSession, onClose, onShowShortcuts])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!open) return

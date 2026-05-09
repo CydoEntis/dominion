@@ -134,8 +134,11 @@ export function resizeSession(sessionId: string, cols: number, rows: number): vo
 
 export { listSessions }
 
-export function patchSession(sessionId: string, patch: { name?: string; color?: string; groupId?: string; taskStatus?: string }): SessionMeta | undefined {
-  const updated = updateSessionMeta(sessionId, patch as any)
+export function patchSession(
+  sessionId: string,
+  patch: Partial<Pick<SessionMeta, 'name' | 'color' | 'groupId' | 'taskStatus' | 'worktreePath' | 'worktreeBranch' | 'worktreeBaseBranch' | 'projectRoot'>>
+): SessionMeta | undefined {
+  const updated = updateSessionMeta(sessionId, patch)
   if (updated) broadcastMetaUpdate(updated)
   return updated
 }

@@ -10,10 +10,7 @@ import { useConfirmClose } from '../hooks/useConfirmClose'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 
-import { SESSION_COLORS as TAB_COLORS } from '../session.service'
-
-const DEFAULT_COLOR = '#22c55e'
-const MAX_NAME_LENGTH = 32
+import { SESSION_COLORS as TAB_COLORS, MAX_NAME_LENGTH } from '../session.service'
 
 interface EditModalProps {
   meta: SessionMeta
@@ -23,7 +20,7 @@ interface EditModalProps {
 
 function EditModal({ meta, onSave, onDismiss }: EditModalProps): JSX.Element {
   const [name, setName] = useState(meta.name)
-  const [color, setColor] = useState(meta.color ?? DEFAULT_COLOR)
+  const [color, setColor] = useState(meta.color ?? TAB_COLORS[0])
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -141,7 +138,7 @@ export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMe
   const [editOpen, setEditOpen] = useState(false)
   const { requestClose, modal: closeModal } = useConfirmClose()
 
-  const color = meta.color ?? DEFAULT_COLOR
+  const color = meta.color ?? TAB_COLORS[0]
   const isExited = meta.status !== 'running'
   const agentStatus = meta.agentStatus ?? 'idle'
 

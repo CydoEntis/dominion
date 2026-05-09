@@ -5,6 +5,8 @@ import { pickFolder } from '../../window/window.service'
 import { createSession, killSession } from '../session.service'
 import { removeWorktree } from '../../fs/fs.service'
 import { findTabForSession } from '../../layout/layout-tree'
+import { normalizePath } from '../../../lib/utils'
+import { DEFAULT_COLS, DEFAULT_ROWS } from '@shared/constants'
 
 const MAX_PROJECTS = 10
 
@@ -28,7 +30,7 @@ export function useProjects(): UseProjectsReturn {
 
   const [refreshTicks, setRefreshTicks] = useState<Record<string, number>>({})
 
-  const openProjects = settings.openProjects.map((p) => p.replace(/\\/g, '/'))
+  const openProjects = settings.openProjects.map(normalizePath)
 
   const bumpRefresh = (root: string): void =>
     setRefreshTicks((t) => ({ ...t, [root]: (t[root] ?? 0) + 1 }))
@@ -46,9 +48,9 @@ export function useProjects(): UseProjectsReturn {
     }
     const folder = await pickFolder()
     if (!folder) return
-    const normalized = folder.replace(/\\/g, '/')
+    const normalized = normalizePath(folder)
     if (!openProjects.includes(normalized)) {
-      const recent = [normalized, ...settings.recentProjects.filter((p) => p.replace(/\\/g, '/') !== normalized)].slice(0, 10)
+      const recent = [normalized, ...settings.recentProjects.filter((p) => normalizePath(p) !== normalized)].slice(0, 10)
       await updateSettings({
         openProjects: [...settings.openProjects, folder],
         projectRoot: folder,
@@ -59,8 +61,8 @@ export function useProjects(): UseProjectsReturn {
           name: folder.split(/[\\/]/).pop() ?? 'project',
           agentCommand: 'claude',
           cwd: folder,
-          cols: 80,
-          rows: 24,
+          cols: DEFAULT_COLS,
+          rows: DEFAULT_ROWS,
         })
         upsertSession(meta)
         addTab(meta.sessionId)
@@ -69,10 +71,10 @@ export function useProjects(): UseProjectsReturn {
   }
 
   const removeProject = async (root: string): Promise<void> => {
-    const normalized = root.replace(/\\/g, '/')
+    const normalized = normalizePath(root)
     const projectSessions = Object.values(sessions).filter((m) => {
-      const cwd = m.cwd?.replace(/\\/g, '/') ?? ''
-      const projectRoot = m.projectRoot?.replace(/\\/g, '/') ?? ''
+      const cwd = normalizePath(m.cwd ?? '')
+      const projectRoot = normalizePath(m.projectRoot ?? '')
       return cwd.startsWith(normalized) || projectRoot === normalized
     })
     for (const m of projectSessions) {
@@ -84,7 +86,7 @@ export function useProjects(): UseProjectsReturn {
       }
     }
     await updateSettings({
-      openProjects: settings.openProjects.filter((p) => p.replace(/\\/g, '/') !== normalized),
+      openProjects: settings.openProjects.filter((p) => normalizePath(p) !== normalized),
     })
   }
 

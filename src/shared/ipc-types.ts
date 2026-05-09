@@ -146,7 +146,6 @@ export const HotkeysSchema = z.object({
   closeSession: z.string().default('Ctrl+Shift+W'),
   commandPalette: z.string().default('Ctrl+Shift+P'),
   openProject: z.string().default('Ctrl+Shift+O'),
-  newNote: z.string().default('Ctrl+Shift+N'),
   quickNote: z.string().default('Ctrl+Shift+N'),
   showShortcuts: z.string().default('Ctrl+Shift+K'),
   reviewChanges: z.string().default('Ctrl+Shift+G'),

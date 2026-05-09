@@ -4,15 +4,15 @@ import { createPortal } from 'react-dom'
 import { useStore } from '../../../store/root.store'
 import { useLayoutDnd } from '../../layout/dnd/LayoutDndContext'
 import { useProjects } from '../../session/hooks/useProjects'
-import { patchSession, killSession, SESSION_COLORS } from '../../session/session.service'
+import { patchSession, killSession, SESSION_COLORS, GROUP_COLORS, MAX_NAME_LENGTH } from '../../session/session.service'
 import { removeWorktree } from '../../fs/fs.service'
 import { detachTab, reattachTab } from '../../window/window.service'
-import { findTabForSession, collectSessionIds, findNotesLeafIdForNote, makeNotesLeaf } from '../../layout/layout-tree'
+import { findTabForSession, collectSessionIds, findNotesLeafIdForNote, findNotesLeafId, makeNotesLeaf } from '../../layout/layout-tree'
 import { useWorktreeStats } from '../hooks/useWorktreeStats'
 import { useConfirmClose } from '../../session/hooks/useConfirmClose'
 import { FileTree } from '../../../components/NoteDrawer'
 import { toast } from 'sonner'
-import { cn } from '../../../lib/utils'
+import { cn, normalizePath, shortPath } from '../../../lib/utils'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Button } from '../../../components/ui/button'
@@ -26,14 +26,6 @@ interface Props {
   onSelectSession: (id: string | null) => void
 }
 
-const MAX_NAME_LENGTH = 32
-const GROUP_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6']
-
-function shortPath(p: string): string {
-  const parts = p.replace(/\\/g, '/').split('/').filter(Boolean)
-  if (parts.length <= 2) return p.replace(/\\/g, '/')
-  return `…/${parts.slice(-2).join('/')}`
-}
 
 interface EditModalProps {
   meta: SessionMeta
@@ -189,7 +181,7 @@ function SessionRow({ meta, activeSessionId, worktreeStats, isNoWorkspace, dragg
   const isSelected = activeSessionId === meta.sessionId
   const isRunning = meta.status === 'running'
   const agentStatus = meta.agentStatus ?? 'idle'
-  const sessionColor = meta.color ?? '#22c55e'
+  const sessionColor = meta.color ?? SESSION_COLORS[0]
   const stats = isNoWorkspace ? undefined : worktreeStats[meta.sessionId]
   const hasStats = stats && (stats.added > 0 || stats.deleted > 0)
   const subtext = isNoWorkspace ? shortPath(meta.cwd) : (meta.worktreeBranch ?? shortPath(meta.cwd))
@@ -288,14 +280,14 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const sidebarBodyRef = useRef<HTMLDivElement>(null)
 
   const isNoWorkspace = activeProject === null
-  const normalizedActive = activeProject?.replace(/\\/g, '/')
+  const normalizedActive = activeProject ? normalizePath(activeProject) : undefined
 
   const projectSessions: SessionMeta[] = useMemo(() =>
     Object.values(sessions)
       .filter((m) => {
         if (isNoWorkspace) return !m.worktreePath
         if (!normalizedActive) return false
-        const root = (m.projectRoot ?? m.cwd).replace(/\\/g, '/')
+        const root = normalizePath(m.projectRoot ?? m.cwd)
         return (root === normalizedActive || root.startsWith(normalizedActive + '/')) && !!m.worktreePath
       })
       .sort((a, b) => b.createdAt - a.createdAt),

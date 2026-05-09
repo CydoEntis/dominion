@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { useStore } from '../../../store/root.store'
 import { createSession, patchSession, writeToSession } from '../session.service'
 import { detachTab } from '../../window/window.service'
@@ -6,10 +7,11 @@ import { clearLayout } from '../persistence.service'
 import { collectSessionIds, migrateLayoutNode } from '../../layout/layout-tree'
 import type { PersistedLayout } from '@shared/ipc-types'
 import type { LayoutNode } from '../../layout/layout-tree'
+import { DEFAULT_COLS, DEFAULT_ROWS } from '@shared/constants'
 
 function remapLayoutTree(node: LayoutNode, idMap: Map<string, string>): LayoutNode {
   if (node.type === 'leaf') {
-    if (node.panel === 'notes') return node
+    if (node.panel !== 'terminal') return node
     const newId = idMap.get(node.sessionId)
     return newId ? { ...node, sessionId: newId } : node
   }
@@ -53,7 +55,7 @@ export function useLayoutRestore(): void {
       }
       try {
         const cwd = ps.worktreePath || ps.cwd || undefined
-        const meta = await createSession({ name: ps.name, agentCommand, cwd, cols: 80, rows: 24, color: ps.color, groupId: ps.groupId })
+        const meta = await createSession({ name: ps.name, agentCommand, cwd, cols: DEFAULT_COLS, rows: DEFAULT_ROWS, color: ps.color, groupId: ps.groupId })
         if (ps.worktreePath) {
           // Immediately put the session in the store with worktree fields from
           // the persisted data — don't wait on patchSession which can return
@@ -67,7 +69,10 @@ export function useLayoutRestore(): void {
         idMap.set(ps.sessionId, meta.sessionId)
         createdMetas.push(meta)
         if (resumeOnStartup && ps.agentCommand) resumeIds.push(meta.sessionId)
-      } catch {}
+      } catch (err) {
+        console.error('Failed to restore session:', ps.name, err)
+        toast.error(`Could not restore "${ps.name}"`)
+      }
     }
 
     for (const tab of layout.tabs) {

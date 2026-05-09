@@ -176,7 +176,7 @@ export function App(): JSX.Element {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [releaseNotesOpen, setReleaseNotesOpen] = useState(false)
   const [sidePanel, setSidePanel] = useState<'settings' | 'git' | null>(null)
-  const [workspaceSessionId, setWorkspaceSessionId] = useState<string>('__root__')
+  const [workspaceSessionId, setWorkspaceSessionId] = useState<string | null>('__root__')
   const [workspaceProject, setWorkspaceProject] = useState<string | null>(
     () => localStorage.getItem('orbit:workspaceProject') ?? null
   )
@@ -371,7 +371,7 @@ export function App(): JSX.Element {
           {/* Terminal area */}
           <div className="flex-1 min-w-0 min-h-0 relative">
             <AgentMonitorLayout
-              sessionId={workspaceSessionId}
+              sessionId={workspaceSessionId ?? '__root__'}
               onSessionClose={() => setWorkspaceSessionId('__root__')}
             />
 

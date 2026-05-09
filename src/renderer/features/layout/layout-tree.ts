@@ -56,17 +56,6 @@ export function insertNode(
   return { ...node, children: node.children.map((c) => insertNode(c, targetId, direction, newLeaf, side)) }
 }
 
-/** Insert newLeaf at the left edge — used when clicking a session/note from the sidebar */
-export function insertAtLeft(root: LayoutNode, newLeaf: LayoutLeaf): LayoutNode {
-  if (root.type === 'leaf') {
-    return { type: 'split', id: makeId(), direction: 'horizontal', children: [newLeaf, root] }
-  }
-  if (root.direction === 'horizontal') {
-    return { ...root, children: [newLeaf, ...root.children] }
-  }
-  return { type: 'split', id: makeId(), direction: 'horizontal', children: [newLeaf, root] }
-}
-
 /** Insert newLeaf at the right edge — used when opening the notes panel */
 export function insertAtRight(root: LayoutNode, newLeaf: LayoutLeaf): LayoutNode {
   if (root.type === 'leaf') {

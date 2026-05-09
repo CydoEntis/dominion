@@ -26,3 +26,7 @@ export function sendWindowControl(action: WindowControlAction): void {
 export async function pickFolder(): Promise<string | null> {
   return ipc.invoke(IPC.DIALOG_PICK_FOLDER) as Promise<string | null>
 }
+
+export async function pickFile(): Promise<string | null> {
+  return ipc.invoke(IPC.DIALOG_PICK_FILE) as Promise<string | null>
+}

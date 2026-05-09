@@ -30,6 +30,10 @@ export function openInEditor(command: string, filePath: string): Promise<void> {
   return ipc.invoke(IPC.FS_OPEN_IN_EDITOR, { command, filePath }) as Promise<void>
 }
 
+export async function detectShells(): Promise<{ name: string; path: string }[]> {
+  return ipc.invoke(IPC.FS_DETECT_SHELLS) as Promise<{ name: string; path: string }[]>
+}
+
 export async function detectEditors(): Promise<{ name: string; command: string }[]> {
   return ipc.invoke(IPC.FS_DETECT_EDITORS) as Promise<{ name: string; command: string }[]>
 }

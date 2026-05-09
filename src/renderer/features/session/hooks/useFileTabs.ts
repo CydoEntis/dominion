@@ -10,7 +10,7 @@ export interface OpenFile {
 export interface UseFileTabsReturn {
   openFiles: OpenFile[]
   activeFilePath: string | null
-  setActiveFilePath: (path: string) => void
+  setActiveFilePath: (path: string | null) => void
   handleFileClick: (path: string, xy: string | undefined) => void
   handleCloseFile: (path: string) => void
 }
@@ -63,11 +63,10 @@ export function useFileTabs(): UseFileTabsReturn {
   }, [])
 
   const handleCloseFile = (path: string): void => {
-    setOpenFiles((prev) => prev.filter((f) => f.path !== path))
-    setActiveFilePath((cur) => {
-      if (cur !== path) return cur
-      const remaining = openFiles.filter((f) => f.path !== path)
-      return remaining.length > 0 ? remaining[remaining.length - 1].path : null
+    setOpenFiles((prev) => {
+      const remaining = prev.filter((f) => f.path !== path)
+      setActiveFilePath((cur) => cur !== path ? cur : remaining.at(-1)?.path ?? null)
+      return remaining
     })
   }
 

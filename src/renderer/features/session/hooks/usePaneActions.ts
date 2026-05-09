@@ -1,6 +1,7 @@
 import { useStore } from '../../../store/root.store'
 import { createSession, killSession, patchSession } from '../session.service'
 import { detachTab, reattachTab } from '../../window/window.service'
+import { DEFAULT_COLS, DEFAULT_ROWS } from '@shared/constants'
 
 interface ContextMenuTarget {
   x: number
@@ -25,25 +26,18 @@ export function usePaneActions(contextMenu: ContextMenuTarget | null): UsePaneAc
   const closePane = useStore((s) => s.closePane)
   const detachPane = useStore((s) => s.detachPane)
 
-  const handleSplitH = async (): Promise<void> => {
+  const handleSplit = async (direction: 'horizontal' | 'vertical'): Promise<void> => {
     if (!contextMenu) return
     const { tabId, sessionId } = contextMenu
     const parent = sessions[sessionId]
     const groupId = parent?.groupId ?? tabId
     if (!parent?.groupId) patchSession({ sessionId, groupId }).catch(() => {})
-    const newMeta = await createSession({ name: `${parent?.name ?? 'pane'} split`, cwd: parent?.cwd, groupId, cols: 80, rows: 24 })
-    splitPane(tabId, sessionId, 'horizontal', newMeta)
+    const newMeta = await createSession({ name: `${parent?.name ?? 'pane'} split`, cwd: parent?.cwd, groupId, cols: DEFAULT_COLS, rows: DEFAULT_ROWS })
+    splitPane(tabId, sessionId, direction, newMeta)
   }
 
-  const handleSplitV = async (): Promise<void> => {
-    if (!contextMenu) return
-    const { tabId, sessionId } = contextMenu
-    const parent = sessions[sessionId]
-    const groupId = parent?.groupId ?? tabId
-    if (!parent?.groupId) patchSession({ sessionId, groupId }).catch(() => {})
-    const newMeta = await createSession({ name: `${parent?.name ?? 'pane'} split`, cwd: parent?.cwd, groupId, cols: 80, rows: 24 })
-    splitPane(tabId, sessionId, 'vertical', newMeta)
-  }
+  const handleSplitH = (): Promise<void> => handleSplit('horizontal')
+  const handleSplitV = (): Promise<void> => handleSplit('vertical')
 
   const handleDetach = async (): Promise<void> => {
     if (!contextMenu || !windowId) return

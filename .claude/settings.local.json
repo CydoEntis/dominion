@@ -101,7 +101,16 @@
       "Bash(npx shadcn@latest *)",
       "Bash(Remove-Item -Recurse -Force \"@\")",
       "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"$PWD\\\\build\\\\icon.png\"\\); Write-Host \"$\\($img.Width\\)x$\\($img.Height\\)\")",
-      "Bash(Remove-Item *)"
+      "Bash(Remove-Item *)",
+      "Bash(xargs grep -l \"LayoutDndProvider\")",
+      "Bash(xargs grep -l \"PaneDropTarget\")",
+      "Bash(Get-Content \"C:\\\\Programming\\\\command-center\\\\src\\\\renderer\\\\store\\\\root.store.ts\")",
+      "Bash(Select-Object -First 40)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('build', d.get\\('electron-builder', {}\\)\\), indent=2\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('version','?'\\)\\)\")",
+      "Bash(xargs grep -l \"toast\\\\|notification\")",
+      "Bash(xargs grep -l \"toast\")",
+      "Bash(xargs wc -l)"
     ]
   }
 }

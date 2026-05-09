@@ -292,7 +292,13 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       const tree = state.paneTree[tabId]
       if (!tree) return
       const newTree = removeNode(tree, leafId)
-      state.paneTree[tabId] = newTree ?? (tabId === '__root__' ? makeHomeLeaf() : (delete state.paneTree[tabId], undefined!))
+      if (newTree) {
+        state.paneTree[tabId] = newTree
+      } else if (tabId === '__root__') {
+        state.paneTree[tabId] = makeHomeLeaf()
+      } else {
+        delete state.paneTree[tabId]
+      }
     }),
 
   replaceLayoutLeaf: (tabId, leafId, replacement) =>

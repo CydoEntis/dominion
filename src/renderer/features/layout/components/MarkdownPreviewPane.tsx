@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ExternalLink } from 'lucide-react'
 import { marked } from 'marked'
@@ -24,7 +24,7 @@ export function MarkdownPreviewPane({ tabId, leafId, noteId, isMainWindow, windo
   const note = notes.find((n) => n.id === noteId)
   const content = note?.content ?? ''
   const title = noteTitle(content)
-  const html = marked.parse(content) as string
+  const html = useMemo(() => marked.parse(content) as string, [content])
 
   const [ctxPos, setCtxPos] = useState<{ x: number; y: number } | null>(null)
 

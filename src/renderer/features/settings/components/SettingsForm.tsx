@@ -5,7 +5,8 @@ import { FolderOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppSettingsSchema, DEFAULT_SETTINGS } from '@shared/ipc-types'
 import type { AppSettings } from '@shared/ipc-types'
-import { IPC } from '@shared/ipc-channels'
+import { pickFolder, pickFile } from '../../window/window.service'
+import { detectShells } from '../../fs/fs.service'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
@@ -86,9 +87,7 @@ function ShellSelect({ value, onChange, onBrowse }: ShellSelectProps): JSX.Eleme
   const [detected, setDetected] = useState<ShellOption[]>([])
 
   useEffect(() => {
-    window.ipc.invoke(IPC.FS_DETECT_SHELLS)
-      .then((r) => setDetected(r as ShellOption[]))
-      .catch(() => {})
+    detectShells().then(setDetected).catch(() => {})
   }, [])
 
   // Radix Select forbids empty-string values — use a sentinel for "System default"
@@ -149,32 +148,32 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
   const hotkeys           = watch('hotkeys')
 
   const pickShell = async (): Promise<void> => {
-    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FILE) as string | null
+    const picked = await pickFile()
     if (picked) setValue('defaultShell', picked)
   }
 
   const pickShellStartDir = async (): Promise<void> => {
-    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    const picked = await pickFolder()
     if (picked !== null) setValue('shellStartDir', picked)
   }
 
   const pickDataDir = async (): Promise<void> => {
-    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    const picked = await pickFolder()
     if (picked !== null) setValue('dataDirectory', picked)
   }
 
   const pickNotesDir = async (): Promise<void> => {
-    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    const picked = await pickFolder()
     if (picked !== null) setValue('notesDirectory', picked)
   }
 
   const pickWorktreesDir = async (): Promise<void> => {
-    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    const picked = await pickFolder()
     if (picked !== null) setValue('worktreesDirectory', picked)
   }
 
   const pickSessionDir = async (): Promise<void> => {
-    const picked = await window.ipc.invoke(IPC.DIALOG_PICK_FOLDER) as string | null
+    const picked = await pickFolder()
     if (picked !== null) setValue('defaultSessionDir', picked)
   }
 
