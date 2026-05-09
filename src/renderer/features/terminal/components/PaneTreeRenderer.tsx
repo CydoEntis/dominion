@@ -1,7 +1,7 @@
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import { TerminalPane } from './TerminalPane'
 import { useStore } from '../../../store/root.store'
-import { createSession, killSession, patchSession } from '../../session/session.service'
+import { killSession } from '../../session/session.service'
 import { detachTab, reattachTab } from '../../window/window.service'
 import type { PaneNode } from '../pane-tree'
 
@@ -19,42 +19,28 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
   const isMainWindow = forceMainWindow ?? useStore((s) => s.isMainWindow)
   const windowId = useStore((s) => s.windowId)
   const setFocusedSession = useStore((s) => s.setFocusedSession)
+  const focusedSessionId = useStore((s) => s.focusedSessionId)
+  const sessions = useStore((s) => s.sessions)
+  const rootIsASplit = useStore((s) => s.paneTree[tabId]?.type === 'split')
 
   if (node.type === 'leaf') {
     const sid = node.sessionId
-    const resolveSplitGroup = async (parent: ReturnType<typeof useStore.getState>['sessions'][string] | undefined): Promise<string> => {
-      const state = useStore.getState()
-      const groups = state.settings.sessionGroups ?? []
-      const existingGroup = parent?.groupId ? groups.find((g) => g.id === parent.groupId) : null
-      if (existingGroup) return existingGroup.id
-      const groupId = crypto.randomUUID()
-      await state.updateSettings({ sessionGroups: [...groups, { id: groupId, name: `${parent?.name ?? 'Session'} splits`, color: parent?.color ?? '#6366f1' }] })
-      if (parent) {
-        const patched = await patchSession({ sessionId: parent.sessionId, groupId })
-        useStore.getState().upsertSession(patched)
-      }
-      return groupId
-    }
 
     const paneItems = [
       {
         label: 'Split Horizontal',
-        action: async () => {
-          const parent = useStore.getState().sessions[sid]
-          const groupId = await resolveSplitGroup(parent)
-          const splitNum = Object.values(useStore.getState().sessions).filter((s) => s.groupId === groupId).length
-          const m = await createSession({ name: `Split #${splitNum}`, cwd: parent?.cwd, groupId, cols: 80, rows: 24 })
-          useStore.getState().splitPane(tabId, sid, 'horizontal', m)
+        action: () => {
+          document.dispatchEvent(new CustomEvent('acc:new-session-for-split', {
+            detail: { tabId, sessionId: sid, direction: 'horizontal' }
+          }))
         },
       },
       {
         label: 'Split Vertical',
-        action: async () => {
-          const parent = useStore.getState().sessions[sid]
-          const groupId = await resolveSplitGroup(parent)
-          const splitNum = Object.values(useStore.getState().sessions).filter((s) => s.groupId === groupId).length
-          const m = await createSession({ name: `Split #${splitNum}`, cwd: parent?.cwd, groupId, cols: 80, rows: 24 })
-          useStore.getState().splitPane(tabId, sid, 'vertical', m)
+        action: () => {
+          document.dispatchEvent(new CustomEvent('acc:new-session-for-split', {
+            detail: { tabId, sessionId: sid, direction: 'vertical' }
+          }))
         },
       },
       isMainWindow
@@ -83,8 +69,15 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
       },
     ]
 
+    const isFocused = rootIsASplit && sid === focusedSessionId
+    const sessionColor = sessions[sid]?.color ?? '#22c55e'
+
     return (
-      <div className="flex flex-col w-full h-full" onMouseDown={() => setFocusedSession(sid)}>
+      <div
+        className="flex flex-col w-full h-full"
+        style={isFocused ? { boxShadow: `inset 0 0 0 1px ${sessionColor}60, inset 0 2px 0 0 ${sessionColor}` } : undefined}
+        onMouseDown={() => setFocusedSession(sid)}
+      >
         <TerminalPane sessionId={sid} paneItems={paneItems} />
       </div>
     )

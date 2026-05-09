@@ -283,15 +283,20 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     const { cols, rows } = terminal
     registerTerminal(sessionId, cols, rows)
 
+    // Suppress the next DOM paste event when Ctrl+Shift+V already handled it via IPC clipboard.
+    // Needed because Chromium/Electron fires a paste DOM event for Ctrl+Shift+V on some platforms.
+    let suppressNextPaste = false
+
     // Ctrl+Shift+V → paste via IPC (Linux-compatible); Ctrl+V → handled by paste DOM event below;
     // Ctrl+C → copy selection if non-empty, otherwise SIGINT
     terminal.attachCustomKeyEventHandler((e) => {
-      if (e.ctrlKey && !e.shiftKey && e.key === 'f' && e.type === 'keydown') {
+      if (e.ctrlKey && e.shiftKey && e.key === 'F' && e.type === 'keydown') {
         setSearchVisible(true)
         return false
       }
       if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
-        readClipboard().then((text) => { terminal.paste(text); terminal.focus() }).catch(() => terminal.focus())
+        suppressNextPaste = true
+        readClipboard().then((text) => { terminal.paste(text); requestAnimationFrame(() => terminal.focus()) }).catch(() => terminal.focus())
         return false
       }
       if (e.ctrlKey && !e.shiftKey && e.key === 'v' && e.type === 'keydown') {
@@ -407,7 +412,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
         }
 
         if (clipText) {
-          items.push({ label: 'Paste', action: () => { terminal.paste(clipText); terminal.focus() } })
+          items.push({ label: 'Paste', action: () => { terminal.paste(clipText); requestAnimationFrame(() => terminal.focus()) } })
         }
 
         setCtxMenu({ x, y, items })
@@ -416,11 +421,13 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
 
     // Capture-phase paste: intercept before xterm's textarea handler fires, giving one paste per Ctrl+V.
     // stopPropagation prevents the event reaching xterm's own textarea listener (which would paste again).
+    // suppressNextPaste skips events already handled by the Ctrl+Shift+V custom key handler.
     const handlePaste = (e: ClipboardEvent): void => {
       e.preventDefault()
       e.stopPropagation()
+      if (suppressNextPaste) { suppressNextPaste = false; return }
       const text = e.clipboardData?.getData('text/plain') ?? ''
-      if (text) { terminal.paste(text); terminal.focus() }
+      if (text) { terminal.paste(text); requestAnimationFrame(() => terminal.focus()) }
     }
 
     // All three in capture phase: prevents xterm.js internal handlers from swallowing Shift+click,

@@ -94,17 +94,21 @@ export function KeyboardShortcutsModal({ open, onClose }: Props): JSX.Element | 
       ]
     },
     {
-      title: 'Notes',
-      rows: [
-        { label: 'Toggle Notes',       binding: hk.quickNote },
-      ]
-    },
-    {
       title: 'Terminal',
       rows: [
         { label: 'Copy selection',     binding: 'Ctrl+C (with selection)' },
         { label: 'Paste',              binding: 'Ctrl+Shift+V' },
+        { label: 'Search',             binding: 'Ctrl+Shift+F' },
         { label: 'Open URL / file',    binding: 'Select text, Shift+click' },
+      ]
+    },
+    {
+      title: 'Notes',
+      rows: [
+        { label: 'New / open note',    binding: hk.quickNote },
+        { label: 'Dock / undock',      binding: 'Ctrl+Shift+D' },
+        { label: 'Toggle file tree',   binding: 'Ctrl+Shift+B' },
+        { label: 'Split preview',      binding: 'Ctrl+Shift+M' },
       ]
     },
   ]

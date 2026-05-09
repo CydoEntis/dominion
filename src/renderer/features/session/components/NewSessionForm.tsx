@@ -60,18 +60,32 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
   const [selectedGroupId, setSelectedGroupId] = useState<string>(NO_GROUP)
   const [yoloMode, setYoloMode] = useState(false)
   const [workspacePath, setWorkspacePath] = useState<string | null>(null)
+  const [splitTarget, setSplitTarget] = useState<{ tabId: string; sessionId: string; direction: 'horizontal' | 'vertical' } | null>(null)
   const upsertSession = useStore((s) => s.upsertSession)
   const addTab = useStore((s) => s.addTab)
+  const splitPane = useStore((s) => s.splitPane)
   const settings = useStore((s) => s.settings)
   const groups = settings.sessionGroups ?? []
 
   useEffect(() => {
     const handler = (): void => {
       setWorkspacePath(null)
+      setSplitTarget(null)
       setOpen(true)
     }
     document.addEventListener('acc:new-session', handler)
     return () => document.removeEventListener('acc:new-session', handler)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: Event): void => {
+      const detail = (e as CustomEvent<{ tabId: string; sessionId: string; direction: 'horizontal' | 'vertical' }>).detail
+      setSplitTarget(detail)
+      setWorkspacePath(null)
+      setOpen(true)
+    }
+    document.addEventListener('acc:new-session-for-split', handler)
+    return () => document.removeEventListener('acc:new-session-for-split', handler)
   }, [])
 
   useEffect(() => {
@@ -90,6 +104,8 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
       setSelectedGroupId(NO_GROUP)
       setYoloMode(false)
       setSelectedPreset('claude')
+    } else {
+      setSplitTarget(null)
     }
   }, [open])
 
@@ -142,6 +158,17 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
         })
         upsertSession(meta)
         addTab(meta.sessionId)
+      } else if (splitTarget) {
+        const meta = await createSession({
+          name: data.name,
+          agentCommand,
+          cwd: selectedDir || undefined,
+          cols: 80,
+          rows: 24,
+          yoloMode: yoloMode || undefined
+        })
+        upsertSession(meta)
+        splitPane(splitTarget.tabId, splitTarget.sessionId, splitTarget.direction, meta)
       } else {
         const groupId = selectedGroupId === NO_GROUP ? undefined : selectedGroupId || undefined
         const meta = await createSession({
@@ -162,6 +189,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
       setSelectedGroupId(NO_GROUP)
       setYoloMode(false)
       setWorkspacePath(null)
+      setSplitTarget(null)
       setOpen(false)
     } catch (err) {
       console.error('Failed to create session:', err)
@@ -177,6 +205,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
 
   const supportsYolo = selectedPreset === 'claude'
   const isWorkspaceMode = workspacePath !== null
+  const isSplitMode = splitTarget !== null
   const projectLabel = isWorkspaceMode
     ? workspacePath.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? workspacePath
     : null
@@ -184,7 +213,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
   const dialogContent = (
     <DialogContent className="sm:max-w-sm" onCloseAutoFocus={(e) => e.preventDefault()}>
       <DialogHeader>
-        <DialogTitle>{isWorkspaceMode ? 'New Task' : 'New Session'}</DialogTitle>
+        <DialogTitle>{isWorkspaceMode ? 'New Task' : isSplitMode ? `Split ${splitTarget.direction === 'horizontal' ? 'Horizontal' : 'Vertical'}` : 'New Session'}</DialogTitle>
         {projectLabel && (
           <p className="text-xs text-zinc-500 mt-0.5">{projectLabel}</p>
         )}
@@ -240,7 +269,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           </div>
         )}
 
-        {!isWorkspaceMode && (
+        {!isWorkspaceMode && !isSplitMode && (
           <div className="flex flex-col gap-1.5">
             <Label>Working directory</Label>
             <div className="flex gap-2">
@@ -272,7 +301,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           </div>
         )}
 
-        {!isWorkspaceMode && groups.length > 0 && (
+        {!isWorkspaceMode && !isSplitMode && groups.length > 0 && (
           <div className="flex flex-col gap-1.5">
             <Label>Group <span className="text-zinc-600 font-normal">(optional)</span></Label>
             <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
-import { NotebookPen, Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette } from 'lucide-react'
+import { NotebookPen, Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { TitleBar } from './components/TitleBar'
 import { NoteDrawer } from './components/NoteDrawer'
@@ -36,6 +36,9 @@ const THEMES = [
   { id: 'light'  as const, label: 'Light',  icon: Sun       },
   { id: 'system' as const, label: 'System', icon: Monitor   },
   { id: 'space'  as const, label: 'Space',  icon: Sparkles  },
+  { id: 'nebula' as const, label: 'Nebula', icon: Star      },
+  { id: 'solar'  as const, label: 'Solar',  icon: Flame     },
+  { id: 'aurora' as const, label: 'Aurora', icon: Waves     },
 ]
 
 function StatusThemeToggle(): JSX.Element {
@@ -160,6 +163,8 @@ export function App(): JSX.Element {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [sidePanel, setSidePanel] = useState<'notes' | 'settings' | 'git' | null>(null)
+  const sidePanelRef = useRef<'notes' | 'settings' | 'git' | null>(null)
+  const [notesMode, setNotesMode] = useState<'overlay' | 'split'>('overlay')
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [openNoteIds, setOpenNoteIds] = useState<Set<string>>(new Set())
   const [workspaceSessionId, setWorkspaceSessionId] = useState<string | null>(null)
@@ -168,6 +173,8 @@ export function App(): JSX.Element {
   )
   const [sidebarWidth, setSidebarWidth] = useState(224)
   const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null)
+  const [notesWidth, setNotesWidth] = useState(520)
+  const notesDragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   const selectedSession = useStore((s) => workspaceSessionId ? s.sessions[workspaceSessionId] : null)
   const gitRoot = selectedSession?.worktreePath ?? workspaceProject
@@ -183,6 +190,7 @@ export function App(): JSX.Element {
     return () => document.removeEventListener('acc:toggle-git-review', handler)
   }, [gitRoot])
 
+  useEffect(() => { sidePanelRef.current = sidePanel }, [sidePanel])
   useEffect(() => { setSidePanel(null) }, [workspaceProject])
 
   const handleWorkspaceProjectChange = useCallback((path: string | null) => {
@@ -208,12 +216,29 @@ export function App(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }, [sidebarWidth])
 
+  const handleNotesDragStart = useCallback((e: React.MouseEvent) => {
+    notesDragRef.current = { startX: e.clientX, startWidth: notesWidth }
+    const onMove = (ev: MouseEvent): void => {
+      if (!notesDragRef.current) return
+      const next = Math.max(320, Math.min(900, notesDragRef.current.startWidth + notesDragRef.current.startX - ev.clientX))
+      setNotesWidth(next)
+    }
+    const onUp = (): void => {
+      notesDragRef.current = null
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [notesWidth])
+
   useEffect(() => {
     const html = document.documentElement
+    const EXTRA_THEMES = ['space', 'nebula', 'solar', 'aurora'] as const
     const applyTheme = (): void => {
-      const isDark = appTheme === 'dark' || appTheme === 'space' || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      const isDark = appTheme === 'dark' || EXTRA_THEMES.includes(appTheme as typeof EXTRA_THEMES[number]) || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
       html.classList.toggle('dark', isDark)
-      html.classList.toggle('space', appTheme === 'space')
+      for (const t of EXTRA_THEMES) html.classList.toggle(t, appTheme === t)
     }
     applyTheme()
     if (appTheme === 'system') {
@@ -283,15 +308,29 @@ export function App(): JSX.Element {
   useKeyboardShortcuts({
     onTogglePalette: () => setPaletteOpen((v) => !v),
     onShowShortcuts: () => setShortcutsOpen((v) => !v),
-    onNewNoteDrawer: useCallback(() => {
-      setSidePanel(p => {
-        if (p === 'notes') return null
-        const { notes: n } = useStore.getState()
-        const sorted = n.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-        if (sorted.length > 0) setActiveNoteId(sorted[0].id)
-        else createNote()
-        return 'notes'
+    onDockNotes: useCallback(() => {
+      setNotesMode(m => {
+        if (m === 'overlay') {
+          if (sidePanelRef.current === 'notes') setSidePanel(null)
+          return 'split'
+        }
+        return 'overlay'
       })
+    }, []),
+    onNewNoteDrawer: useCallback(() => {
+      if (sidePanelRef.current === 'notes') {
+        const id = createNote()
+        setActiveNoteId(id)
+        return
+      }
+      setSidePanel('notes')
+      const { notes: n } = useStore.getState()
+      const sorted = n.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+      if (sorted.length > 0) setActiveNoteId(sorted[0].id)
+      else {
+        const id = createNote()
+        setActiveNoteId(id)
+      }
     }, [createNote]),
   })
 
@@ -336,40 +375,72 @@ export function App(): JSX.Element {
         />
 
         {/* Main content */}
-        <div className="flex-1 min-w-0 min-h-0 relative">
-          {workspaceSessionId === null ? (
-            <div className="absolute inset-0">
-              <EmptyState />
-            </div>
-          ) : (
-            <AgentMonitorLayout
-              sessionId={workspaceSessionId}
-              onSessionClose={() => setWorkspaceSessionId(null)}
-            />
-          )}
+        <div className="flex-1 min-w-0 min-h-0 flex">
+          {/* Terminal area */}
+          <div className="flex-1 min-w-0 min-h-0 relative">
+            {workspaceSessionId === null ? (
+              <div className="absolute inset-0">
+                <EmptyState />
+              </div>
+            ) : (
+              <AgentMonitorLayout
+                sessionId={workspaceSessionId}
+                onSessionClose={() => setWorkspaceSessionId(null)}
+              />
+            )}
 
-          {sidePanel !== null && (
+            {sidePanel !== null && sidePanel !== 'notes' && (
+              <>
+                <div className="absolute inset-0 z-10" onClick={() => setSidePanel(null)} />
+                <div
+                  className={cn(
+                    'absolute right-0 top-0 h-full z-20 border-l border-brand-panel bg-brand-surface flex flex-col shadow-2xl',
+                    sidePanel === 'settings' ? 'w-[520px]' : 'w-[420px]'
+                  )}
+                >
+                  {sidePanel === 'settings' && <SettingsForm onClose={() => setSidePanel(null)} />}
+                  {sidePanel === 'git' && <GitReviewPanel projectRoot={gitRoot} gitReview={gitReview} />}
+                </div>
+              </>
+            )}
+
+            {/* Notes overlay mode — floats over the terminal */}
+            {sidePanel === 'notes' && notesMode === 'overlay' && (
+              <div style={{ width: notesWidth, flexShrink: 0 }} className="absolute right-0 top-0 h-full z-20 flex flex-col bg-brand-surface border-l border-brand-panel shadow-2xl">
+                <NoteDrawer
+                  open={false}
+                  onClose={() => {}}
+                  activeNoteId={activeNoteId}
+                  onActivate={handleNoteActivate}
+                  onCreate={() => { const id = createNote(); setActiveNoteId(id) }}
+                  expanded={true}
+                  onToggleExpand={() => setSidePanel(null)}
+                  onToggleMode={() => { setSidePanel(null); setNotesMode('split') }}
+                  isSplitMode={false}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Notes split mode — true flex sibling, terminal resizes to make room */}
+          {sidePanel === 'notes' && notesMode === 'split' && (
             <>
-              <div className="absolute inset-0 z-10" onClick={() => setSidePanel(null)} />
               <div
-                className={cn(
-                  'absolute right-0 top-0 h-full z-20 border-l border-brand-panel bg-brand-surface flex flex-col shadow-2xl',
-                  sidePanel === 'notes' ? 'w-[640px]' : sidePanel === 'settings' ? 'w-[520px]' : 'w-[420px]'
-                )}
-              >
-                {sidePanel === 'notes' && (
-                  <NoteDrawer
-                    open={false}
-                    onClose={() => {}}
-                    activeNoteId={activeNoteId}
-                    onActivate={handleNoteActivate}
-                    onCreate={() => { const id = createNote(); setActiveNoteId(id) }}
-                    expanded={true}
-                    onToggleExpand={() => setSidePanel(null)}
-                  />
-                )}
-                {sidePanel === 'settings' && <SettingsForm onClose={() => setSidePanel(null)} />}
-                {sidePanel === 'git' && <GitReviewPanel projectRoot={gitRoot} gitReview={gitReview} />}
+                className="w-1 flex-shrink-0 bg-brand-panel hover:bg-brand-accent transition-colors cursor-col-resize"
+                onMouseDown={handleNotesDragStart}
+              />
+              <div style={{ width: notesWidth, flexShrink: 0 }} className="flex flex-col min-h-0 bg-brand-surface border-l border-brand-panel">
+                <NoteDrawer
+                  open={false}
+                  onClose={() => {}}
+                  activeNoteId={activeNoteId}
+                  onActivate={handleNoteActivate}
+                  onCreate={() => { const id = createNote(); setActiveNoteId(id) }}
+                  expanded={true}
+                  onToggleExpand={() => setSidePanel(null)}
+                  onToggleMode={() => setNotesMode('overlay')}
+                  isSplitMode={true}
+                />
               </div>
             </>
           )}

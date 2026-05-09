@@ -129,11 +129,11 @@ export const PresetSchema = z.object({
 export type Preset = z.infer<typeof PresetSchema>
 
 export const HotkeysSchema = z.object({
-  newSession: z.string().default('Ctrl+T'),
-  closeSession: z.string().default('Ctrl+W'),
-  commandPalette: z.string().default('Ctrl+P'),
-  openProject: z.string().default('Ctrl+O'),
-  newNote: z.string().default('Ctrl+N'),
+  newSession: z.string().default('Ctrl+Shift+T'),
+  closeSession: z.string().default('Ctrl+Shift+W'),
+  commandPalette: z.string().default('Ctrl+Shift+P'),
+  openProject: z.string().default('Ctrl+Shift+O'),
+  newNote: z.string().default('Ctrl+Shift+N'),
   quickNote: z.string().default('Ctrl+Shift+N'),
   showShortcuts: z.string().default('Ctrl+Shift+K'),
   reviewChanges: z.string().default('Ctrl+Shift+G'),

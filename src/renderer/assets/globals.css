@@ -70,6 +70,90 @@
     --brand-muted: 161 161 170;
   }
 
+  /* Nebula theme — deep indigo, electric cyan */
+  .nebula {
+    --background: 252 60% 5%;
+    --foreground: 194 90% 92%;
+    --card: 250 58% 8%;
+    --card-foreground: 194 90% 92%;
+    --popover: 250 58% 8%;
+    --popover-foreground: 194 90% 92%;
+    --primary: 194 100% 70%;
+    --primary-foreground: 252 60% 5%;
+    --secondary: 250 52% 14%;
+    --secondary-foreground: 194 90% 92%;
+    --muted: 250 52% 14%;
+    --muted-foreground: 200 40% 60%;
+    --accent: 250 52% 14%;
+    --accent-foreground: 194 90% 92%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 250 52% 16%;
+    --input: 250 52% 14%;
+    --ring: 194 100% 70%;
+    --brand-bg: 8 5 20;
+    --brand-surface: 12 9 32;
+    --brand-panel: 22 16 56;
+    --brand-accent: 100 220 255;
+    --brand-muted: 70 160 200;
+  }
+
+  /* Solar theme — near-black, warm amber/gold */
+  .solar {
+    --background: 28 55% 3%;
+    --foreground: 40 90% 95%;
+    --card: 28 50% 5%;
+    --card-foreground: 40 90% 95%;
+    --popover: 28 50% 5%;
+    --popover-foreground: 40 90% 95%;
+    --primary: 43 100% 50%;
+    --primary-foreground: 28 55% 3%;
+    --secondary: 28 45% 9%;
+    --secondary-foreground: 40 90% 95%;
+    --muted: 28 45% 9%;
+    --muted-foreground: 35 40% 55%;
+    --accent: 28 45% 9%;
+    --accent-foreground: 40 90% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 28 45% 12%;
+    --input: 28 45% 9%;
+    --ring: 43 100% 50%;
+    --brand-bg: 12 8 4;
+    --brand-surface: 18 12 6;
+    --brand-panel: 36 24 10;
+    --brand-accent: 255 185 0;
+    --brand-muted: 200 140 60;
+  }
+
+  /* Aurora theme — dark teal-black, bright emerald */
+  .aurora {
+    --background: 190 58% 4%;
+    --foreground: 160 80% 94%;
+    --card: 190 56% 6%;
+    --card-foreground: 160 80% 94%;
+    --popover: 190 56% 6%;
+    --popover-foreground: 160 80% 94%;
+    --primary: 160 100% 45%;
+    --primary-foreground: 190 58% 4%;
+    --secondary: 188 52% 10%;
+    --secondary-foreground: 160 80% 94%;
+    --muted: 188 52% 10%;
+    --muted-foreground: 168 35% 52%;
+    --accent: 188 52% 10%;
+    --accent-foreground: 160 80% 94%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 188 52% 13%;
+    --input: 188 52% 10%;
+    --ring: 160 100% 45%;
+    --brand-bg: 4 12 14;
+    --brand-surface: 6 18 22;
+    --brand-panel: 10 32 40;
+    --brand-accent: 0 230 160;
+    --brand-muted: 0 160 120;
+  }
+
   /* Space theme — dark purple / nebula variant */
   .space {
     --background: 258 44% 7%;
@@ -158,11 +242,34 @@
   background: #52525b;
 }
 
+/* Scrollbars — nebula */
+.nebula * { scrollbar-color: #160a3c transparent; }
+.nebula *::-webkit-scrollbar-thumb { background: #22104a; }
+.nebula *::-webkit-scrollbar-thumb:hover { background: #341860; }
+
+/* Scrollbars — solar */
+.solar * { scrollbar-color: #1e1208 transparent; }
+.solar *::-webkit-scrollbar-thumb { background: #2e1e0c; }
+.solar *::-webkit-scrollbar-thumb:hover { background: #4a3010; }
+
+/* Scrollbars — aurora */
+.aurora * { scrollbar-color: #081820 transparent; }
+.aurora *::-webkit-scrollbar-thumb { background: #0c2830; }
+.aurora *::-webkit-scrollbar-thumb:hover { background: #143a48; }
+
 /* Text selection color — brand-accent at low opacity */
 ::selection {
   background-color: rgba(228, 228, 231, 0.12);
   color: inherit;
 }
+.nebula ::selection { background-color: rgba(100, 220, 255, 0.15); }
+.solar  ::selection { background-color: rgba(255, 185,   0, 0.13); }
+.aurora ::selection { background-color: rgba(  0, 230, 160, 0.13); }
+
+/* Focus ring — per theme accent color */
+.nebula :focus-visible { outline-color: rgba(100, 220, 255, 0.45); }
+.solar  :focus-visible { outline-color: rgba(255, 185,   0, 0.40); }
+.aurora :focus-visible { outline-color: rgba(  0, 230, 160, 0.40); }
 
 /* shiki syntax highlighting */
 .shiki-wrap {

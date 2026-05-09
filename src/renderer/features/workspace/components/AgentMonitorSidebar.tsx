@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { Plus, ChevronDown, ChevronRight, Loader2, FolderOpen, Pencil, X, Users, Trash2, Scissors } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight, Loader2, FolderOpen, Pencil, X, Users, Trash2, Scissors, ExternalLink, Columns2 } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../../store/root.store'
 import { useProjects } from '../../session/hooks/useProjects'
 import { patchSession, killSession, SESSION_COLORS } from '../../session/session.service'
 import { removeWorktree } from '../../fs/fs.service'
+import { detachTab } from '../../window/window.service'
+import { findTabForSession, collectSessionIds } from '../../terminal/pane-tree'
 import { useWorktreeStats } from '../hooks/useWorktreeStats'
 import { useConfirmClose } from '../../session/hooks/useConfirmClose'
 import { toast } from 'sonner'
@@ -238,8 +240,15 @@ function SessionRow({ meta, activeSessionId, worktreeStats, isNoWorkspace, dragg
 export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSessionId, onSelectSession }: Props): JSX.Element {
   const sessions = useStore((s) => s.sessions)
   const isRestoringLayout = useStore((s) => s.isRestoringLayout)
+  const isMainWindow = useStore((s) => s.isMainWindow)
+  const windowId = useStore((s) => s.windowId)
   const upsertSession = useStore((s) => s.upsertSession)
   const removeTab = useStore((s) => s.removeTab)
+  const detachPane = useStore((s) => s.detachPane)
+  const paneTree = useStore((s) => s.paneTree)
+  const openGroupInSplits = useStore((s) => s.openGroupInSplits)
+  const focusedSessionId = useStore((s) => s.focusedSessionId)
+  const setFocusedSession = useStore((s) => s.setFocusedSession)
   const sessionGroups = useStore((s) => s.settings.sessionGroups)
   const updateSettings = useStore((s) => s.updateSettings)
 
@@ -385,15 +394,27 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
     : normalizedActive ? normalizedActive.split('/').filter(Boolean).pop() ?? normalizedActive
     : 'No Workspace'
 
+  const resolveTabId = useCallback((sessionId: string): string =>
+    findTabForSession(paneTree, sessionId) ?? sessionId,
+    [paneTree]
+  )
+
+  const effectiveActiveId = useMemo(() => {
+    if (!activeSessionId || !focusedSessionId) return activeSessionId
+    const tree = paneTree[activeSessionId]
+    if (tree && collectSessionIds(tree).includes(focusedSessionId)) return focusedSessionId
+    return activeSessionId
+  }, [activeSessionId, focusedSessionId, paneTree])
+
   const renderSessionRow = (meta: SessionMeta): JSX.Element => (
     <SessionRow
       key={meta.sessionId}
       meta={meta}
-      activeSessionId={activeSessionId}
+      activeSessionId={effectiveActiveId}
       worktreeStats={worktreeStats}
       isNoWorkspace={isNoWorkspace}
       dragging={draggedSessionId === meta.sessionId}
-      onSelectSession={onSelectSession}
+      onSelectSession={() => { onSelectSession(resolveTabId(meta.sessionId)); setFocusedSession(meta.sessionId) }}
       onEditMeta={setEditMeta}
       onCtxMenu={setCtxMenu}
       onDragStart={setDraggedSessionId}
@@ -538,11 +559,11 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
                             <SessionRow
                               key={meta.sessionId}
                               meta={meta}
-                              activeSessionId={activeSessionId}
+                              activeSessionId={effectiveActiveId}
                               worktreeStats={worktreeStats}
                               isNoWorkspace={isNoWorkspace}
                               dragging={draggedSessionId === meta.sessionId}
-                              onSelectSession={onSelectSession}
+                              onSelectSession={() => { onSelectSession(resolveTabId(meta.sessionId)); setFocusedSession(meta.sessionId) }}
                               onEditMeta={setEditMeta}
                               onCtxMenu={setCtxMenu}
                               onDragStart={setDraggedSessionId}
@@ -565,10 +586,43 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
       {ctxMenu && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" onMouseDown={() => setCtxMenu(null)} onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null) }} />
-          <div className="fixed z-[9999] bg-brand-surface border border-brand-panel/60 rounded shadow-xl py-1 min-w-[160px]" style={{ left: Math.min(ctxMenu.x, window.innerWidth - 180), top: Math.min(ctxMenu.y, window.innerHeight - 100) }}>
+          <div className="fixed z-[9999] bg-brand-surface border border-brand-panel/60 rounded shadow-xl py-1 min-w-[160px]" style={{ left: Math.min(ctxMenu.x, window.innerWidth - 180), top: Math.min(ctxMenu.y, window.innerHeight - 150) }}>
             <button onMouseDown={(e) => { e.stopPropagation(); setEditMeta(ctxMenu.meta); setCtxMenu(null) }} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors">
               <Pencil size={12} />Rename / Recolor
             </button>
+            {activeSessionId && activeSessionId !== ctxMenu.meta.sessionId && ctxMenu.meta.status === 'running' && !collectSessionIds(paneTree[activeSessionId] ?? { type: 'leaf', sessionId: '' }).includes(ctxMenu.meta.sessionId) && (
+              <>
+                <div className="my-1 border-t border-brand-panel/60" />
+                <button
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    openGroupInSplits([activeSessionId, ctxMenu.meta.sessionId])
+                    setCtxMenu(null)
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                >
+                  <Columns2 size={12} />Split Here
+                </button>
+              </>
+            )}
+            {isMainWindow && windowId && (
+              <>
+                <div className="my-1 border-t border-brand-panel/60" />
+                <button
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    const sid = ctxMenu.meta.sessionId
+                    detachPane(sid, sid)
+                    void detachTab(sid, windowId)
+                    if (activeSessionId === sid) onSelectSession(null)
+                    setCtxMenu(null)
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                >
+                  <ExternalLink size={12} />Detach to Window
+                </button>
+              </>
+            )}
             {ctxMenu.meta.groupId && projectSessions.some((s) => s.groupId === ctxMenu.meta.groupId && /^Split #\d+$/.test(s.name)) && (
               <>
                 <div className="my-1 border-t border-brand-panel/60" />

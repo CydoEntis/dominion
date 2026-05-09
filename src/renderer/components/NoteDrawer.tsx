@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { X, Eye, Code, LayoutList, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus } from 'lucide-react'
+import { X, Eye, Code, Columns2, LayoutList, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus, PanelRight, PanelRightOpen } from 'lucide-react'
 import { marked } from 'marked'
 import { useStore } from '../store/root.store'
 import { cn } from '../lib/utils'
@@ -398,10 +398,12 @@ export interface NoteDrawerProps {
   onCreate: () => void
   expanded: boolean
   onToggleExpand: () => void
+  onToggleMode?: () => void
+  isSplitMode?: boolean
 }
 
 export function NoteDrawer({
-  open, onClose, activeNoteId, onActivate, onCreate, expanded, onToggleExpand
+  open, onClose, activeNoteId, onActivate, onCreate, expanded, onToggleExpand, onToggleMode, isSplitMode
 }: NoteDrawerProps): JSX.Element | null {
   const notes = useStore((s) => s.notes)
   const saveNote = useStore((s) => s.saveNote)
@@ -411,14 +413,21 @@ export function NoteDrawer({
     ?? null
 
   const [showTree, setShowTree] = useState(false)
-  const [editorMode, setEditorMode] = useState<'raw' | 'preview'>('raw')
+  const [treeWidth, setTreeWidth] = useState(240)
+  const [drawerWidth, setDrawerWidth] = useState(600)
+  const [editorMode, setEditorMode] = useState<'raw' | 'split' | 'preview'>('raw')
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
+      if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
         e.preventDefault()
         e.stopPropagation()
         setShowTree((v) => !v)
+      }
+      if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault()
+        e.stopPropagation()
+        setEditorMode((m) => m === 'split' ? 'raw' : 'split')
       }
     }
     document.addEventListener('keydown', handler, { capture: true })
@@ -485,13 +494,34 @@ export function NoteDrawer({
     <div className="flex h-full w-full bg-brand-bg">
       {/* File tree — slides in on the left */}
       {showTree && (
-        <div className="w-[240px] flex-shrink-0 flex flex-col min-h-0">
-          <FileTree
-            activeNoteId={activeNoteId}
-            onActivate={handleActivate}
-            onCreate={handleCreate}
+        <>
+          <div style={{ width: treeWidth }} className="flex-shrink-0 flex flex-col min-h-0">
+            <FileTree
+              activeNoteId={activeNoteId}
+              onActivate={handleActivate}
+              onCreate={handleCreate}
+            />
+          </div>
+          {/* Standalone divider — sits between tree and editor in the flex row */}
+          <div
+            className="w-1 flex-shrink-0 bg-zinc-700 hover:bg-brand-accent transition-colors"
+            style={{ cursor: 'col-resize' }}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              const startX = e.clientX
+              const startWidth = treeWidth
+              const onMove = (ev: MouseEvent): void => {
+                setTreeWidth(Math.min(520, Math.max(160, startWidth + ev.clientX - startX)))
+              }
+              const onUp = (): void => {
+                document.removeEventListener('mousemove', onMove)
+                document.removeEventListener('mouseup', onUp)
+              }
+              document.addEventListener('mousemove', onMove)
+              document.addEventListener('mouseup', onUp)
+            }}
           />
-        </div>
+        </>
       )}
 
       {/* Editor */}
@@ -503,11 +533,20 @@ export function NoteDrawer({
           </span>
           {activeNote && (
             <button
-              onClick={() => setEditorMode(m => m === 'raw' ? 'preview' : 'raw')}
+              onClick={() => setEditorMode(m => m === 'raw' ? 'split' : m === 'split' ? 'preview' : 'raw')}
               className="text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
-              title={editorMode === 'raw' ? 'Preview' : 'Raw'}
+              title={editorMode === 'raw' ? 'Split preview (Ctrl+Shift+M)' : editorMode === 'split' ? 'Preview only' : 'Edit'}
             >
-              {editorMode === 'raw' ? <Eye size={15} /> : <Code size={15} />}
+              {editorMode === 'raw' ? <Columns2 size={15} /> : editorMode === 'split' ? <Eye size={15} /> : <Code size={15} />}
+            </button>
+          )}
+          {onToggleMode && (
+            <button
+              onClick={onToggleMode}
+              className="text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
+              title={isSplitMode ? 'Switch to overlay' : 'Switch to split'}
+            >
+              {isSplitMode ? <PanelRight size={15} /> : <PanelRightOpen size={15} />}
             </button>
           )}
           <button
@@ -528,6 +567,21 @@ export function NoteDrawer({
         ) : !activeNote ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-2">
             <p className="text-xs text-zinc-600">Select a note from the tree</p>
+          </div>
+        ) : editorMode === 'split' ? (
+          <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+            <textarea
+              value={displayContent}
+              onChange={handleChange}
+              placeholder="Start typing…"
+              className="flex-1 min-w-0 bg-transparent text-zinc-200 text-sm resize-none outline-none px-5 py-4 placeholder-zinc-600 leading-relaxed select-text border-r border-brand-panel"
+              spellCheck={false}
+              ref={textareaRef}
+            />
+            <div
+              className="flex-1 min-w-0 overflow-y-auto px-5 py-4 markdown-body select-text"
+              dangerouslySetInnerHTML={{ __html: marked.parse(displayContent || '') as string }}
+            />
           </div>
         ) : editorMode === 'raw' ? (
           <textarea
@@ -571,9 +625,31 @@ export function NoteDrawer({
   return (
     <>
       <div className="fixed inset-0 z-[90]" onClick={onClose} />
-      <div className="fixed top-0 right-0 bottom-0 z-[91] border-l border-brand-panel shadow-2xl" style={{ width: showTree ? 760 : 480 }}>
+      <div
+        className="fixed top-0 right-0 bottom-0 z-[91] border-l border-brand-panel shadow-2xl"
+        style={{ width: drawerWidth }}
+      >
         {drawerContent}
       </div>
+      {/* Resize handle for the whole panel — z-92 so it sits above everything, right-positioned so it tracks the panel border on window resize */}
+      <div
+        className="fixed top-0 bottom-0 z-[92]"
+        style={{ right: drawerWidth - 4, width: 8, cursor: 'col-resize' }}
+        onMouseDown={(e) => {
+          e.preventDefault()
+          const startX = e.clientX
+          const startWidth = drawerWidth
+          const onMove = (ev: MouseEvent): void => {
+            setDrawerWidth(Math.min(window.innerWidth - 320, Math.max(320, startWidth + startX - ev.clientX)))
+          }
+          const onUp = (): void => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+          }
+          document.addEventListener('mousemove', onMove)
+          document.addEventListener('mouseup', onUp)
+        }}
+      />
     </>
   )
 }
