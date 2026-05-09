@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { Plus, ChevronDown, ChevronRight, Loader2, FolderOpen, Pencil, X, Users, Trash2, Scissors, ExternalLink, Columns2 } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight, Loader2, FolderOpen, Pencil, X, Users, Trash2, Scissors, ExternalLink, Columns2, PanelLeftOpen } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../../../store/root.store'
 import { useLayoutDnd } from '../../layout/dnd/LayoutDndContext'
 import { useProjects } from '../../session/hooks/useProjects'
 import { patchSession, killSession, SESSION_COLORS } from '../../session/session.service'
 import { removeWorktree } from '../../fs/fs.service'
-import { detachTab } from '../../window/window.service'
+import { detachTab, reattachTab } from '../../window/window.service'
 import { findTabForSession, collectSessionIds, findNotesLeafIdForNote, makeNotesLeaf } from '../../layout/layout-tree'
 import { useWorktreeStats } from '../hooks/useWorktreeStats'
 import { useConfirmClose } from '../../session/hooks/useConfirmClose'
@@ -257,7 +257,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const focusedSessionId = useStore((s) => s.focusedSessionId)
   const setFocusedSession = useStore((s) => s.setFocusedSession)
   const addTab = useStore((s) => s.addTab)
-  const insertSessionAtRight = useStore((s) => s.insertSessionAtRight)
+  const switchPaneSession = useStore((s) => s.switchPaneSession)
   const insertLayoutAtRight = useStore((s) => s.insertLayoutAtRight)
   const sessionGroups = useStore((s) => s.settings.sessionGroups)
   const updateSettings = useStore((s) => s.updateSettings)
@@ -491,11 +491,11 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
       onSelectSession(tabId)
       setFocusedSession(sessionId)
     } else if (activeSessionId && activeSessionId !== '__root__') {
-      insertSessionAtRight(activeSessionId, sessionId)
+      switchPaneSession(activeSessionId, sessionId)
     } else {
       addTab(sessionId)
     }
-  }, [paneTree, onSelectSession, setFocusedSession, addTab, insertSessionAtRight, activeSessionId])
+  }, [paneTree, onSelectSession, setFocusedSession, addTab, switchPaneSession, activeSessionId])
 
   const renderSessionRow = (meta: SessionMeta): JSX.Element => (
     <SessionRow
@@ -797,22 +797,35 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
                 </button>
               </>
             )}
-            {isMainWindow && windowId && (
+            {isMainWindow && (
               <>
                 <div className="my-1 border-t border-brand-panel/60" />
-                <button
-                  onMouseDown={(e) => {
-                    e.stopPropagation()
-                    const sid = ctxMenu.meta.sessionId
-                    detachPane(sid, sid)
-                    void detachTab(sid, windowId)
-                    if (activeSessionId === sid) onSelectSession(null)
-                    setCtxMenu(null)
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
-                >
-                  <ExternalLink size={12} />Detach to Window
-                </button>
+                {findTabForSession(paneTree, ctxMenu.meta.sessionId) && windowId ? (
+                  <button
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      const sid = ctxMenu.meta.sessionId
+                      detachPane(sid, sid)
+                      void detachTab(sid, windowId)
+                      if (activeSessionId === sid) onSelectSession(null)
+                      setCtxMenu(null)
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                  >
+                    <ExternalLink size={12} />Detach to Window
+                  </button>
+                ) : (
+                  <button
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      void reattachTab(ctxMenu.meta.sessionId, windowId ?? undefined)
+                      setCtxMenu(null)
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                  >
+                    <PanelLeftOpen size={12} />Reattach to Main
+                  </button>
+                )}
               </>
             )}
             {ctxMenu.meta.groupId && projectSessions.some((s) => s.groupId === ctxMenu.meta.groupId && /^Split #\d+$/.test(s.name)) && (

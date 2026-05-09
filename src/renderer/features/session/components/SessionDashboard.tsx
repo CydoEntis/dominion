@@ -131,9 +131,9 @@ function SessionGroupMenu({ x, y, meta, groups, tabId, isMainWindow, onAssign, o
       className="bg-brand-surface border border-brand-panel/60 rounded-md shadow-2xl py-1 w-48"
       onContextMenu={(e) => e.preventDefault()}
     >
-      {tabId && meta.status === 'running' && (
+      {meta.status === 'running' && (
         <>
-          {isMainWindow ? (
+          {tabId && isMainWindow ? (
             <button onClick={dismiss(onDetach)} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors text-left">
               <Maximize2 size={11} className="flex-shrink-0" /> Detach to Window
             </button>
@@ -487,7 +487,7 @@ function SessionRow({ meta, isFocused, tabId, openProjects, onActivate, onClose,
       <div
         className={cn(
           'group w-full flex flex-col gap-0.5 px-3 py-2 transition-all border-l-2',
-          tabId ? 'cursor-pointer' : 'opacity-30 cursor-default',
+          tabId ? 'cursor-pointer' : 'cursor-pointer opacity-60',
         )}
         style={{
           borderLeftColor: isFocused ? sessionColor : 'transparent',
@@ -614,7 +614,7 @@ interface GroupSectionProps {
   focusedSessionId: string | null
   paneTree: Record<string, unknown>
   openProjects: string[]
-  onActivate: (tabId: string, sessionId: string) => void
+  onActivate: (tabId: string | null, sessionId: string) => void
   onClose: (sessionId: string) => void
   onSessionCtxMenu: (e: React.MouseEvent, meta: SessionMeta) => void
 }
@@ -670,7 +670,7 @@ function GroupSection({ group, sessions, collapsed, onToggle, onEdit, onDelete, 
               tabId={tabId}
               groups={[]}
               openProjects={openProjects}
-              onActivate={() => { if (tabId) onActivate(tabId, meta.sessionId) }}
+              onActivate={() => onActivate(tabId, meta.sessionId)}
               onClose={() => onClose(meta.sessionId)}
               onContextMenu={(e) => onSessionCtxMenu(e, meta)}
             />
@@ -695,8 +695,10 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
   const sessions = useStore((s) => s.sessions)
   const paneTree = useStore((s) => s.paneTree)
   const focusedSessionId = useStore((s) => s.focusedSessionId)
+  const activeSessionId = useStore((s) => s.activeSessionId)
   const setActiveSession = useStore((s) => s.setActiveSession)
   const setFocusedSession = useStore((s) => s.setFocusedSession)
+  const switchPaneSession = useStore((s) => s.switchPaneSession)
   const updateSettings = useStore((s) => s.updateSettings)
   const upsertSession = useStore((s) => s.upsertSession)
   const addTab = useStore((s) => s.addTab)
@@ -835,7 +837,11 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
                   focusedSessionId={focusedSessionId}
                   paneTree={paneTree}
                   openProjects={openProjects}
-                  onActivate={(tabId, sessionId) => { setActiveSession(tabId); setFocusedSession(sessionId) }}
+                  onActivate={(tabId, sessionId) => {
+                    if (tabId) { setActiveSession(tabId); setFocusedSession(sessionId) }
+                    else if (activeSessionId && activeSessionId !== '__root__') { switchPaneSession(activeSessionId, sessionId) }
+                    else { addTab(sessionId) }
+                  }}
                   onClose={(sessionId) => requestSessionClose(() => closeSession(sessionId))}
                   onSessionCtxMenu={(e, meta) => setSessionCtxMenu({ x: e.clientX, y: e.clientY, meta })}
                 />
@@ -860,7 +866,11 @@ export function SessionDashboard({ onFileClick, activeTab, activeFilePath, exter
                       tabId={tabId}
                       groups={groups}
                       openProjects={openProjects}
-                      onActivate={() => { if (tabId) { setActiveSession(tabId); setFocusedSession(meta.sessionId) } }}
+                      onActivate={() => {
+                        if (tabId) { setActiveSession(tabId); setFocusedSession(meta.sessionId) }
+                        else if (activeSessionId && activeSessionId !== '__root__') { switchPaneSession(activeSessionId, meta.sessionId) }
+                        else { addTab(meta.sessionId) }
+                      }}
                       onClose={() => requestSessionClose(() => closeSession(meta.sessionId))}
                       onContextMenu={(e) => setSessionCtxMenu({ x: e.clientX, y: e.clientY, meta })}
                     />
