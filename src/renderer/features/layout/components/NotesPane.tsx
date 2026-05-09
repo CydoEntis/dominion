@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Eye } from 'lucide-react'
 import { NoteDrawer } from '../../../components/NoteDrawer'
 import { useStore } from '../../../store/root.store'
 
@@ -10,6 +11,7 @@ interface Props {
 
 export function NotesPane({ tabId, leafId, initialNoteId }: Props): JSX.Element | null {
   const removeLayoutLeaf = useStore((s) => s.removeLayoutLeaf)
+  const openMarkdownPreviewPane = useStore((s) => s.openMarkdownPreviewPane)
   const addNote = useStore((s) => s.addNote)
   const saveNote = useStore((s) => s.saveNote)
   const notes = useStore((s) => s.notes)
@@ -32,15 +34,15 @@ export function NotesPane({ tabId, leafId, initialNoteId }: Props): JSX.Element 
     }
   }, [activeNoteId, tabId])
 
-  // Receive activation from sidebar — only respond if event targets this tab
+  // Receive activation from sidebar — only respond if event targets this specific leaf
   useEffect(() => {
     const handler = (e: Event): void => {
-      const { noteId, tabId: targetTabId } = (e as CustomEvent<{ noteId: string; tabId?: string }>).detail
-      if (!targetTabId || targetTabId === tabId) setActiveNoteId(noteId)
+      const { noteId, leafId: targetLeafId } = (e as CustomEvent<{ noteId: string; leafId?: string }>).detail
+      if (!targetLeafId || targetLeafId === leafId) setActiveNoteId(noteId)
     }
     document.addEventListener('acc:activate-note', handler)
     return () => document.removeEventListener('acc:activate-note', handler)
-  }, [tabId])
+  }, [leafId])
 
   const createNote = useCallback((): string => {
     const { notes: current } = useStore.getState()
@@ -72,6 +74,7 @@ export function NotesPane({ tabId, leafId, initialNoteId }: Props): JSX.Element 
       activeNoteId={activeNoteId}
       onActivate={setActiveNoteId}
       onCreate={createNote}
+      onOpenPreview={activeNoteId ? () => openMarkdownPreviewPane(activeNoteId) : undefined}
     />
   )
 }

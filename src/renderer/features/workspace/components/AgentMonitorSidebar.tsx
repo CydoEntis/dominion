@@ -7,7 +7,7 @@ import { useProjects } from '../../session/hooks/useProjects'
 import { patchSession, killSession, SESSION_COLORS } from '../../session/session.service'
 import { removeWorktree } from '../../fs/fs.service'
 import { detachTab } from '../../window/window.service'
-import { findTabForSession, collectSessionIds, findNotesLeafId } from '../../layout/layout-tree'
+import { findTabForSession, collectSessionIds, findNotesLeafIdForNote, makeNotesLeaf } from '../../layout/layout-tree'
 import { useWorktreeStats } from '../hooks/useWorktreeStats'
 import { useConfirmClose } from '../../session/hooks/useConfirmClose'
 import { FileTree } from '../../../components/NoteDrawer'
@@ -256,6 +256,9 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const openGroupInSplits = useStore((s) => s.openGroupInSplits)
   const focusedSessionId = useStore((s) => s.focusedSessionId)
   const setFocusedSession = useStore((s) => s.setFocusedSession)
+  const addTab = useStore((s) => s.addTab)
+  const insertSessionAtRight = useStore((s) => s.insertSessionAtRight)
+  const insertLayoutAtRight = useStore((s) => s.insertLayoutAtRight)
   const sessionGroups = useStore((s) => s.settings.sessionGroups)
   const updateSettings = useStore((s) => s.updateSettings)
 
@@ -276,6 +279,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [draggedSessionId, setDraggedSessionId] = useState<string | null>(null)
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null | 'ungrouped'>('ungrouped')
+  const [sessionsOpen, setSessionsOpen] = useState(true)
   const [notesOpen, setNotesOpen] = useState(false)
   const [splitPercent, setSplitPercent] = useState(50)
   const [sidebarActiveNoteId, setSidebarActiveNoteId] = useState<string | null>(null)
@@ -319,8 +323,10 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   }, [normalizedActive, isNoWorkspace])
 
   useEffect(() => {
-    if (!activeSessionId && projectSessions.length > 0) onSelectSession(projectSessions[0].sessionId)
-  }, [projectSessions.length, activeSessionId, onSelectSession])
+    if (!isNoWorkspace && projectSessions.length > 0 && (!activeSessionId || activeSessionId === '__root__')) {
+      onSelectSession(projectSessions[0].sessionId)
+    }
+  }, [projectSessions.length, activeSessionId, isNoWorkspace, onSelectSession])
 
   const resetFooter = (): void => {
     setFooterMode('idle')
@@ -355,15 +361,32 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   }, [])
 
   const handleSidebarNoteActivate = useCallback((noteId: string): void => {
-    if (activeSessionId) {
-      const state = useStore.getState()
-      const tree = state.paneTree[activeSessionId]
-      if (tree && !findNotesLeafId(tree)) state.toggleNotesPane(activeSessionId)
+    const s = useStore.getState()
+    const tabId = (activeSessionId && s.paneTree[activeSessionId]) ? activeSessionId : '__root__'
+    const tree = s.paneTree[tabId]
+    if (!tree) return
+
+    if (tree.type === 'leaf' && tree.panel === 'home') {
+      const newLeaf = makeNotesLeaf(noteId)
+      s.replaceLayoutLeaf(tabId, tree.id, newLeaf)
+      setTimeout(() => {
+        document.dispatchEvent(new CustomEvent('acc:activate-note', { detail: { noteId, tabId, leafId: newLeaf.id } }))
+      }, 50)
+      return
     }
+
+    const existingLeafId = findNotesLeafIdForNote(tree, noteId)
+    if (existingLeafId) {
+      document.dispatchEvent(new CustomEvent('acc:activate-note', { detail: { noteId, tabId, leafId: existingLeafId } }))
+      return
+    }
+
+    const newLeaf = makeNotesLeaf(noteId)
+    insertLayoutAtRight(tabId, newLeaf)
     setTimeout(() => {
-      document.dispatchEvent(new CustomEvent('acc:activate-note', { detail: { noteId, tabId: activeSessionId } }))
+      document.dispatchEvent(new CustomEvent('acc:activate-note', { detail: { noteId, tabId, leafId: newLeaf.id } }))
     }, 50)
-  }, [activeSessionId])
+  }, [activeSessionId, insertLayoutAtRight])
 
   const handleNewNote = useCallback((): void => {
     if (activeSessionId) {
@@ -455,17 +478,24 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
     : normalizedActive ? normalizedActive.split('/').filter(Boolean).pop() ?? normalizedActive
     : 'No Workspace'
 
-  const resolveTabId = useCallback((sessionId: string): string =>
-    findTabForSession(paneTree, sessionId) ?? sessionId,
-    [paneTree]
-  )
-
   const effectiveActiveId = useMemo(() => {
     if (!activeSessionId || !focusedSessionId) return activeSessionId
     const tree = paneTree[activeSessionId]
     if (tree && collectSessionIds(tree).includes(focusedSessionId)) return focusedSessionId
     return activeSessionId
   }, [activeSessionId, focusedSessionId, paneTree])
+
+  const handleSessionSelect = useCallback((sessionId: string): void => {
+    const tabId = findTabForSession(paneTree, sessionId)
+    if (tabId) {
+      onSelectSession(tabId)
+      setFocusedSession(sessionId)
+    } else if (activeSessionId && activeSessionId !== '__root__') {
+      insertSessionAtRight(activeSessionId, sessionId)
+    } else {
+      addTab(sessionId)
+    }
+  }, [paneTree, onSelectSession, setFocusedSession, addTab, insertSessionAtRight, activeSessionId])
 
   const renderSessionRow = (meta: SessionMeta): JSX.Element => (
     <SessionRow
@@ -475,7 +505,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
       worktreeStats={worktreeStats}
       isNoWorkspace={isNoWorkspace}
       dragging={draggedSessionId === meta.sessionId}
-      onSelectSession={() => { onSelectSession(resolveTabId(meta.sessionId)); setFocusedSession(meta.sessionId) }}
+      onSelectSession={() => handleSessionSelect(meta.sessionId)}
       onEditMeta={setEditMeta}
       onCtxMenu={setCtxMenu}
       onDragStart={setDraggedSessionId}
@@ -566,7 +596,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
                             worktreeStats={worktreeStats}
                             isNoWorkspace={isNoWorkspace}
                             dragging={draggedSessionId === meta.sessionId}
-                            onSelectSession={() => { onSelectSession(resolveTabId(meta.sessionId)); setFocusedSession(meta.sessionId) }}
+                            onSelectSession={() => handleSessionSelect(meta.sessionId)}
                             onEditMeta={setEditMeta}
                             onCtxMenu={setCtxMenu}
                             onDragStart={setDraggedSessionId}
@@ -602,7 +632,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
               className="flex items-center justify-center w-7 h-7 rounded hover:bg-red-500/10 text-zinc-600 hover:text-red-400 transition-colors flex-shrink-0"
               title="Close project"
             >
-              <Trash2 size={13} />
+              <X size={13} />
             </button>
           )}
         </div>
@@ -647,23 +677,32 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
 
         {/* ── Sessions section ── */}
         <div
-          className="flex flex-col min-h-0"
-          style={notesOpen ? { flex: `0 0 ${splitPercent}%` } : { flex: '1 1 0' }}
+          className={cn('flex flex-col min-h-0', !sessionsOpen && 'flex-shrink-0')}
+          style={sessionsOpen
+            ? (notesOpen ? { flex: `0 0 ${splitPercent}%` } : { flex: '1 1 0' })
+            : undefined}
         >
           {/* Sessions header */}
-          <div className="flex-shrink-0 flex items-center gap-0.5 px-3 py-1.5 border-b border-brand-panel/40">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 flex-1 select-none">Sessions</span>
-            {isNoWorkspace ? (
+          <div
+            className="flex-shrink-0 flex items-center gap-0.5 px-3 py-1.5 border-b border-brand-panel/40 cursor-pointer hover:bg-brand-panel/30 transition-colors select-none"
+            onClick={() => setSessionsOpen((v) => !v)}
+          >
+            <ChevronRight
+              size={10}
+              className={cn('flex-shrink-0 text-zinc-600 transition-transform duration-150', sessionsOpen && 'rotate-90')}
+            />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 flex-1">Sessions</span>
+            {sessionsOpen && (isNoWorkspace ? (
               <>
                 <button
-                  onClick={() => document.dispatchEvent(new CustomEvent('acc:new-session'))}
+                  onClick={(e) => { e.stopPropagation(); document.dispatchEvent(new CustomEvent('acc:new-session')) }}
                   className="p-1 text-zinc-600 hover:text-zinc-300 rounded hover:bg-brand-panel/60 transition-colors"
                   title="New Session"
                 >
                   <Plus size={12} />
                 </button>
                 <button
-                  onClick={() => setFooterMode('newGroup')}
+                  onClick={(e) => { e.stopPropagation(); setFooterMode('newGroup') }}
                   className="p-1 text-zinc-600 hover:text-zinc-300 rounded hover:bg-brand-panel/60 transition-colors"
                   title="New Group"
                 >
@@ -672,23 +711,25 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
               </>
             ) : (
               <button
-                onClick={() => document.dispatchEvent(new CustomEvent('acc:new-task', { detail: { projectPath: activeProject } }))}
+                onClick={(e) => { e.stopPropagation(); document.dispatchEvent(new CustomEvent('acc:new-task', { detail: { projectPath: activeProject } })) }}
                 className="p-1 text-zinc-600 hover:text-zinc-300 rounded hover:bg-brand-panel/60 transition-colors"
                 title="New Task"
               >
                 <Plus size={12} />
               </button>
-            )}
+            ))}
           </div>
 
           {/* Sessions list */}
-          <div className="flex-1 overflow-y-auto min-h-0 py-1">
-            {sessionListContent}
-          </div>
+          {sessionsOpen && (
+            <div className="flex-1 overflow-y-auto min-h-0 py-1">
+              {sessionListContent}
+            </div>
+          )}
         </div>
 
-        {/* Resize handle — only when notes open */}
-        {notesOpen && (
+        {/* Resize handle — only when both sections open */}
+        {notesOpen && sessionsOpen && (
           <div
             className="h-1 flex-shrink-0 bg-brand-panel/60 hover:bg-brand-accent transition-colors cursor-row-resize"
             onMouseDown={handleResizeMouseDown}
@@ -784,7 +825,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
             )}
             <div className="my-1 border-t border-brand-panel/60" />
             <button onMouseDown={(e) => { e.stopPropagation(); handleCloseSession(ctxMenu.meta); setCtxMenu(null) }} className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-red-400 hover:bg-brand-panel hover:text-red-300 transition-colors">
-              <X size={12} />Close Session
+              <Trash2 size={12} />Kill Session
             </button>
           </div>
         </>,
