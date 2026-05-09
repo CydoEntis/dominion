@@ -278,6 +278,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const [dragOverGroupId, setDragOverGroupId] = useState<string | null | 'ungrouped'>('ungrouped')
   const [notesOpen, setNotesOpen] = useState(false)
   const [splitPercent, setSplitPercent] = useState(50)
+  const [sidebarActiveNoteId, setSidebarActiveNoteId] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   const sidebarBodyRef = useRef<HTMLDivElement>(null)
@@ -326,6 +327,16 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
     setNewGroupName(''); setNewGroupColor(GROUP_COLORS[0])
   }
 
+  useEffect(() => {
+    setSidebarActiveNoteId(null)
+    const handler = (e: Event): void => {
+      const { noteId, tabId } = (e as CustomEvent<{ noteId: string; tabId: string }>).detail
+      if (tabId === activeSessionId) setSidebarActiveNoteId(noteId)
+    }
+    document.addEventListener('acc:note-active-changed', handler)
+    return () => document.removeEventListener('acc:note-active-changed', handler)
+  }, [activeSessionId])
+
   const handleResizeMouseDown = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
     const body = sidebarBodyRef.current
@@ -350,7 +361,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
       if (tree && !findNotesLeafId(tree)) state.toggleNotesPane(activeSessionId)
     }
     setTimeout(() => {
-      document.dispatchEvent(new CustomEvent('acc:activate-note', { detail: { noteId } }))
+      document.dispatchEvent(new CustomEvent('acc:activate-note', { detail: { noteId, tabId: activeSessionId } }))
     }, 50)
   }, [activeSessionId])
 
@@ -710,7 +721,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
             <div className="flex-1 min-h-0 relative overflow-hidden">
               <div className="absolute inset-0">
                 <FileTree
-                  activeNoteId={null}
+                  activeNoteId={sidebarActiveNoteId}
                   onActivate={handleSidebarNoteActivate}
                   onCreate={handleNewNote}
                   onNoteDragStart={(noteId) => startDrag({ type: 'sidebar-notes', noteId })}

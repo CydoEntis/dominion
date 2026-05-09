@@ -295,7 +295,7 @@ export function App(): JSX.Element {
               />
             )}
 
-            {sidePanel !== null && sidePanel !== 'notes' && (
+            {sidePanel !== null && (
               <>
                 <div className="absolute inset-0 z-10" onClick={() => setSidePanel(null)} />
                 <div
@@ -345,7 +345,7 @@ export function App(): JSX.Element {
           )}
           <button
             onClick={() => { if (workspaceSessionId) toggleNotesPane(workspaceSessionId) }}
-            title="Notes (Ctrl+Shift+N)"
+            title="Toggle Notes Pane"
             className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', notesOpen ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
           >
             <NotebookPen size={15} />

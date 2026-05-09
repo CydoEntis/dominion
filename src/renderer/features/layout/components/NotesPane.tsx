@@ -21,18 +21,26 @@ export function NotesPane({ tabId, leafId, initialNoteId }: Props): JSX.Element 
       const sorted = [...notes].sort((a, b) => b.updatedAt - a.updatedAt)
       setActiveNoteId(sorted[0].id)
     }
-  // only initialize on mount — subsequent note changes don't reset the active note
+  // only initialize on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Broadcast which note is active so the sidebar can highlight it
+  useEffect(() => {
+    if (activeNoteId) {
+      document.dispatchEvent(new CustomEvent('acc:note-active-changed', { detail: { noteId: activeNoteId, tabId } }))
+    }
+  }, [activeNoteId, tabId])
+
+  // Receive activation from sidebar — only respond if event targets this tab
   useEffect(() => {
     const handler = (e: Event): void => {
-      const { noteId } = (e as CustomEvent<{ noteId: string }>).detail
-      setActiveNoteId(noteId)
+      const { noteId, tabId: targetTabId } = (e as CustomEvent<{ noteId: string; tabId?: string }>).detail
+      if (!targetTabId || targetTabId === tabId) setActiveNoteId(noteId)
     }
     document.addEventListener('acc:activate-note', handler)
     return () => document.removeEventListener('acc:activate-note', handler)
-  }, [])
+  }, [tabId])
 
   const createNote = useCallback((): string => {
     const { notes: current } = useStore.getState()
@@ -60,13 +68,10 @@ export function NotesPane({ tabId, leafId, initialNoteId }: Props): JSX.Element 
 
   return (
     <NoteDrawer
-      open={true}
       onClose={handleClose}
       activeNoteId={activeNoteId}
       onActivate={setActiveNoteId}
       onCreate={createNote}
-      expanded={true}
-      onToggleExpand={handleClose}
     />
   )
 }
