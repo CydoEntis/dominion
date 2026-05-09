@@ -1,9 +1,8 @@
 import { useRef, useCallback } from 'react'
-import { GripVertical } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { useLayoutDnd } from './LayoutDndContext'
 import { useStore } from '../../../store/root.store'
-import { makeNotesLeaf } from '../layout-tree'
+import { makeNotesLeaf, findNotesLeafIdForNote } from '../layout-tree'
 import type { DropSide } from './LayoutDndContext'
 
 interface Props {
@@ -42,6 +41,7 @@ export function PaneDropTarget({ leafId, tabId, children }: Props): JSX.Element 
   const moveLayout = useStore((s) => s.moveLayout)
   const insertSessionIntoLayout = useStore((s) => s.insertSessionIntoLayout)
   const insertLayout = useStore((s) => s.insertLayout)
+  const paneTree = useStore((s) => s.paneTree)
 
   const isDragging = dragState !== null
   const isSource = dragState?.type === 'layout-leaf' && dragState.leafId === leafId
@@ -72,7 +72,8 @@ export function PaneDropTarget({ leafId, tabId, children }: Props): JSX.Element 
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
-    if (!dragState || !activeZone) return
+    if (!dragState || !activeZone) { endDrag(); return }
+    const tree = paneTree[tabId]
     const direction = activeZone === 'left' || activeZone === 'right' ? 'horizontal' : 'vertical'
     const side = activeZone === 'right' || activeZone === 'bottom' ? 'after' : 'before'
     if (dragState.type === 'layout-leaf') {
@@ -80,34 +81,20 @@ export function PaneDropTarget({ leafId, tabId, children }: Props): JSX.Element 
     } else if (dragState.type === 'sidebar-session') {
       insertSessionIntoLayout(tabId, leafId, dragState.sessionId, direction, side)
     } else if (dragState.type === 'sidebar-notes') {
-      insertLayout(tabId, leafId, direction, makeNotesLeaf(dragState.noteId), side)
+      const existingLeafId = dragState.noteId && tree ? findNotesLeafIdForNote(tree, dragState.noteId) : null
+      if (existingLeafId) moveLayout(tabId, existingLeafId, leafId, direction, side)
+      else insertLayout(tabId, leafId, direction, makeNotesLeaf(dragState.noteId), side)
     }
     endDrag()
-  }, [dragState, activeZone, tabId, leafId, moveLayout, insertSessionIntoLayout, endDrag])
+  }, [dragState, activeZone, tabId, leafId, moveLayout, insertSessionIntoLayout, insertLayout, paneTree, endDrag])
 
   return (
     <div
       ref={paneRef}
-      className="relative w-full h-full group/pane"
+      className="relative w-full h-full group"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* Drag handle — only visible on hover, hidden while dragging */}
-      {!isDragging && (
-        <div
-          draggable
-          onDragStart={handleDragStart}
-          onDragEnd={endDrag}
-          className={cn(
-            'absolute top-1.5 left-1.5 z-30 p-1 rounded cursor-grab active:cursor-grabbing',
-            'opacity-0 group-hover/pane:opacity-100 transition-opacity duration-150',
-            'text-zinc-500 hover:text-zinc-200 hover:bg-brand-panel/80',
-          )}
-          title="Drag to move pane"
-        >
-          <GripVertical size={11} />
-        </div>
-      )}
 
       {children}
 

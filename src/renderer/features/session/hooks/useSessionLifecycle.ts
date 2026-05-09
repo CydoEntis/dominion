@@ -54,10 +54,10 @@ export function useSessionLifecycle(): void {
     })
 
     const offInitial = ipc.on(IPC.WINDOW_INITIAL_SESSIONS, (payload) => {
-      const { sessionIds, windowId } = payload as WindowInitialSessionsPayload
+      const { sessionIds, windowId, isMainWindow: isMain } = payload as WindowInitialSessionsPayload
       setWindowId(windowId)
       sessionIds.forEach((sessionId) => addTab(sessionId))
-      isMainRef.current = sessionIds.length === 0
+      isMainRef.current = isMain ?? sessionIds.length === 0
       setIsMainWindow(isMainRef.current)
       maybeShowRestore()
     })

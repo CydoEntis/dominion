@@ -1,14 +1,17 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
-import { NotebookPen, Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves } from 'lucide-react'
+import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves } from 'lucide-react'
+import { marked } from 'marked'
 import { createPortal } from 'react-dom'
+import { ipc } from './lib/ipc'
+import { IPC } from '@shared/ipc-channels'
+import type { WindowInitialNotePreviewPayload } from '@shared/ipc-types'
 import { TitleBar } from './components/TitleBar'
 import { PaneContextMenu } from './features/session/components/PaneContextMenu'
 import { CommandPalette } from './components/CommandPalette'
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal'
 import { NewSessionForm } from './features/session/components/NewSessionForm'
 import { SettingsForm } from './features/settings/components/SettingsForm'
-import { EmptyState } from './components/EmptyState'
 import { AgentMonitorSidebar } from './features/workspace/components/AgentMonitorSidebar'
 import { AgentMonitorLayout } from './features/workspace/components/AgentMonitorLayout'
 import { GitReviewPanel } from './features/workspace/components/GitReviewPanel'
@@ -159,12 +162,13 @@ export function App(): JSX.Element {
   const tabOrder = useStore((s) => s.tabOrder)
   const sessions = useStore((s) => s.sessions)
   const appTheme = useStore((s) => s.settings.theme)
+  const storeActiveSessionId = useStore((s) => s.activeSessionId)
 
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [sidePanel, setSidePanel] = useState<'settings' | 'git' | null>(null)
-  const [workspaceSessionId, setWorkspaceSessionId] = useState<string | null>(null)
+  const [workspaceSessionId, setWorkspaceSessionId] = useState<string>('__root__')
   const [workspaceProject, setWorkspaceProject] = useState<string | null>(
     () => localStorage.getItem('orbit:workspaceProject') ?? null
   )
@@ -187,9 +191,27 @@ export function App(): JSX.Element {
 
   useEffect(() => { setSidePanel(null) }, [workspaceProject])
 
+  useEffect(() => {
+    const newId = storeActiveSessionId ?? '__root__'
+    if (newId !== '__root__' && workspaceProject) {
+      const { sessions: currentSessions } = useStore.getState()
+      const session = currentSessions[newId]
+      if (session) {
+        const normalized = workspaceProject.replace(/\\/g, '/')
+        const root = (session.projectRoot ?? session.cwd ?? '').replace(/\\/g, '/')
+        const belongsToWorkspace = (root === normalized || root.startsWith(normalized + '/')) && !!session.worktreePath
+        if (!belongsToWorkspace) {
+          setWorkspaceSessionId('__root__')
+          return
+        }
+      }
+    }
+    setWorkspaceSessionId(newId)
+  }, [storeActiveSessionId, workspaceProject])
+
   const handleWorkspaceProjectChange = useCallback((path: string | null) => {
     setWorkspaceProject(path)
-    setWorkspaceSessionId(null)
+    setWorkspaceSessionId('__root__')
     if (path) localStorage.setItem('orbit:workspaceProject', path)
     else localStorage.removeItem('orbit:workspaceProject')
   }, [])
@@ -228,10 +250,6 @@ export function App(): JSX.Element {
   }, [appTheme])
 
   const toggleNotesPane = useStore((s) => s.toggleNotesPane)
-  const paneTree = useStore((s) => s.paneTree)
-  const notesOpen = workspaceSessionId
-    ? Boolean(paneTree[workspaceSessionId] && findNotesLeafId(paneTree[workspaceSessionId]))
-    : false
 
   useKeyboardShortcuts({
     onTogglePalette: () => setPaletteOpen((v) => !v),
@@ -249,16 +267,70 @@ export function App(): JSX.Element {
     }, [toggleNotesPane]),
   })
 
-  const { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClose } = usePaneActions(contextMenu)
+  const { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClosePane, handleKillSession } = usePaneActions(contextMenu)
 
   const handleContextMenu = useCallback((e: React.MouseEvent, sessionId: string, tabId: string) => {
     setContextMenu({ x: e.clientX, y: e.clientY, sessionId, tabId })
   }, [])
 
-  const activeMeta = workspaceSessionId ? sessions[workspaceSessionId] : null
-  const titleBarTitle = sidePanel === 'settings' ? 'Settings' : (activeMeta?.name ?? 'Orbit')
-  const titleBarSubtitle = sidePanel === 'settings' ? '' : (activeMeta?.cwd ?? '')
+  const [notePreviewWindowNoteId, setNotePreviewWindowNoteId] = useState<string | null>(null)
 
+  useEffect(() => {
+    const off = ipc.on(IPC.WINDOW_INITIAL_NOTE_PREVIEW, (payload) => {
+      const { noteId } = payload as WindowInitialNotePreviewPayload
+      setNotePreviewWindowNoteId(noteId)
+    })
+    return () => off()
+  }, [])
+
+  const focusedSessionId = useStore((s) => s.focusedSessionId)
+  const notes = useStore((s) => s.notes)
+  const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setFocusedNoteId(null)
+    const handler = (e: Event): void => {
+      const { noteId, tabId } = (e as CustomEvent<{ noteId: string; tabId: string }>).detail
+      if (tabId === workspaceSessionId) setFocusedNoteId(noteId)
+    }
+    document.addEventListener('acc:note-active-changed', handler)
+    return () => document.removeEventListener('acc:note-active-changed', handler)
+  }, [workspaceSessionId])
+
+  useEffect(() => { if (focusedSessionId) setFocusedNoteId(null) }, [focusedSessionId])
+
+  useEffect(() => {
+    const handler = (): void => setFocusedNoteId(null)
+    document.addEventListener('acc:terminal-pane-focused', handler)
+    return () => document.removeEventListener('acc:terminal-pane-focused', handler)
+  }, [])
+
+  const titleSession = (focusedSessionId && sessions[focusedSessionId])
+    ? sessions[focusedSessionId]
+    : workspaceSessionId ? sessions[workspaceSessionId] : null
+  const focusedNote = focusedNoteId ? notes.find((n) => n.id === focusedNoteId) : null
+  const noteTitleText = focusedNote
+    ? (focusedNote.content.split('\n').find((l) => l.trim())?.trim().slice(0, 50) || 'Untitled')
+    : null
+  const titleBarTitle = sidePanel === 'settings' ? 'Settings' : (noteTitleText ?? (titleSession?.name ?? 'Orbit'))
+  const titleBarSubtitle = sidePanel === 'settings' ? '' : (noteTitleText ? 'Note' : (titleSession?.cwd ?? ''))
+
+
+  if (notePreviewWindowNoteId) {
+    const previewNote = notes.find((n) => n.id === notePreviewWindowNoteId)
+    const previewContent = previewNote?.content ?? ''
+    const previewTitle = previewContent.split('\n').find((l) => l.trim())?.trim().slice(0, 50) || 'Untitled'
+    const previewHtml = marked.parse(previewContent) as string
+    return (
+      <div className="flex flex-col h-screen bg-brand-bg text-zinc-100 overflow-hidden">
+        <TitleBar title={`Preview · ${previewTitle}`} subtitle="Note Preview" />
+        <div
+          className="flex-1 overflow-y-auto px-8 py-6 markdown-body select-text min-h-0"
+          dangerouslySetInnerHTML={{ __html: previewHtml }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-screen bg-brand-bg text-zinc-100 overflow-hidden">
@@ -284,16 +356,10 @@ export function App(): JSX.Element {
         <div className="flex-1 min-w-0 min-h-0 flex">
           {/* Terminal area */}
           <div className="flex-1 min-w-0 min-h-0 relative">
-            {workspaceSessionId === null ? (
-              <div className="absolute inset-0">
-                <EmptyState />
-              </div>
-            ) : (
-              <AgentMonitorLayout
-                sessionId={workspaceSessionId}
-                onSessionClose={() => setWorkspaceSessionId(null)}
-              />
-            )}
+            <AgentMonitorLayout
+              sessionId={workspaceSessionId}
+              onSessionClose={() => setWorkspaceSessionId('__root__')}
+            />
 
             {sidePanel !== null && (
               <>
@@ -318,7 +384,7 @@ export function App(): JSX.Element {
       {/* Status bar */}
       <div className="flex items-center justify-between h-10 px-3 bg-brand-surface border-t border-brand-panel flex-shrink-0">
         <span className="text-xs text-zinc-500">
-          {tabOrder.length === 0 ? 'No sessions' : `${tabOrder.length} session${tabOrder.length !== 1 ? 's' : ''}`}
+          {(() => { const n = tabOrder.filter(id => id !== '__root__').length; return n === 0 ? 'No sessions' : `${n} session${n !== 1 ? 's' : ''}` })()}
         </span>
         <div className="flex items-center gap-0.5">
           {workspaceProject !== null && (
@@ -343,14 +409,6 @@ export function App(): JSX.Element {
               )}
             </button>
           )}
-          <button
-            onClick={() => { if (workspaceSessionId) toggleNotesPane(workspaceSessionId) }}
-            title="Toggle Notes Pane"
-            className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', notesOpen ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
-          >
-            <NotebookPen size={15} />
-            <span className="text-[11px] font-medium">Notes</span>
-          </button>
           {workspaceSessionId !== null && (
             <StatusTerminalThemeToggle sessionId={workspaceSessionId} />
           )}
@@ -376,7 +434,8 @@ export function App(): JSX.Element {
           onSplitV={handleSplitV}
           onDetach={handleDetach}
           onReattach={handleReattach}
-          onClose={handleClose}
+          onClosePane={handleClosePane}
+          onKillSession={handleKillSession}
         />
       )}
 

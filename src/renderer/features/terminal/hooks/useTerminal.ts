@@ -269,8 +269,11 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     terminal.loadAddon(searchAddon)
     terminal.open(container)
     searchAddonRef.current = searchAddon
-    // Double-RAF: first frame starts layout, second frame has real dimensions.
-    // Fallback at 200ms for split panes where panel layout settles after mount.
+    // Immediate fit: by the time useEffect runs, react-resizable-panels has already applied
+    // panel CSS sizes via useLayoutEffect, so the container has real pixel dimensions.
+    // This ensures replay data arrives into a correctly-sized terminal.
+    try { fitAddon.fit() } catch {}
+    // Double-RAF + fallback: safety net for any edge cases where CSS settles later.
     requestAnimationFrame(() => requestAnimationFrame(() => {
       try { fitAddon.fit() } catch {}
       terminal.focus()

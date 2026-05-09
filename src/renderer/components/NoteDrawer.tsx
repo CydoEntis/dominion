@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { X, Eye, Code, Columns2, LayoutList, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { X, Eye, Code, Columns2, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus } from 'lucide-react'
 import { marked } from 'marked'
 import { useStore } from '../store/root.store'
 import { cn } from '../lib/utils'
@@ -58,6 +59,7 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
   const [dragNoteId, setDragNoteId] = useState<string | null>(null)
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<{ type: 'folder' | 'note'; id: string; x: number; y: number } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'folder' | 'note'; id: string } | null>(null)
   const [renamingNoteId, setRenamingNoteId] = useState<string | null>(null)
   const [renamingNoteName, setRenamingNoteName] = useState('')
   // null id = new folder, string id = edit existing
@@ -311,7 +313,7 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
                 </button>
                 <button
                   className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-brand-panel hover:text-red-300 transition-colors"
-                  onClick={() => { void deleteNoteFolder(contextMenu.id); setContextMenu(null) }}
+                  onClick={() => { setDeleteConfirm({ type: 'folder', id: contextMenu.id }); setContextMenu(null) }}
                 >
                   Delete
                 </button>
@@ -326,7 +328,7 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
                 </button>
                 <button
                   className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-brand-panel hover:text-red-300 transition-colors"
-                  onClick={() => { void deleteNote(contextMenu.id); setContextMenu(null) }}
+                  onClick={() => { setDeleteConfirm({ type: 'note', id: contextMenu.id }); setContextMenu(null) }}
                 >
                   Delete
                 </button>
@@ -386,6 +388,48 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
           </div>
         </>
       )}
+      {deleteConfirm && (() => {
+        const isFolder = deleteConfirm.type === 'folder'
+        const folder = noteFolders.find(f => f.id === deleteConfirm.id)
+        const note = notes.find(n => n.id === deleteConfirm.id)
+        const label = isFolder ? (folder?.name ?? 'this folder') : noteTitle(note ?? { id: '', content: '', updatedAt: 0 })
+        const subtext = isFolder ? 'Notes inside will become unfiled.' : 'This cannot be undone.'
+        const confirmLabel = isFolder ? 'Delete Folder' : 'Delete Note'
+        const onConfirm = (): void => {
+          if (isFolder) void deleteNoteFolder(deleteConfirm.id)
+          else void deleteNote(deleteConfirm.id)
+          setDeleteConfirm(null)
+        }
+        return createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null) }}
+          >
+            <div className="absolute inset-0 bg-black/50" />
+            <div className="relative bg-brand-surface border border-brand-panel/60 rounded-lg shadow-2xl w-80 p-5 flex flex-col gap-4">
+              <span className="text-sm font-semibold text-zinc-200">Confirm Delete</span>
+              <p className="text-xs text-zinc-400">
+                Delete <span className="text-zinc-200 font-medium">{label}</span>? {subtext}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors rounded border border-brand-panel hover:border-zinc-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onConfirm}
+                  className="px-3 py-1.5 text-xs bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600/30 hover:text-red-300 transition-colors rounded"
+                >
+                  {confirmLabel}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      })()}
     </div>
   )
 }
@@ -397,9 +441,10 @@ export interface NoteDrawerProps {
   activeNoteId: string | null
   onActivate: (id: string) => void
   onCreate: () => void
+  onOpenPreview?: () => void
 }
 
-export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate }: NoteDrawerProps): JSX.Element {
+export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate, onOpenPreview }: NoteDrawerProps): JSX.Element {
   const notes = useStore((s) => s.notes)
   const saveNote = useStore((s) => s.saveNote)
 
@@ -410,6 +455,7 @@ export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate }: Note
   const [showTree, setShowTree] = useState(false)
   const [treeWidth, setTreeWidth] = useState(240)
   const [editorMode, setEditorMode] = useState<'raw' | 'split' | 'preview'>('raw')
+  const [headerCtxPos, setHeaderCtxPos] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -476,7 +522,10 @@ export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate }: Note
   }
 
   return (
-    <div className="flex h-full w-full bg-brand-bg">
+    <div
+      className="flex h-full w-full bg-brand-bg"
+      onContextMenu={(e) => { e.preventDefault(); setHeaderCtxPos({ x: e.clientX, y: e.clientY }) }}
+    >
       {/* File tree — slides in on the left */}
       {showTree && (
         <>
@@ -515,22 +564,6 @@ export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate }: Note
           <span className="text-xs text-zinc-300 truncate flex-1 min-w-0">
             {activeNote ? noteTitle(activeNote) : 'Notes'}
           </span>
-          {activeNote && (
-            <button
-              onClick={() => setEditorMode(m => m === 'raw' ? 'split' : m === 'split' ? 'preview' : 'raw')}
-              className="text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
-              title={editorMode === 'raw' ? 'Split preview (Ctrl+Shift+M)' : editorMode === 'split' ? 'Preview only' : 'Edit'}
-            >
-              {editorMode === 'raw' ? <Columns2 size={15} /> : editorMode === 'split' ? <Eye size={15} /> : <Code size={15} />}
-            </button>
-          )}
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-100 transition-colors flex-shrink-0"
-            title="Close notes"
-          >
-            <X size={15} />
-          </button>
         </div>
 
         {/* Editor body */}
@@ -574,20 +607,35 @@ export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate }: Note
           />
         )}
 
-        {/* Floating tree toggle */}
-        <button
-          onClick={() => setShowTree(v => !v)}
-          title={showTree ? 'Hide file tree' : 'Browse notes'}
-          className={cn(
-            'absolute bottom-4 right-4 w-9 h-9 rounded-lg flex items-center justify-center shadow-lg border transition-colors',
-            showTree
-              ? 'bg-brand-panel border-brand-muted/30 text-brand-muted hover:bg-brand-panel/80'
-              : 'bg-brand-panel border-brand-panel/60 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600'
-          )}
-        >
-          <LayoutList size={15} />
-        </button>
       </div>
+
+      {headerCtxPos && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onMouseDown={() => setHeaderCtxPos(null)} />
+          <div
+            className="fixed z-[9999] bg-brand-surface border border-brand-panel/60 rounded-md shadow-2xl py-1 w-44"
+            style={{ left: Math.min(headerCtxPos.x, window.innerWidth - 176), top: Math.min(headerCtxPos.y, window.innerHeight - 80) }}
+          >
+            {activeNote && onOpenPreview && (
+              <button
+                onMouseDown={(e) => { e.stopPropagation(); setHeaderCtxPos(null); onOpenPreview() }}
+                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+              >
+                <Eye size={12} />
+                Preview Markdown
+              </button>
+            )}
+            <button
+              onMouseDown={(e) => { e.stopPropagation(); setHeaderCtxPos(null); onClose() }}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+            >
+              <X size={12} />
+              Close
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   )
 }
