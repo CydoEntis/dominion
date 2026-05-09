@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
-import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves } from 'lucide-react'
+import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves, HelpCircle } from 'lucide-react'
 import { marked } from 'marked'
 import { createPortal } from 'react-dom'
 import { ipc } from './lib/ipc'
@@ -10,6 +10,7 @@ import { TitleBar } from './components/TitleBar'
 import { PaneContextMenu } from './features/session/components/PaneContextMenu'
 import { CommandPalette } from './components/CommandPalette'
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal'
+import { ReleaseNotesModal } from './components/ReleaseNotesModal'
 import { NewSessionForm } from './features/session/components/NewSessionForm'
 import { SettingsForm } from './features/settings/components/SettingsForm'
 import { AgentMonitorSidebar } from './features/workspace/components/AgentMonitorSidebar'
@@ -27,6 +28,8 @@ import { findNotesLeafId } from './features/layout/layout-tree'
 import { LayoutDndProvider } from './features/layout/dnd/LayoutDndContext'
 import { TERMINAL_THEME_LIST } from './features/terminal/hooks/useTerminal'
 import { cn } from './lib/utils'
+
+declare const __APP_VERSION__: string
 
 interface ContextMenuTarget {
   x: number
@@ -164,9 +167,14 @@ export function App(): JSX.Element {
   const appTheme = useStore((s) => s.settings.theme)
   const storeActiveSessionId = useStore((s) => s.activeSessionId)
 
+  const settingsLoaded = useStore((s) => s.settingsLoaded)
+  const dismissedReleaseVersion = useStore((s) => s.settings.dismissedReleaseVersion)
+  const updateSettings = useStore((s) => s.updateSettings)
+
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false)
   const [sidePanel, setSidePanel] = useState<'settings' | 'git' | null>(null)
   const [workspaceSessionId, setWorkspaceSessionId] = useState<string>('__root__')
   const [workspaceProject, setWorkspaceProject] = useState<string | null>(
@@ -182,6 +190,12 @@ export function App(): JSX.Element {
     (gitReview.data?.staged.length ?? 0) +
     (gitReview.data?.unstaged.length ?? 0) +
     (gitReview.data?.untracked.length ?? 0)
+
+  useEffect(() => {
+    if (settingsLoaded && dismissedReleaseVersion !== __APP_VERSION__) {
+      setReleaseNotesOpen(true)
+    }
+  }, [settingsLoaded, dismissedReleaseVersion])
 
   useEffect(() => {
     const handler = (): void => { if (gitRoot) setSidePanel(p => p === 'git' ? null : 'git') }
@@ -383,9 +397,16 @@ export function App(): JSX.Element {
 
       {/* Status bar */}
       <div className="flex items-center justify-between h-10 px-3 bg-brand-surface border-t border-brand-panel flex-shrink-0">
-        <span className="text-xs text-zinc-500">
-          {(() => { const n = tabOrder.filter(id => id !== '__root__').length; return n === 0 ? 'No sessions' : `${n} session${n !== 1 ? 's' : ''}` })()}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] text-zinc-600 font-medium select-none">v{__APP_VERSION__}</span>
+          <button
+            onClick={() => setReleaseNotesOpen(true)}
+            title="What's new"
+            className="text-zinc-700 hover:text-zinc-400 transition-colors"
+          >
+            <HelpCircle size={13} />
+          </button>
+        </div>
         <div className="flex items-center gap-0.5">
           {workspaceProject !== null && (
             <button
@@ -446,6 +467,14 @@ export function App(): JSX.Element {
         onShowShortcuts={() => { setPaletteOpen(false); setShortcutsOpen(true) }}
       />
       <KeyboardShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <ReleaseNotesModal
+        open={releaseNotesOpen}
+        onClose={() => setReleaseNotesOpen(false)}
+        onDismiss={() => {
+          updateSettings({ dismissedReleaseVersion: __APP_VERSION__ })
+          setReleaseNotesOpen(false)
+        }}
+      />
       <Toaster position="bottom-right" theme="dark" richColors />
     </div>
   )

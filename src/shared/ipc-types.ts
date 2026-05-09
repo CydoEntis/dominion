@@ -190,7 +190,8 @@ export const AppSettingsSchema = z.object({
   noteFolders: z.array(NoteFolderSchema).default([]),
   noteFolderMap: z.record(z.string()).default({}),
   lastActiveProject: z.string().default(''),
-  defaultSessionDir: z.string().default('')
+  defaultSessionDir: z.string().default(''),
+  dismissedReleaseVersion: z.string().default('')
 })
 
 export const NoteSchema = z.object({ id: z.string(), content: z.string().default(''), updatedAt: z.number().default(0) })
