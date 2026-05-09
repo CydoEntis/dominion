@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import { useEffect, useRef } from 'react'
-import { Columns2, Rows2, ExternalLink, PanelLeftOpen, X } from 'lucide-react'
+import { Columns2, Rows2, ExternalLink, PanelLeftOpen, X, Trash2 } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 
 interface Props {
@@ -12,7 +12,8 @@ interface Props {
   onSplitV: () => void
   onDetach: () => void
   onReattach: () => void
-  onClose: () => void
+  onClosePane: () => void
+  onKillSession: () => void
 }
 
 function MenuItem({
@@ -40,7 +41,7 @@ function MenuItem({
   )
 }
 
-export function PaneContextMenu({ x, y, isMainWindow, onDismiss, onSplitH, onSplitV, onDetach, onReattach, onClose }: Props): JSX.Element {
+export function PaneContextMenu({ x, y, isMainWindow, onDismiss, onSplitH, onSplitV, onDetach, onReattach, onClosePane, onKillSession }: Props): JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export function PaneContextMenu({ x, y, isMainWindow, onDismiss, onSplitH, onSpl
   }, [onDismiss])
 
   const adjustedX = Math.min(x, window.innerWidth - 200)
-  const adjustedY = Math.min(y, window.innerHeight - 160)
+  const adjustedY = Math.min(y, window.innerHeight - 180)
 
   return createPortal(
     <div
@@ -77,7 +78,12 @@ export function PaneContextMenu({ x, y, isMainWindow, onDismiss, onSplitH, onSpl
       <MenuItem
         icon={<X size={12} />}
         label="Close Pane"
-        onClick={() => { onClose(); onDismiss() }}
+        onClick={() => { onClosePane(); onDismiss() }}
+      />
+      <MenuItem
+        icon={<Trash2 size={12} />}
+        label="Kill Session"
+        onClick={() => { onKillSession(); onDismiss() }}
         className="text-red-400 hover:text-red-300"
       />
     </div>,

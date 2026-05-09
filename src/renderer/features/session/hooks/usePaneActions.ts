@@ -14,7 +14,8 @@ export interface UsePaneActionsReturn {
   handleSplitV: () => Promise<void>
   handleDetach: () => Promise<void>
   handleReattach: () => Promise<void>
-  handleClose: () => Promise<void>
+  handleClosePane: () => void
+  handleKillSession: () => Promise<void>
 }
 
 export function usePaneActions(contextMenu: ContextMenuTarget | null): UsePaneActionsReturn {
@@ -56,12 +57,18 @@ export function usePaneActions(contextMenu: ContextMenuTarget | null): UsePaneAc
     await reattachTab(contextMenu.sessionId)
   }
 
-  const handleClose = async (): Promise<void> => {
+  const handleClosePane = (): void => {
+    if (!contextMenu) return
+    const { tabId, sessionId } = contextMenu
+    detachPane(tabId, sessionId)
+  }
+
+  const handleKillSession = async (): Promise<void> => {
     if (!contextMenu) return
     const { tabId, sessionId } = contextMenu
     await killSession(sessionId)
     closePane(tabId, sessionId)
   }
 
-  return { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClose }
+  return { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClosePane, handleKillSession }
 }

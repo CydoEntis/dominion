@@ -1,9 +1,10 @@
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
+import { EmptyState } from '../../../components/EmptyState'
 import { TerminalPane } from './TerminalPane'
 import { NotesPane } from '../../layout/components/NotesPane'
+import { MarkdownPreviewPane } from '../../layout/components/MarkdownPreviewPane'
 import { PaneDropTarget } from '../../layout/dnd/PaneDropTarget'
 import { useStore } from '../../../store/root.store'
-import { killSession } from '../../session/session.service'
 import { detachTab, reattachTab } from '../../window/window.service'
 import type { LayoutNode } from '../../layout/layout-tree'
 
@@ -26,12 +27,36 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
   const rootIsASplit = useStore((s) => s.paneTree[tabId]?.type === 'split')
 
   if (node.type === 'leaf') {
+    if (node.panel === 'home') {
+      return (
+        <PaneDropTarget leafId={node.id} tabId={tabId}>
+          <div className="w-full h-full flex items-center justify-center">
+            <EmptyState />
+          </div>
+        </PaneDropTarget>
+      )
+    }
+
     if (node.panel === 'notes') {
       return (
         <PaneDropTarget leafId={node.id} tabId={tabId}>
           <div className="flex flex-col w-full h-full bg-brand-surface">
             <NotesPane tabId={tabId} leafId={node.id} initialNoteId={node.noteId} />
           </div>
+        </PaneDropTarget>
+      )
+    }
+
+    if (node.panel === 'markdown-preview') {
+      return (
+        <PaneDropTarget leafId={node.id} tabId={tabId}>
+          <MarkdownPreviewPane
+            tabId={tabId}
+            leafId={node.id}
+            noteId={node.noteId}
+            isMainWindow={isMainWindow}
+            windowId={windowId}
+          />
         </PaneDropTarget>
       )
     }
@@ -69,13 +94,10 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
           },
       {
         label: 'Close Pane',
-        action: async () => {
-          await killSession(sid)
-          const { closePane, removeTab, paneTree } = useStore.getState()
-          removeTab(sid)  // remove from sessions store so EXIT handler skips the error toast
-          const treeBeforeClose = paneTree[tabId]
-          closePane(tabId, sid)
-          const isLastPane = treeBeforeClose?.type === 'leaf'
+        action: () => {
+          const { detachPane, paneTree } = useStore.getState()
+          const isLastPane = paneTree[tabId]?.type === 'leaf'
+          detachPane(tabId, sid)
           if (isLastPane) onCloseLastPane?.()
         },
       },
@@ -88,8 +110,11 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
       <PaneDropTarget leafId={node.id} tabId={tabId}>
         <div
           className="flex flex-col w-full h-full"
-          style={isFocused ? { boxShadow: `inset 0 0 0 1px ${sessionColor}60, inset 0 2px 0 0 ${sessionColor}` } : undefined}
-          onMouseDown={() => setFocusedSession(sid)}
+          style={isFocused ? { boxShadow: `inset 0 0 0 2px ${sessionColor}, inset 0 3px 0 0 ${sessionColor}` } : undefined}
+          onMouseDown={() => {
+            setFocusedSession(sid)
+            document.dispatchEvent(new CustomEvent('acc:terminal-pane-focused'))
+          }}
         >
           <TerminalPane sessionId={sid} paneItems={paneItems} />
         </div>
