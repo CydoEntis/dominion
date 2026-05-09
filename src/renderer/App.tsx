@@ -244,6 +244,7 @@ export function App(): JSX.Element {
         document.dispatchEvent(new CustomEvent('acc:new-note'))
       } else {
         toggleNotesPane(tabId)
+        setTimeout(() => document.dispatchEvent(new CustomEvent('acc:new-note')), 50)
       }
     }, [toggleNotesPane]),
   })
