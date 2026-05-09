@@ -3,9 +3,9 @@ import { Toaster } from 'sonner'
 import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves, HelpCircle } from 'lucide-react'
 import { marked } from 'marked'
 import { createPortal } from 'react-dom'
-import { ipc } from './lib/ipc'
-import { IPC } from '@shared/ipc-channels'
-import type { WindowInitialNotePreviewPayload } from '@shared/ipc-types'
+import { useTheme } from './hooks/useTheme'
+import { useSidebarResize } from './hooks/useSidebarResize'
+import { useNoteWindowPreview } from './hooks/useNoteWindowPreview'
 import { TitleBar } from './components/TitleBar'
 import { PaneContextMenu } from './features/session/components/PaneContextMenu'
 import { CommandPalette } from './components/CommandPalette'
@@ -180,8 +180,7 @@ export function App(): JSX.Element {
   const [workspaceProject, setWorkspaceProject] = useState<string | null>(
     () => localStorage.getItem('orbit:workspaceProject') ?? null
   )
-  const [sidebarWidth, setSidebarWidth] = useState(224)
-  const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null)
+  const { sidebarWidth, handleSidebarDragStart } = useSidebarResize(224)
 
   const selectedSession = useStore((s) => workspaceSessionId ? s.sessions[workspaceSessionId] : null)
   const gitRoot = selectedSession?.worktreePath ?? workspaceProject
@@ -230,38 +229,7 @@ export function App(): JSX.Element {
     else localStorage.removeItem('orbit:workspaceProject')
   }, [])
 
-  const handleSidebarDragStart = useCallback((e: React.MouseEvent) => {
-    sidebarDragRef.current = { startX: e.clientX, startWidth: sidebarWidth }
-    const onMove = (ev: MouseEvent): void => {
-      if (!sidebarDragRef.current) return
-      const next = Math.max(160, Math.min(480, sidebarDragRef.current.startWidth + ev.clientX - sidebarDragRef.current.startX))
-      setSidebarWidth(next)
-    }
-    const onUp = (): void => {
-      sidebarDragRef.current = null
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }, [sidebarWidth])
-
-  useEffect(() => {
-    const html = document.documentElement
-    const EXTRA_THEMES = ['space', 'nebula', 'solar', 'aurora'] as const
-    const applyTheme = (): void => {
-      const isDark = appTheme === 'dark' || EXTRA_THEMES.includes(appTheme as typeof EXTRA_THEMES[number]) || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      html.classList.toggle('dark', isDark)
-      for (const t of EXTRA_THEMES) html.classList.toggle(t, appTheme === t)
-    }
-    applyTheme()
-    if (appTheme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)')
-      mq.addEventListener('change', applyTheme)
-      return () => mq.removeEventListener('change', applyTheme)
-    }
-    return undefined
-  }, [appTheme])
+  useTheme(appTheme)
 
   const toggleNotesPane = useStore((s) => s.toggleNotesPane)
 
@@ -287,15 +255,7 @@ export function App(): JSX.Element {
     setContextMenu({ x: e.clientX, y: e.clientY, sessionId, tabId })
   }, [])
 
-  const [notePreviewWindowNoteId, setNotePreviewWindowNoteId] = useState<string | null>(null)
-
-  useEffect(() => {
-    const off = ipc.on(IPC.WINDOW_INITIAL_NOTE_PREVIEW, (payload) => {
-      const { noteId } = payload as WindowInitialNotePreviewPayload
-      setNotePreviewWindowNoteId(noteId)
-    })
-    return () => off()
-  }, [])
+  const notePreviewWindowNoteId = useNoteWindowPreview()
 
   const focusedSessionId = useStore((s) => s.focusedSessionId)
   const notes = useStore((s) => s.notes)
