@@ -84,7 +84,24 @@
       "PowerShell(npx --yes png-to-ico \"build\\\\icon.png\" > \"build\\\\icon.ico\"; Write-Output \"ICO generated\")",
       "Bash(npx vite *)",
       "Bash(Find-ChildItem -Path \"C:\\\\Programming\\\\command-center\\\\src\\\\renderer\" -Recurse -Name \"*note*\" -Type f)",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Bash(npx electron-builder *)",
+      "Bash(python -c \"with open\\('build/icon.ico','rb'\\) as f: h=f.read\\(4\\); print\\(h.hex\\(\\)\\)\")",
+      "Bash(python -c \"with open\\('build/icon.ico.tmp','rb'\\) as f: h=f.read\\(4\\); print\\('old ico magic:', h.hex\\(\\)\\)\")",
+      "Bash(python -c \"with open\\('build/icon.ico','rb'\\) as f: h=f.read\\(4\\); print\\('current ico magic:', h.hex\\(\\)\\)\")",
+      "Bash(python -c \"with open\\('build/icon.ico','rb'\\) as f: h=f.read\\(4\\); print\\('restored ico magic:', h.hex\\(\\)\\)\")",
+      "PowerShell(cd \"C:\\\\Programming\\\\command-center\"; $env:CSC_IDENTITY_AUTO_DISCOVERY=\"false\"; $env:CSC_LINK=\"\"; npx electron-builder --win --config.win.forceCodeSigning=false 2>&1)",
+      "PowerShell(cd \"C:\\\\Programming\\\\command-center\"; $env:CSC_IDENTITY_AUTO_DISCOVERY=\"false\"; npx electron-builder --win --config.win.signAndEditExecutable=false 2>&1)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Programming\\\\command-center\\\\src\" -Recurse -File | Select-Object FullName | ForEach-Object { $_.FullName } | Sort-Object)",
+      "Bash(xargs grep -l \"SessionTab\")",
+      "Bash(xargs grep -l \"contextmenu\\\\|Paste\")",
+      "Bash(Remove-Item \"C:\\\\Programming\\\\command-center\\\\src\\\\renderer\\\\components\\\\NotepadPane.tsx\")",
+      "Bash(Remove-Item \"C:\\\\Programming\\\\command-center\\\\src\\\\renderer\\\\components\\\\FileSearchPalette.tsx\")",
+      "Bash(Remove-Item \"C:\\\\Programming\\\\command-center\\\\.continue-here.md\")",
+      "Bash(npx shadcn@latest *)",
+      "Bash(Remove-Item -Recurse -Force \"@\")",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"$PWD\\\\build\\\\icon.png\"\\); Write-Host \"$\\($img.Width\\)x$\\($img.Height\\)\")",
+      "Bash(Remove-Item *)"
     ]
   }
 }

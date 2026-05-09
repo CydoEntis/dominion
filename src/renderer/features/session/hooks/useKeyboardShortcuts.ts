@@ -6,7 +6,6 @@ interface Callbacks {
   onTogglePalette: () => void
   onShowShortcuts: () => void
   onNewNoteDrawer: () => void
-  onDockNotes: () => void
 }
 
 function match(e: KeyboardEvent, binding: string): boolean {
@@ -24,7 +23,7 @@ function match(e: KeyboardEvent, binding: string): boolean {
   )
 }
 
-export function useKeyboardShortcuts({ onTogglePalette, onShowShortcuts, onNewNoteDrawer, onDockNotes }: Callbacks): void {
+export function useKeyboardShortcuts({ onTogglePalette, onShowShortcuts, onNewNoteDrawer }: Callbacks): void {
   const removeTab = useStore((s) => s.removeTab)
   const settings = useStore((s) => s.settings)
   const activeSessionId = useStore((s) => s.activeSessionId)
@@ -34,14 +33,12 @@ export function useKeyboardShortcuts({ onTogglePalette, onShowShortcuts, onNewNo
   const onTogglePaletteRef = useRef(onTogglePalette)
   const onShowShortcutsRef = useRef(onShowShortcuts)
   const onNewNoteDrawerRef = useRef(onNewNoteDrawer)
-  const onDockNotesRef = useRef(onDockNotes)
 
   useEffect(() => { settingsRef.current = settings }, [settings])
   useEffect(() => { activeSessionIdRef.current = activeSessionId }, [activeSessionId])
   useEffect(() => { onTogglePaletteRef.current = onTogglePalette }, [onTogglePalette])
   useEffect(() => { onShowShortcutsRef.current = onShowShortcuts }, [onShowShortcuts])
   useEffect(() => { onNewNoteDrawerRef.current = onNewNoteDrawer }, [onNewNoteDrawer])
-  useEffect(() => { onDockNotesRef.current = onDockNotes }, [onDockNotes])
 
   useEffect(() => {
     const onQuickNoteEvent = (): void => onNewNoteDrawerRef.current()
@@ -77,9 +74,6 @@ export function useKeyboardShortcuts({ onTogglePalette, onShowShortcuts, onNewNo
       } else if (match(e, hk.reviewChanges)) {
         e.preventDefault(); e.stopPropagation()
         document.dispatchEvent(new CustomEvent('acc:toggle-git-review'))
-      } else if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'd') {
-        e.preventDefault(); e.stopPropagation()
-        onDockNotesRef.current()
       }
     }
 

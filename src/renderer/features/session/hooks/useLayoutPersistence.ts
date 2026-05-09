@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useStore } from '../../../store/root.store'
 import { saveLayout } from '../persistence.service'
-import { collectSessionIds } from '../../terminal/pane-tree'
+import { collectSessionIds, makeTerminalLeaf } from '../../layout/layout-tree'
 import type { PersistedLayout } from '@shared/ipc-types'
 
 export function useLayoutPersistence(): void {
@@ -28,7 +28,7 @@ export function useLayoutPersistence(): void {
         .filter((m) => !inTabSessionIds.has(m.sessionId))
         .map((m) => ({
           tabId: m.sessionId,
-          tree: { type: 'leaf' as const, sessionId: m.sessionId },
+          tree: makeTerminalLeaf(m.sessionId),
           detached: true
         }))
 

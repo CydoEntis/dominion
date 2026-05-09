@@ -1,17 +1,22 @@
 import type { StateCreator } from 'zustand'
 import type { SessionMeta, PersistedLayout } from '@shared/ipc-types'
 import type { RootStore } from '../../store/root.store'
-import { makeLeaf, splitLeaf, removeLeaf, collectSessionIds, findTabForSession } from '../terminal/pane-tree'
-import type { PaneNode } from '../terminal/pane-tree'
+import {
+  makeTerminalLeaf, makeNotesLeaf,
+  splitTerminalLeaf, removeTerminalLeaf,
+  removeNode, insertAtRight, insertNode, moveNode,
+  collectSessionIds, findTabForSession, findNotesLeafId,
+} from '../layout/layout-tree'
+import type { LayoutNode, LayoutLeaf } from '../layout/layout-tree'
 
-export type { PaneNode }
+export type { LayoutNode }
 
 export interface SessionSlice {
   sessions: Record<string, SessionMeta>
   tabOrder: string[]
   activeSessionId: string | null
   focusedSessionId: string | null
-  paneTree: Record<string, PaneNode>
+  paneTree: Record<string, LayoutNode>
   pendingRestore: PersistedLayout | null
   isRestoringLayout: boolean
 
@@ -33,8 +38,12 @@ export interface SessionSlice {
   removePaneBySessionId: (sessionId: string) => void
   setPendingRestore: (layout: PersistedLayout | null) => void
   setIsRestoringLayout: (v: boolean) => void
-  restoreTab: (tabId: string, tree: PaneNode, metas: SessionMeta[]) => void
+  restoreTab: (tabId: string, tree: LayoutNode, metas: SessionMeta[]) => void
   openGroupInSplits: (sessionIds: string[]) => void
+  toggleNotesPane: (tabId: string) => void
+  removeLayoutLeaf: (tabId: string, leafId: string) => void
+  insertLayout: (tabId: string, targetLeafId: string, direction: 'horizontal' | 'vertical', newLeaf: LayoutLeaf, side: 'before' | 'after') => void
+  moveLayout: (tabId: string, sourceLeafId: string, targetLeafId: string, direction: 'horizontal' | 'vertical', side: 'before' | 'after') => void
 }
 
 export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', never]], [], SessionSlice> = (set) => ({
@@ -55,7 +64,7 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
     set((state) => {
       if (!state.tabOrder.includes(sessionId)) {
         state.tabOrder.push(sessionId)
-        state.paneTree[sessionId] = makeLeaf(sessionId)
+        state.paneTree[sessionId] = makeTerminalLeaf(sessionId)
       }
       state.activeSessionId = sessionId
       state.focusedSessionId = sessionId
@@ -81,7 +90,7 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       state.sessions[newMeta.sessionId] = newMeta
       const tree = state.paneTree[tabId]
       if (tree) {
-        state.paneTree[tabId] = splitLeaf(tree, targetSessionId, direction, newMeta.sessionId)
+        state.paneTree[tabId] = splitTerminalLeaf(tree, targetSessionId, direction, newMeta.sessionId)
       }
     }),
 
@@ -90,7 +99,7 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       const tree = state.paneTree[tabId]
       if (!tree) return
       delete state.sessions[sessionId]
-      const newTree = removeLeaf(tree, sessionId)
+      const newTree = removeTerminalLeaf(tree, sessionId)
       if (!newTree) {
         state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
         delete state.paneTree[tabId]
@@ -104,10 +113,9 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
 
   detachPane: (tabId, sessionId) =>
     set((state) => {
-      // Remove from tree without killing the session — it continues in a new window
       const tree = state.paneTree[tabId]
       if (!tree) return
-      const newTree = removeLeaf(tree, sessionId)
+      const newTree = removeTerminalLeaf(tree, sessionId)
       if (!newTree) {
         state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
         delete state.paneTree[tabId]
@@ -125,10 +133,9 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       if (!tabId) return
       const tree = state.paneTree[tabId]
       if (!tree) return
-      // Don't auto-close if it's the only pane in the tab — show exited state instead
       if (collectSessionIds(tree).length <= 1) return
       delete state.sessions[sessionId]
-      const newTree = removeLeaf(tree, sessionId)
+      const newTree = removeTerminalLeaf(tree, sessionId)
       if (!newTree) {
         state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
         delete state.paneTree[tabId]
@@ -197,16 +204,15 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
 
       if (!existingTabId) {
         if (!state.tabOrder.includes(tabId)) state.tabOrder.push(tabId)
-        state.paneTree[tabId] = makeLeaf(first)
+        state.paneTree[tabId] = makeTerminalLeaf(first)
       }
 
-      // Remove remaining sessions from their current tabs (keep them in state.sessions)
       for (const sid of running.slice(1)) {
         const oldTabId = findTabForSession(state.paneTree, sid)
         if (oldTabId && oldTabId !== tabId) {
           const oldTree = state.paneTree[oldTabId]
           if (oldTree) {
-            const newOldTree = removeLeaf(oldTree, sid)
+            const newOldTree = removeTerminalLeaf(oldTree, sid)
             if (!newOldTree) {
               state.tabOrder = state.tabOrder.filter((id) => id !== oldTabId)
               delete state.paneTree[oldTabId]
@@ -225,31 +231,63 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
         return
       }
 
-      // Build grid: numCols = ceil(sqrt(n)), sessions fill columns left-to-right
       const n = running.length
       const numCols = Math.ceil(Math.sqrt(n))
       const cols: string[][] = Array.from({ length: numCols }, () => [])
       running.forEach((sid, i) => cols[i % numCols].push(sid))
 
-      // Add columns via horizontal splits (anchor = first session in previous column)
       const colAnchors: string[] = [cols[0][0]]
       for (let c = 1; c < cols.length; c++) {
         if (cols[c].length === 0) continue
         const firstInCol = cols[c][0]
         const tree = state.paneTree[tabId]
-        if (tree) state.paneTree[tabId] = splitLeaf(tree, colAnchors[c - 1], 'horizontal', firstInCol)
+        if (tree) state.paneTree[tabId] = splitTerminalLeaf(tree, colAnchors[c - 1], 'horizontal', firstInCol)
         colAnchors.push(firstInCol)
       }
 
-      // Add rows within each column via vertical splits
       for (let c = 0; c < cols.length; c++) {
         for (let r = 1; r < cols[c].length; r++) {
           const tree = state.paneTree[tabId]
-          if (tree) state.paneTree[tabId] = splitLeaf(tree, cols[c][r - 1], 'vertical', cols[c][r])
+          if (tree) state.paneTree[tabId] = splitTerminalLeaf(tree, cols[c][r - 1], 'vertical', cols[c][r])
         }
       }
 
       state.activeSessionId = tabId
       if (!state.tabOrder.includes(tabId)) state.tabOrder.push(tabId)
+    }),
+
+  toggleNotesPane: (tabId) =>
+    set((state) => {
+      const tree = state.paneTree[tabId]
+      if (!tree) return
+      const notesId = findNotesLeafId(tree)
+      if (notesId) {
+        const newTree = removeNode(tree, notesId)
+        if (newTree) state.paneTree[tabId] = newTree
+      } else {
+        state.paneTree[tabId] = insertAtRight(tree, makeNotesLeaf())
+      }
+    }),
+
+  removeLayoutLeaf: (tabId, leafId) =>
+    set((state) => {
+      const tree = state.paneTree[tabId]
+      if (!tree) return
+      const newTree = removeNode(tree, leafId)
+      if (newTree) state.paneTree[tabId] = newTree
+    }),
+
+  insertLayout: (tabId, targetLeafId, direction, newLeaf, side) =>
+    set((state) => {
+      const tree = state.paneTree[tabId]
+      if (!tree) return
+      state.paneTree[tabId] = insertNode(tree, targetLeafId, direction, newLeaf, side)
+    }),
+
+  moveLayout: (tabId, sourceLeafId, targetLeafId, direction, side) =>
+    set((state) => {
+      const tree = state.paneTree[tabId]
+      if (!tree) return
+      state.paneTree[tabId] = moveNode(tree, sourceLeafId, targetLeafId, direction, side)
     }),
 })

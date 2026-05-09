@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useStore } from '../../../store/root.store'
-import { findTabForSession } from '../../terminal/pane-tree'
+import { findTabForSession } from '../../layout/layout-tree'
 
 export interface PaletteItem {
   id: string

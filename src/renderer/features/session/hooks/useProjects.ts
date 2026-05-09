@@ -4,7 +4,7 @@ import { useStore } from '../../../store/root.store'
 import { pickFolder } from '../../window/window.service'
 import { createSession, killSession } from '../session.service'
 import { removeWorktree } from '../../fs/fs.service'
-import { findTabForSession } from '../../terminal/pane-tree'
+import { findTabForSession } from '../../layout/layout-tree'
 
 const MAX_PROJECTS = 10
 

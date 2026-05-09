@@ -1,12 +1,13 @@
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import { TerminalPane } from './TerminalPane'
+import { NotesPane } from '../../layout/components/NotesPane'
 import { useStore } from '../../../store/root.store'
 import { killSession } from '../../session/session.service'
 import { detachTab, reattachTab } from '../../window/window.service'
-import type { PaneNode } from '../pane-tree'
+import type { LayoutNode } from '../../layout/layout-tree'
 
 interface Props {
-  node: PaneNode
+  node: LayoutNode
   tabId: string
   onContextMenu?: (e: React.MouseEvent, sessionId: string, tabId: string) => void
   /** Override isMainWindow from store — useful in contexts where store value may be stale */
@@ -24,6 +25,14 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
   const rootIsASplit = useStore((s) => s.paneTree[tabId]?.type === 'split')
 
   if (node.type === 'leaf') {
+    if (node.panel === 'notes') {
+      return (
+        <div className="flex flex-col w-full h-full bg-brand-surface">
+          <NotesPane tabId={tabId} />
+        </div>
+      )
+    }
+
     const sid = node.sessionId
 
     const paneItems = [
@@ -92,7 +101,7 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
     <PanelGroup orientation={node.direction} className="w-full h-full">
       {node.children.map((child, idx) => [
         idx > 0 && <PanelResizeHandle key={`handle-${node.id}-${idx}`} className={handleClass} />,
-        <Panel key={child.type === 'leaf' ? child.sessionId : child.id} defaultSize={Math.floor(100 / node.children.length)} minSize={10}>
+        <Panel key={child.id} defaultSize={Math.floor(100 / node.children.length)} minSize={10}>
           <PaneTreeRenderer
             node={child}
             tabId={tabId}

@@ -3,7 +3,6 @@ import { Toaster } from 'sonner'
 import { NotebookPen, Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { TitleBar } from './components/TitleBar'
-import { NoteDrawer } from './components/NoteDrawer'
 import { PaneContextMenu } from './features/session/components/PaneContextMenu'
 import { CommandPalette } from './components/CommandPalette'
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal'
@@ -21,6 +20,7 @@ import { usePaneActions } from './features/session/hooks/usePaneActions'
 import { useAutoUpdater } from './features/updater/hooks/useAutoUpdater'
 import { useGitReview } from './features/workspace/hooks/useGitReview'
 import { useStore } from './store/root.store'
+import { findNotesLeafId } from './features/layout/layout-tree'
 import { TERMINAL_THEME_LIST } from './features/terminal/hooks/useTerminal'
 import { cn } from './lib/utils'
 
@@ -162,19 +162,13 @@ export function App(): JSX.Element {
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const [sidePanel, setSidePanel] = useState<'notes' | 'settings' | 'git' | null>(null)
-  const sidePanelRef = useRef<'notes' | 'settings' | 'git' | null>(null)
-  const [notesMode, setNotesMode] = useState<'overlay' | 'split'>('overlay')
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
-  const [openNoteIds, setOpenNoteIds] = useState<Set<string>>(new Set())
+  const [sidePanel, setSidePanel] = useState<'settings' | 'git' | null>(null)
   const [workspaceSessionId, setWorkspaceSessionId] = useState<string | null>(null)
   const [workspaceProject, setWorkspaceProject] = useState<string | null>(
     () => localStorage.getItem('orbit:workspaceProject') ?? null
   )
   const [sidebarWidth, setSidebarWidth] = useState(224)
   const sidebarDragRef = useRef<{ startX: number; startWidth: number } | null>(null)
-  const [notesWidth, setNotesWidth] = useState(520)
-  const notesDragRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
   const selectedSession = useStore((s) => workspaceSessionId ? s.sessions[workspaceSessionId] : null)
   const gitRoot = selectedSession?.worktreePath ?? workspaceProject
@@ -190,7 +184,6 @@ export function App(): JSX.Element {
     return () => document.removeEventListener('acc:toggle-git-review', handler)
   }, [gitRoot])
 
-  useEffect(() => { sidePanelRef.current = sidePanel }, [sidePanel])
   useEffect(() => { setSidePanel(null) }, [workspaceProject])
 
   const handleWorkspaceProjectChange = useCallback((path: string | null) => {
@@ -216,22 +209,6 @@ export function App(): JSX.Element {
     document.addEventListener('mouseup', onUp)
   }, [sidebarWidth])
 
-  const handleNotesDragStart = useCallback((e: React.MouseEvent) => {
-    notesDragRef.current = { startX: e.clientX, startWidth: notesWidth }
-    const onMove = (ev: MouseEvent): void => {
-      if (!notesDragRef.current) return
-      const next = Math.max(320, Math.min(900, notesDragRef.current.startWidth + notesDragRef.current.startX - ev.clientX))
-      setNotesWidth(next)
-    }
-    const onUp = (): void => {
-      notesDragRef.current = null
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }, [notesWidth])
-
   useEffect(() => {
     const html = document.documentElement
     const EXTRA_THEMES = ['space', 'nebula', 'solar', 'aurora'] as const
@@ -249,89 +226,25 @@ export function App(): JSX.Element {
     return undefined
   }, [appTheme])
 
-  const addNote = useStore((s) => s.addNote)
-  const storeSaveNote = useStore((s) => s.saveNote)
-  const notes = useStore((s) => s.notes)
-
-  const notesInitRef = useRef(false)
-  useEffect(() => {
-    if (!notesInitRef.current && notes.length > 0) {
-      notesInitRef.current = true
-      const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-      setOpenNoteIds(new Set([sorted[0].id]))
-      setActiveNoteId(sorted[0].id)
-    }
-  }, [notes])
-
-  useEffect(() => {
-    const existingIds = new Set(notes.map(n => n.id))
-    setOpenNoteIds(prev => {
-      const cleaned = [...prev].filter(id => existingIds.has(id))
-      if (cleaned.length === prev.size) return prev
-      return new Set(cleaned)
-    })
-  }, [notes])
-
-  const createNote = useCallback((): string => {
-    const { notes: current } = useStore.getState()
-    const sorted = current.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-    if (sorted.length > 0 && sorted[0].content.trim() === '') {
-      const existing = sorted[0].id
-      setOpenNoteIds((prev) => { const next = new Set(prev); next.add(existing); return next })
-      return existing
-    }
-    const id = crypto.randomUUID()
-    addNote(id)
-    storeSaveNote(id, '')
-    setOpenNoteIds((prev) => { const next = new Set(prev); next.add(id); return next })
-    return id
-  }, [addNote, storeSaveNote])
-
-  const handleNoteActivate = useCallback((id: string): void => {
-    setActiveNoteId(id)
-    setOpenNoteIds((prev) => { const next = new Set(prev); next.add(id); return next })
-  }, [])
-
-  const handleNoteClose = useCallback((id: string): void => {
-    setOpenNoteIds((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
-    setActiveNoteId((prev) => {
-      if (prev !== id) return prev
-      const remaining = [...openNoteIds].filter((nid) => nid !== id)
-      return remaining.length > 0 ? remaining[remaining.length - 1] : null
-    })
-  }, [openNoteIds])
+  const toggleNotesPane = useStore((s) => s.toggleNotesPane)
+  const paneTree = useStore((s) => s.paneTree)
+  const notesOpen = workspaceSessionId
+    ? Boolean(paneTree[workspaceSessionId] && findNotesLeafId(paneTree[workspaceSessionId]))
+    : false
 
   useKeyboardShortcuts({
     onTogglePalette: () => setPaletteOpen((v) => !v),
     onShowShortcuts: () => setShortcutsOpen((v) => !v),
-    onDockNotes: useCallback(() => {
-      setNotesMode(m => {
-        if (m === 'overlay') {
-          if (sidePanelRef.current === 'notes') setSidePanel(null)
-          return 'split'
-        }
-        return 'overlay'
-      })
-    }, []),
     onNewNoteDrawer: useCallback(() => {
-      if (sidePanelRef.current === 'notes') {
-        const id = createNote()
-        setActiveNoteId(id)
-        return
+      const { paneTree, activeSessionId: tabId } = useStore.getState()
+      if (!tabId) return
+      const tree = paneTree[tabId]
+      if (tree && findNotesLeafId(tree)) {
+        document.dispatchEvent(new CustomEvent('acc:new-note'))
+      } else {
+        toggleNotesPane(tabId)
       }
-      setSidePanel('notes')
-      const { notes: n } = useStore.getState()
-      const sorted = n.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-      if (sorted.length > 0) setActiveNoteId(sorted[0].id)
-      else {
-        const id = createNote()
-        setActiveNoteId(id)
-      }
-    }, [createNote]),
+    }, [toggleNotesPane]),
   })
 
   const { handleSplitH, handleSplitV, handleDetach, handleReattach, handleClose } = usePaneActions(contextMenu)
@@ -344,16 +257,6 @@ export function App(): JSX.Element {
   const titleBarTitle = sidePanel === 'settings' ? 'Settings' : (activeMeta?.name ?? 'Orbit')
   const titleBarSubtitle = sidePanel === 'settings' ? '' : (activeMeta?.cwd ?? '')
 
-  const handleNotesToggle = useCallback((): void => {
-    setSidePanel(p => {
-      if (p === 'notes') return null
-      const { notes: n } = useStore.getState()
-      const sorted = n.slice().sort((a, b) => b.updatedAt - a.updatedAt)
-      if (sorted.length > 0) setActiveNoteId(sorted[0].id)
-      else createNote()
-      return 'notes'
-    })
-  }, [createNote])
 
   return (
     <div className="flex flex-col h-screen bg-brand-bg text-zinc-100 overflow-hidden">
@@ -404,46 +307,7 @@ export function App(): JSX.Element {
               </>
             )}
 
-            {/* Notes overlay mode — floats over the terminal */}
-            {sidePanel === 'notes' && notesMode === 'overlay' && (
-              <div style={{ width: notesWidth, flexShrink: 0 }} className="absolute right-0 top-0 h-full z-20 flex flex-col bg-brand-surface border-l border-brand-panel shadow-2xl">
-                <NoteDrawer
-                  open={false}
-                  onClose={() => {}}
-                  activeNoteId={activeNoteId}
-                  onActivate={handleNoteActivate}
-                  onCreate={() => { const id = createNote(); setActiveNoteId(id) }}
-                  expanded={true}
-                  onToggleExpand={() => setSidePanel(null)}
-                  onToggleMode={() => { setSidePanel(null); setNotesMode('split') }}
-                  isSplitMode={false}
-                />
-              </div>
-            )}
           </div>
-
-          {/* Notes split mode — true flex sibling, terminal resizes to make room */}
-          {sidePanel === 'notes' && notesMode === 'split' && (
-            <>
-              <div
-                className="w-1 flex-shrink-0 bg-brand-panel hover:bg-brand-accent transition-colors cursor-col-resize"
-                onMouseDown={handleNotesDragStart}
-              />
-              <div style={{ width: notesWidth, flexShrink: 0 }} className="flex flex-col min-h-0 bg-brand-surface border-l border-brand-panel">
-                <NoteDrawer
-                  open={false}
-                  onClose={() => {}}
-                  activeNoteId={activeNoteId}
-                  onActivate={handleNoteActivate}
-                  onCreate={() => { const id = createNote(); setActiveNoteId(id) }}
-                  expanded={true}
-                  onToggleExpand={() => setSidePanel(null)}
-                  onToggleMode={() => setNotesMode('overlay')}
-                  isSplitMode={true}
-                />
-              </div>
-            </>
-          )}
         </div>
       </div>
 
@@ -476,9 +340,9 @@ export function App(): JSX.Element {
             </button>
           )}
           <button
-            onClick={handleNotesToggle}
-            title="Notes"
-            className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', sidePanel === 'notes' ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
+            onClick={() => { if (workspaceSessionId) toggleNotesPane(workspaceSessionId) }}
+            title="Notes (Ctrl+Shift+N)"
+            className={cn('flex items-center gap-1.5 px-2.5 h-7 rounded transition-colors', notesOpen ? 'text-brand-muted bg-brand-panel' : 'text-zinc-500 hover:text-zinc-300')}
           >
             <NotebookPen size={15} />
             <span className="text-[11px] font-medium">Notes</span>

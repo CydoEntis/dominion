@@ -3,20 +3,26 @@ import { useStore } from '../../../store/root.store'
 import { createSession, patchSession, writeToSession } from '../session.service'
 import { detachTab } from '../../window/window.service'
 import { clearLayout } from '../persistence.service'
-import { collectSessionIds } from '../../terminal/pane-tree'
+import { collectSessionIds, migrateLayoutNode } from '../../layout/layout-tree'
 import type { PersistedLayout } from '@shared/ipc-types'
-import type { PaneNode } from '../../terminal/pane-tree'
+import type { LayoutNode } from '../../layout/layout-tree'
 
-function remapPaneTree(node: PaneNode, idMap: Map<string, string>): PaneNode {
+function remapLayoutTree(node: LayoutNode, idMap: Map<string, string>): LayoutNode {
   if (node.type === 'leaf') {
-    return { type: 'leaf', sessionId: idMap.get(node.sessionId) ?? node.sessionId }
+    if (node.panel === 'notes') return node
+    const newId = idMap.get(node.sessionId)
+    return newId ? { ...node, sessionId: newId } : node
   }
-  return { ...node, children: node.children.map((c) => remapPaneTree(c, idMap)) }
+  return { ...node, children: node.children.map((c) => remapLayoutTree(c, idMap)) }
 }
 
-function firstLeafId(node: PaneNode): string {
-  if (node.type === 'leaf') return node.sessionId
-  return firstLeafId(node.children[0])
+function firstSessionId(node: LayoutNode): string | null {
+  if (node.type === 'leaf') return node.panel === 'terminal' ? node.sessionId : null
+  for (const child of node.children) {
+    const id = firstSessionId(child)
+    if (id) return id
+  }
+  return null
 }
 
 export function useLayoutRestore(): void {
@@ -65,15 +71,16 @@ export function useLayoutRestore(): void {
     }
 
     for (const tab of layout.tabs) {
-      const tree = tab.tree as PaneNode
-      if (!tree) continue
-      const newTabId = idMap.get(firstLeafId(tree))
+      if (!tab.tree) continue
+      const tree = migrateLayoutNode(tab.tree)
+      const firstId = firstSessionId(tree)
+      const newTabId = firstId ? idMap.get(firstId) : null
       if (!newTabId) continue
 
       if (tab.detached) {
         await detachTab(newTabId, windowIdRef.current ?? '')
       } else {
-        const remapped = remapPaneTree(tree, idMap)
+        const remapped = remapLayoutTree(tree, idMap)
         const tabSessionIds = new Set(collectSessionIds(remapped))
         const tabMetas = createdMetas.filter((m) => tabSessionIds.has(m.sessionId))
         restoreTab(newTabId, remapped, tabMetas)

@@ -105,8 +105,7 @@ export function KeyboardShortcutsModal({ open, onClose }: Props): JSX.Element | 
     {
       title: 'Notes',
       rows: [
-        { label: 'New / open note',    binding: hk.quickNote },
-        { label: 'Dock / undock',      binding: 'Ctrl+Shift+D' },
+        { label: 'Open / close notes', binding: hk.quickNote },
         { label: 'Toggle file tree',   binding: 'Ctrl+Shift+B' },
         { label: 'Split preview',      binding: 'Ctrl+Shift+M' },
       ]
