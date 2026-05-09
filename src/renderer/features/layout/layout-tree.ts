@@ -5,6 +5,8 @@ function makeId(): string {
 export type LayoutLeaf =
   | { type: 'leaf'; id: string; panel: 'terminal'; sessionId: string }
   | { type: 'leaf'; id: string; panel: 'notes'; noteId?: string }
+  | { type: 'leaf'; id: string; panel: 'markdown-preview'; noteId: string }
+  | { type: 'leaf'; id: string; panel: 'home' }
 
 export type LayoutSplit = {
   type: 'split'
@@ -23,6 +25,19 @@ export function makeNotesLeaf(noteId?: string): LayoutLeaf {
   return { type: 'leaf', id: makeId(), panel: 'notes', noteId }
 }
 
+export function makeMarkdownPreviewLeaf(noteId: string): LayoutLeaf {
+  return { type: 'leaf', id: makeId(), panel: 'markdown-preview', noteId }
+}
+
+export function makeHomeLeaf(): LayoutLeaf {
+  return { type: 'leaf', id: makeId(), panel: 'home' }
+}
+
+export function replaceNode(tree: LayoutNode, targetId: string, replacement: LayoutNode): LayoutNode {
+  if (tree.type === 'leaf') return tree.id === targetId ? replacement : tree
+  return { ...tree, children: tree.children.map((c) => replaceNode(c, targetId, replacement)) }
+}
+
 /** Insert newLeaf next to targetId, splitting in the given direction */
 export function insertNode(
   node: LayoutNode,
@@ -39,6 +54,17 @@ export function insertNode(
     return node
   }
   return { ...node, children: node.children.map((c) => insertNode(c, targetId, direction, newLeaf, side)) }
+}
+
+/** Insert newLeaf at the left edge — used when clicking a session/note from the sidebar */
+export function insertAtLeft(root: LayoutNode, newLeaf: LayoutLeaf): LayoutNode {
+  if (root.type === 'leaf') {
+    return { type: 'split', id: makeId(), direction: 'horizontal', children: [newLeaf, root] }
+  }
+  if (root.direction === 'horizontal') {
+    return { ...root, children: [newLeaf, ...root.children] }
+  }
+  return { type: 'split', id: makeId(), direction: 'horizontal', children: [newLeaf, root] }
 }
 
 /** Insert newLeaf at the right edge — used when opening the notes panel */
@@ -95,6 +121,25 @@ export function findNotesLeafId(node: LayoutNode): string | null {
     if (found) return found
   }
   return null
+}
+
+export function hasNotesForNote(node: LayoutNode, noteId: string): boolean {
+  if (node.type === 'leaf') return node.panel === 'notes' && node.noteId === noteId
+  return node.children.some((c) => hasNotesForNote(c, noteId))
+}
+
+export function findNotesLeafIdForNote(node: LayoutNode, noteId: string): string | null {
+  if (node.type === 'leaf') return (node.panel === 'notes' && node.noteId === noteId) ? node.id : null
+  for (const child of node.children) {
+    const found = findNotesLeafIdForNote(child, noteId)
+    if (found) return found
+  }
+  return null
+}
+
+export function hasMarkdownPreviewForNote(node: LayoutNode, noteId: string): boolean {
+  if (node.type === 'leaf') return node.panel === 'markdown-preview' && node.noteId === noteId
+  return node.children.some((c) => hasMarkdownPreviewForNote(c, noteId))
 }
 
 export function collectSessionIds(node: LayoutNode): string[] {

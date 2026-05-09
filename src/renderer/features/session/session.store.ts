@@ -2,10 +2,10 @@ import type { StateCreator } from 'zustand'
 import type { SessionMeta, PersistedLayout } from '@shared/ipc-types'
 import type { RootStore } from '../../store/root.store'
 import {
-  makeTerminalLeaf, makeNotesLeaf,
+  makeTerminalLeaf, makeNotesLeaf, makeMarkdownPreviewLeaf, makeHomeLeaf,
   splitTerminalLeaf, removeTerminalLeaf,
-  removeNode, insertAtRight, insertNode, moveNode,
-  collectSessionIds, findTabForSession, findNotesLeafId,
+  removeNode, insertAtRight, insertNode, moveNode, replaceNode,
+  collectSessionIds, findTabForSession, findNotesLeafId, hasMarkdownPreviewForNote,
 } from '../layout/layout-tree'
 import type { LayoutNode, LayoutLeaf } from '../layout/layout-tree'
 
@@ -41,18 +41,22 @@ export interface SessionSlice {
   restoreTab: (tabId: string, tree: LayoutNode, metas: SessionMeta[]) => void
   openGroupInSplits: (sessionIds: string[]) => void
   toggleNotesPane: (tabId: string) => void
+  openMarkdownPreviewPane: (noteId: string) => void
   removeLayoutLeaf: (tabId: string, leafId: string) => void
   insertLayout: (tabId: string, targetLeafId: string, direction: 'horizontal' | 'vertical', newLeaf: LayoutLeaf, side: 'before' | 'after') => void
   moveLayout: (tabId: string, sourceLeafId: string, targetLeafId: string, direction: 'horizontal' | 'vertical', side: 'before' | 'after') => void
   insertSessionIntoLayout: (targetTabId: string, targetLeafId: string, sessionId: string, direction: 'horizontal' | 'vertical', side: 'before' | 'after') => void
+  replaceLayoutLeaf: (tabId: string, leafId: string, replacement: LayoutNode) => void
+  insertLayoutAtRight: (tabId: string, newLeaf: LayoutLeaf) => void
+  insertSessionAtRight: (targetTabId: string, sessionId: string) => void
 }
 
 export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', never]], [], SessionSlice> = (set) => ({
   sessions: {},
-  tabOrder: [],
+  tabOrder: ['__root__'],
   activeSessionId: null,
   focusedSessionId: null,
-  paneTree: {},
+  paneTree: { '__root__': makeHomeLeaf() as LayoutNode },
   pendingRestore: null,
   isRestoringLayout: false,
 
@@ -73,6 +77,7 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
 
   removeTab: (tabId) =>
     set((state) => {
+      if (tabId === '__root__') return
       const idx = state.tabOrder.indexOf(tabId)
       state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
       const tree = state.paneTree[tabId]
@@ -102,10 +107,10 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       delete state.sessions[sessionId]
       const newTree = removeTerminalLeaf(tree, sessionId)
       if (!newTree) {
-        state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
-        delete state.paneTree[tabId]
-        if (state.activeSessionId === tabId) {
-          state.activeSessionId = state.tabOrder[0] ?? null
+        if (tabId === '__root__') { state.paneTree[tabId] = makeHomeLeaf() } else {
+          state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
+          delete state.paneTree[tabId]
+          if (state.activeSessionId === tabId) state.activeSessionId = state.tabOrder[0] ?? null
         }
       } else {
         state.paneTree[tabId] = newTree
@@ -118,10 +123,10 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       if (!tree) return
       const newTree = removeTerminalLeaf(tree, sessionId)
       if (!newTree) {
-        state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
-        delete state.paneTree[tabId]
-        if (state.activeSessionId === tabId) {
-          state.activeSessionId = state.tabOrder[0] ?? null
+        if (tabId === '__root__') { state.paneTree[tabId] = makeHomeLeaf() } else {
+          state.tabOrder = state.tabOrder.filter((id) => id !== tabId)
+          delete state.paneTree[tabId]
+          if (state.activeSessionId === tabId) state.activeSessionId = state.tabOrder[0] ?? null
         }
       } else {
         state.paneTree[tabId] = newTree
@@ -270,12 +275,29 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       }
     }),
 
+  openMarkdownPreviewPane: (noteId) =>
+    set((state) => {
+      const tabId = state.activeSessionId
+      if (!tabId) return
+      const tree = state.paneTree[tabId]
+      if (!tree) return
+      if (hasMarkdownPreviewForNote(tree, noteId)) return
+      state.paneTree[tabId] = insertAtRight(tree, makeMarkdownPreviewLeaf(noteId))
+    }),
+
   removeLayoutLeaf: (tabId, leafId) =>
     set((state) => {
       const tree = state.paneTree[tabId]
       if (!tree) return
       const newTree = removeNode(tree, leafId)
-      if (newTree) state.paneTree[tabId] = newTree
+      state.paneTree[tabId] = newTree ?? (tabId === '__root__' ? makeHomeLeaf() : (delete state.paneTree[tabId], undefined!))
+    }),
+
+  replaceLayoutLeaf: (tabId, leafId, replacement) =>
+    set((state) => {
+      const tree = state.paneTree[tabId]
+      if (!tree) return
+      state.paneTree[tabId] = replaceNode(tree, leafId, replacement)
     }),
 
   insertLayout: (tabId, targetLeafId, direction, newLeaf, side) =>
@@ -301,9 +323,11 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
         if (sourceTree) {
           const newSourceTree = removeTerminalLeaf(sourceTree, sessionId)
           if (!newSourceTree) {
-            state.tabOrder = state.tabOrder.filter((id) => id !== sourceTabId)
-            delete state.paneTree[sourceTabId]
-            if (state.activeSessionId === sourceTabId) state.activeSessionId = targetTabId
+            if (sourceTabId === '__root__') { state.paneTree['__root__'] = makeHomeLeaf() } else {
+              state.tabOrder = state.tabOrder.filter((id) => id !== sourceTabId)
+              delete state.paneTree[sourceTabId]
+              if (state.activeSessionId === sourceTabId) state.activeSessionId = targetTabId
+            }
           } else {
             state.paneTree[sourceTabId] = newSourceTree
           }
@@ -312,6 +336,43 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       const targetTree = state.paneTree[targetTabId]
       if (targetTree) {
         state.paneTree[targetTabId] = insertNode(targetTree, targetLeafId, direction, newLeaf, side)
+      }
+      state.activeSessionId = targetTabId
+      state.focusedSessionId = sessionId
+    }),
+
+  insertLayoutAtRight: (tabId, newLeaf) =>
+    set((state) => {
+      const tree = state.paneTree[tabId]
+      if (!tree) return
+      state.paneTree[tabId] = insertAtRight(tree, newLeaf)
+    }),
+
+  insertSessionAtRight: (targetTabId, sessionId) =>
+    set((state) => {
+      const sourceTabId = findTabForSession(state.paneTree, sessionId)
+      if (sourceTabId === targetTabId) {
+        state.focusedSessionId = sessionId
+        return
+      }
+      if (sourceTabId) {
+        const sourceTree = state.paneTree[sourceTabId]
+        if (sourceTree) {
+          const newSourceTree = removeTerminalLeaf(sourceTree, sessionId)
+          if (!newSourceTree) {
+            if (sourceTabId === '__root__') { state.paneTree['__root__'] = makeHomeLeaf() } else {
+              state.tabOrder = state.tabOrder.filter((id) => id !== sourceTabId)
+              delete state.paneTree[sourceTabId]
+              if (state.activeSessionId === sourceTabId) state.activeSessionId = targetTabId
+            }
+          } else {
+            state.paneTree[sourceTabId] = newSourceTree
+          }
+        }
+      }
+      const targetTree = state.paneTree[targetTabId]
+      if (targetTree) {
+        state.paneTree[targetTabId] = insertAtRight(targetTree, makeTerminalLeaf(sessionId))
       }
       state.activeSessionId = targetTabId
       state.focusedSessionId = sessionId
