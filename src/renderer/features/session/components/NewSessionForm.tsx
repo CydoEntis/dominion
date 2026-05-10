@@ -275,7 +275,7 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
               />
             </div>
             {yoloMode && settings.sandboxYoloMode && !sbxAvailable && (
-              <p className="text-xs text-amber-600 -mt-2 px-1">sbx not found — running unsandboxed. Install with: winget install -h Docker.sbx</p>
+              <p className="text-xs text-amber-600 -mt-2 px-1">sbx not found — running unsandboxed. See docs.docker.com/ai/sandboxes to install.</p>
             )}
           </>
         )}
