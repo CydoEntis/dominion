@@ -12,7 +12,7 @@ import {
 } from './session-registry'
 import { IPC } from '@shared/ipc-channels'
 import { getSettings } from '../settings/settings-store'
-import { isSbxAvailable } from '../../lib/sbx'
+import { getSbxExecutable } from '../../lib/sbx'
 import type {
   CreateSessionPayload,
   SessionMeta,
@@ -27,8 +27,9 @@ function resolveShellSpawn(agentCommand?: string, yoloMode?: boolean): { command
     if (cmd === 'claude' || cmd.startsWith('claude ')) {
       cmd = `${cmd} --dangerously-skip-permissions`
     }
-    if (settings.sandboxYoloMode && isSbxAvailable()) {
-      cmd = `sbx run ${cmd}`
+    const sbxExe = getSbxExecutable()
+    if (settings.sandboxYoloMode && sbxExe !== null) {
+      cmd = `"${sbxExe}" run ${cmd}`
     }
   }
   if (process.platform === 'win32') {
