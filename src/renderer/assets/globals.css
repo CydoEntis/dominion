@@ -154,6 +154,62 @@
     --brand-muted: 0 160 120;
   }
 
+  /* Mars theme — near-black reddish-brown, vivid orange-red */
+  .mars {
+    --background: 12 55% 4%;
+    --foreground: 22 70% 94%;
+    --card: 12 50% 6%;
+    --card-foreground: 22 70% 94%;
+    --popover: 12 50% 6%;
+    --popover-foreground: 22 70% 94%;
+    --primary: 22 88% 54%;
+    --primary-foreground: 12 55% 4%;
+    --secondary: 14 45% 10%;
+    --secondary-foreground: 22 70% 94%;
+    --muted: 14 45% 10%;
+    --muted-foreground: 18 30% 55%;
+    --accent: 14 45% 10%;
+    --accent-foreground: 22 70% 94%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 14 45% 13%;
+    --input: 14 45% 10%;
+    --ring: 22 88% 54%;
+    --brand-bg: 16 8 5;
+    --brand-surface: 26 12 7;
+    --brand-panel: 52 22 12;
+    --brand-accent: 255 105 45;
+    --brand-muted: 185 85 50;
+  }
+
+  /* Pulsar theme — near-black deep blue, electric cyan */
+  .pulsar {
+    --background: 218 68% 4%;
+    --foreground: 195 75% 95%;
+    --card: 218 64% 6%;
+    --card-foreground: 195 75% 95%;
+    --popover: 218 64% 6%;
+    --popover-foreground: 195 75% 95%;
+    --primary: 190 100% 50%;
+    --primary-foreground: 218 68% 4%;
+    --secondary: 215 58% 10%;
+    --secondary-foreground: 195 75% 95%;
+    --muted: 215 58% 10%;
+    --muted-foreground: 205 35% 58%;
+    --accent: 215 58% 10%;
+    --accent-foreground: 195 75% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 58% 13%;
+    --input: 215 58% 10%;
+    --ring: 190 100% 50%;
+    --brand-bg: 4 8 20;
+    --brand-surface: 6 14 32;
+    --brand-panel: 12 26 60;
+    --brand-accent: 0 215 255;
+    --brand-muted: 0 150 190;
+  }
+
   /* Space theme — dark purple / nebula variant */
   .space {
     --background: 258 44% 7%;
@@ -242,6 +298,16 @@
   background: #52525b;
 }
 
+/* Scrollbars — mars */
+.mars * { scrollbar-color: #1e0a05 transparent; }
+.mars *::-webkit-scrollbar-thumb { background: #341008; }
+.mars *::-webkit-scrollbar-thumb:hover { background: #501a0e; }
+
+/* Scrollbars — pulsar */
+.pulsar * { scrollbar-color: #060e28 transparent; }
+.pulsar *::-webkit-scrollbar-thumb { background: #0a1840; }
+.pulsar *::-webkit-scrollbar-thumb:hover { background: #102258; }
+
 /* Scrollbars — nebula */
 .nebula * { scrollbar-color: #160a3c transparent; }
 .nebula *::-webkit-scrollbar-thumb { background: #22104a; }
@@ -262,11 +328,15 @@
   background-color: rgba(228, 228, 231, 0.12);
   color: inherit;
 }
+.mars   ::selection { background-color: rgba(255, 105,  45, 0.15); }
+.pulsar ::selection { background-color: rgba(  0, 215, 255, 0.15); }
 .nebula ::selection { background-color: rgba(100, 220, 255, 0.15); }
 .solar  ::selection { background-color: rgba(255, 185,   0, 0.13); }
 .aurora ::selection { background-color: rgba(  0, 230, 160, 0.13); }
 
 /* Focus ring — per theme accent color */
+.mars   :focus-visible { outline-color: rgba(255, 105,  45, 0.45); }
+.pulsar :focus-visible { outline-color: rgba(  0, 215, 255, 0.45); }
 .nebula :focus-visible { outline-color: rgba(100, 220, 255, 0.45); }
 .solar  :focus-visible { outline-color: rgba(255, 185,   0, 0.40); }
 .aurora :focus-visible { outline-color: rgba(  0, 230, 160, 0.40); }
