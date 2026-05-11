@@ -6,6 +6,7 @@ import type { PersistedLayout } from '@shared/ipc-types'
 
 export function useLayoutPersistence(): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingLayoutRef = useRef<PersistedLayout | null>(null)
 
   useEffect(() => {
     const unsubscribe = useStore.subscribe((state) => {
@@ -23,7 +24,6 @@ export function useLayoutPersistence(): void {
       )
 
       // Sessions running but not in any tab = detached into another window.
-      // Save them as single-pane tabs so they restore in the main window.
       const detachedTabs = runningSessions
         .filter((m) => !inTabSessionIds.has(m.sessionId))
         .map((m) => ({
@@ -43,6 +43,7 @@ export function useLayoutPersistence(): void {
           color: m.color,
           conversationId: m.conversationId,
           groupId: m.groupId,
+          yoloMode: m.yoloMode,
           worktreePath: m.worktreePath,
           worktreeBranch: m.worktreeBranch,
           worktreeBaseBranch: m.worktreeBaseBranch,
@@ -56,14 +57,20 @@ export function useLayoutPersistence(): void {
         ]
       }
 
+      pendingLayoutRef.current = layout
       if (timerRef.current) clearTimeout(timerRef.current)
       timerRef.current = setTimeout(() => {
         saveLayout(layout)
+        pendingLayoutRef.current = null
       }, 2000)
     })
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        // Flush any pending save synchronously so state isn't lost on close
+        if (pendingLayoutRef.current) saveLayout(pendingLayoutRef.current)
+      }
       unsubscribe()
     }
   }, [])

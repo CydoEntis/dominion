@@ -4,9 +4,10 @@ import { ipc } from '../../../lib/ipc'
 import { IPC } from '@shared/ipc-channels'
 import { useStore } from '../../../store/root.store'
 import { listSessions } from '../session.service'
-import { getWindowId } from '../../window/window.service'
+import { getWindowInfo } from '../../window/window.service'
 import { loadLayout } from '../persistence.service'
-import type { PersistedLayout, SessionMeta, SessionExitPayload, WindowInitialSessionsPayload, TabReattachedPayload } from '@shared/ipc-types'
+import { findTabForSession } from '../../layout/layout-tree'
+import type { PersistedLayout, SessionMeta, SessionExitPayload, WindowInitialSessionsPayload, TabReattachedPayload, NotePanePayload } from '@shared/ipc-types'
 
 export function useSessionLifecycle(): void {
   const upsertSession = useStore((s) => s.upsertSession)
@@ -17,6 +18,13 @@ export function useSessionLifecycle(): void {
   const loadSettings = useStore((s) => s.loadSettings)
   const setPendingRestore = useStore((s) => s.setPendingRestore)
   const setIsMainWindow = useStore((s) => s.setIsMainWindow)
+  const setWindowMeta = useStore((s) => s.setWindowMeta)
+  const setWindowHighlighted = useStore((s) => s.setWindowHighlighted)
+  const setTotalWindowCount = useStore((s) => s.setTotalWindowCount)
+  const addNotePaneToLayout = useStore((s) => s.addNotePaneToLayout)
+  const removeNotePaneFromLayout = useStore((s) => s.removeNotePaneFromLayout)
+  const addDetachedNoteId = useStore((s) => s.addDetachedNoteId)
+  const removeDetachedNoteId = useStore((s) => s.removeDetachedNoteId)
 
   const layoutRef = useRef<PersistedLayout | null | 'loading'>('loading')
   const isMainRef = useRef<boolean | null>(null)
@@ -25,15 +33,21 @@ export function useSessionLifecycle(): void {
 
   useEffect(() => {
     loadSettings()
-    getWindowId().then(setWindowId)
+    getWindowInfo().then(({ windowId, isMainWindow }) => {
+      setWindowId(windowId)
+      setIsMainWindow(isMainWindow)
+      setWindowHighlighted(false)
+    })
 
     const maybeShowRestore = (): void => {
       // Wait for all three async sources to resolve before deciding
       if (layoutRef.current === 'loading' || isMainRef.current === null || liveSessionsRef.current === 'pending') return
       const live = liveSessionsRef.current as SessionMeta[]
-      // If PTY sessions are already running (renderer reload / HMR), skip restore.
-      // We already called addTab for them above so tabs are wired up.
-      if (live.length > 0) return
+      if (live.length > 0) {
+        // HMR/renderer-reload: only the main window wires up all running sessions
+        if (isMainRef.current) live.forEach((m) => addTab(m.sessionId))
+        return
+      }
       if (isMainRef.current && layoutRef.current && layoutRef.current.tabs.length > 0) {
         setPendingRestore(layoutRef.current)
       }
@@ -43,8 +57,6 @@ export function useSessionLifecycle(): void {
       const running = sessions.filter((m) => m.status === 'running')
       sessions.forEach((meta) => upsertSession(meta))
       liveSessionsRef.current = running
-      // Wire up tabs for already-running sessions without layout restore
-      running.forEach((m) => addTab(m.sessionId))
       maybeShowRestore()
     })
 
@@ -54,8 +66,10 @@ export function useSessionLifecycle(): void {
     })
 
     const offInitial = ipc.on(IPC.WINDOW_INITIAL_SESSIONS, (payload) => {
-      const { sessionIds, windowId, isMainWindow: isMain } = payload as WindowInitialSessionsPayload
+      const { sessionIds, windowId, isMainWindow: isMain, windowName, windowColor, totalWindowCount } = payload as WindowInitialSessionsPayload
       setWindowId(windowId)
+      if (windowName && windowColor) setWindowMeta(windowName, windowColor)
+      if (totalWindowCount != null) setTotalWindowCount(totalWindowCount)
       sessionIds.forEach((sessionId) => addTab(sessionId))
       isMainRef.current = isMain ?? sessionIds.length === 0
       setIsMainWindow(isMainRef.current)
@@ -88,11 +102,80 @@ export function useSessionLifecycle(): void {
       addTab(sessionId)
     })
 
+    const offAddSession = ipc.on(IPC.WINDOW_ADD_SESSION, (payload) => {
+      const { sessionId, meta } = payload as { sessionId: string; meta: SessionMeta }
+      if (meta) upsertSession(meta)
+      addTab(sessionId)
+    })
+
+    const offRemoveSession = ipc.on(IPC.WINDOW_SESSION_REMOVED, (payload) => {
+      const { sessionId } = payload as { sessionId: string }
+      const { paneTree, detachPane } = useStore.getState()
+      const tabId = findTabForSession(paneTree, sessionId) ?? sessionId
+      detachPane(tabId, sessionId)
+    })
+
+    const offHighlight = ipc.on(IPC.WINDOW_HIGHLIGHT, (payload) => {
+      const { active } = payload as { active: boolean }
+      setWindowHighlighted(active)
+    })
+
+    const onFocus = (): void => setWindowHighlighted(false)
+    window.addEventListener('focus', onFocus)
+
+    const offWindowCount = ipc.on(IPC.WINDOW_COUNT_CHANGED, (payload) => {
+      const { count } = payload as { count: number }
+      setTotalWindowCount(count)
+    })
+
+    const offMetaUpdated = ipc.on(IPC.WINDOW_META_UPDATED, (payload) => {
+      const { name, color } = payload as { name: string; color: string }
+      setWindowMeta(name, color)
+    })
+
+    const offSettingsUpdated = ipc.on(IPC.SETTINGS_UPDATED, () => {
+      void loadSettings()
+    })
+
+    const offInitialNotPane = ipc.on(IPC.WINDOW_INITIAL_NOTE_PANE, (payload) => {
+      const { noteId, panel } = payload as NotePanePayload
+      addNotePaneToLayout(noteId, panel)
+    })
+
+    const offNotePaneReattached = ipc.on(IPC.WINDOW_NOTE_PANE_REATTACHED, (payload) => {
+      const { noteId, panel } = payload as NotePanePayload
+      removeDetachedNoteId(noteId)
+      addNotePaneToLayout(noteId, panel)
+    })
+
+    const offAddNotePane = ipc.on(IPC.WINDOW_ADD_NOTE_PANE, (payload) => {
+      const { noteId, panel } = payload as NotePanePayload
+      removeDetachedNoteId(noteId)
+      addNotePaneToLayout(noteId, panel)
+    })
+
+    const offRemoveNotePane = ipc.on(IPC.WINDOW_NOTE_PANE_REMOVED, (payload) => {
+      const { noteId, panel } = payload as NotePanePayload
+      addDetachedNoteId(noteId)
+      removeNotePaneFromLayout(noteId, panel)
+    })
+
     return () => {
       offInitial()
       offMeta()
       offExit()
       offReattached()
+      offAddSession()
+      offRemoveSession()
+      offHighlight()
+      window.removeEventListener('focus', onFocus)
+      offWindowCount()
+      offMetaUpdated()
+      offSettingsUpdated()
+      offInitialNotPane()
+      offNotePaneReattached()
+      offAddNotePane()
+      offRemoveNotePane()
     }
   }, [])
 }

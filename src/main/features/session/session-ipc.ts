@@ -10,6 +10,7 @@ import {
   replayAndSubscribe,
   patchSession
 } from './session-service'
+import { isSbxAvailable } from '../../lib/sbx'
 
 export function registerSessionIpc(): void {
   ipcMain.handle(IPC.SESSION_CREATE, (event, payload) => {
@@ -52,4 +53,6 @@ export function registerSessionIpc(): void {
     const parsed = SessionResizePayloadSchema.safeParse(payload)
     if (parsed.success) resizeSession(parsed.data.sessionId, parsed.data.cols, parsed.data.rows)
   })
+
+  ipcMain.handle(IPC.SBX_AVAILABLE, () => isSbxAvailable())
 }

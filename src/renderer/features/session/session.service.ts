@@ -43,3 +43,15 @@ export function resizeSession(payload: SessionResizePayload): void {
 export async function patchSession(payload: { sessionId: string; name?: string; color?: string; groupId?: string | null; taskStatus?: string | null; worktreePath?: string; worktreeBranch?: string; worktreeBaseBranch?: string; projectRoot?: string }): Promise<SessionMeta> {
   return ipc.invoke(IPC.SESSION_PATCH, payload) as Promise<SessionMeta>
 }
+
+export async function checkSbxAvailable(): Promise<boolean> {
+  return ipc.invoke(IPC.SBX_AVAILABLE) as Promise<boolean>
+}
+
+export async function startCrossWindowDrag(sessionId: string): Promise<void> {
+  await ipc.invoke(IPC.DRAG_SESSION_START, { sessionId })
+}
+
+export async function endCrossWindowDrag(sessionId: string): Promise<void> {
+  await ipc.invoke(IPC.DRAG_SESSION_END, { sessionId })
+}

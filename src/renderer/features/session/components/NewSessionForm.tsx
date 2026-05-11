@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, FolderOpen, X, Zap } from 'lucide-react'
+import { Plus, FolderOpen, X, Zap, ShieldCheck } from 'lucide-react'
 import { Button } from '../../../components/ui/button'
 import {
   Dialog,
@@ -21,7 +21,7 @@ import {
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { Switch } from '../../../components/ui/switch'
-import { createSession } from '../session.service'
+import { createSession, checkSbxAvailable } from '../session.service'
 import { createWorktree } from '../../fs/fs.service'
 import { pickFolder } from '../../window/window.service'
 import { useStore } from '../../../store/root.store'
@@ -60,6 +60,9 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
   const [selectedDir, setSelectedDir] = useState<string>('')
   const [selectedGroupId, setSelectedGroupId] = useState<string>(NO_GROUP)
   const [yoloMode, setYoloMode] = useState(false)
+  const [skipSandbox, setSkipSandbox] = useState(false)
+  const [useSandboxMode, setUseSandboxMode] = useState(false)
+  const [sbxAvailable, setSbxAvailable] = useState(false)
   const [workspacePath, setWorkspacePath] = useState<string | null>(null)
   const [splitTarget, setSplitTarget] = useState<{ tabId: string; sessionId: string; direction: 'horizontal' | 'vertical' } | null>(null)
   const upsertSession = useStore((s) => s.upsertSession)
@@ -104,7 +107,10 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
       setSelectedDir(settings.shellStartDir || '')
       setSelectedGroupId(NO_GROUP)
       setYoloMode(false)
+      setSkipSandbox(false)
+      setUseSandboxMode(false)
       setSelectedPreset('claude')
+      checkSbxAvailable().then(setSbxAvailable).catch(() => {})
     } else {
       setSplitTarget(null)
     }
@@ -152,6 +158,8 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           cols: DEFAULT_COLS,
           rows: DEFAULT_ROWS,
           yoloMode: yoloMode || undefined,
+          noSandbox: skipSandbox || undefined,
+          useSandbox: useSandboxMode || undefined,
           worktreePath: worktreeResult.worktreePath,
           worktreeBranch: worktreeResult.branchName,
           worktreeBaseBranch: worktreeResult.baseBranch,
@@ -166,7 +174,9 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           cwd: selectedDir || undefined,
           cols: DEFAULT_COLS,
           rows: DEFAULT_ROWS,
-          yoloMode: yoloMode || undefined
+          yoloMode: yoloMode || undefined,
+          noSandbox: skipSandbox || undefined,
+          useSandbox: useSandboxMode || undefined
         })
         upsertSession(meta)
         splitPane(splitTarget.tabId, splitTarget.sessionId, splitTarget.direction, meta)
@@ -179,7 +189,9 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
           cols: DEFAULT_COLS,
           rows: DEFAULT_ROWS,
           groupId,
-          yoloMode: yoloMode || undefined
+          yoloMode: yoloMode || undefined,
+          noSandbox: skipSandbox || undefined,
+          useSandbox: useSandboxMode || undefined
         })
         upsertSession(meta)
         addTab(meta.sessionId)
@@ -189,6 +201,8 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
       setSelectedPreset('claude')
       setSelectedGroupId(NO_GROUP)
       setYoloMode(false)
+      setSkipSandbox(false)
+      setUseSandboxMode(false)
       setWorkspacePath(null)
       setSplitTarget(null)
       setOpen(false)
@@ -248,21 +262,61 @@ export function NewSessionForm({ variant = 'icon' }: { variant?: 'icon' | 'sideb
         </div>
 
         {supportsYolo && (
+          <>
+            <div className={cn(
+              'flex items-center justify-between px-3 py-2.5 rounded-md border transition-colors',
+              yoloMode ? 'border-amber-500/40 bg-amber-500/5' : 'border-brand-panel'
+            )}>
+              <div className="flex items-center gap-2 min-w-0">
+                <Zap size={12} className={cn('flex-shrink-0', yoloMode ? 'text-amber-400' : 'text-zinc-500')} />
+                <span className={cn('text-xs font-medium', yoloMode ? 'text-amber-300' : 'text-zinc-300')}>
+                  YOLO Mode
+                </span>
+                {yoloMode && settings.sandboxYoloMode && sbxAvailable && !skipSandbox ? (
+                  <span className="flex items-center gap-1 text-xs text-emerald-500">
+                    <ShieldCheck size={10} />sandboxed
+                  </span>
+                ) : (
+                  <span className="text-xs text-zinc-600 truncate">— skip permission prompts</span>
+                )}
+              </div>
+              <Switch
+                checked={yoloMode}
+                onCheckedChange={setYoloMode}
+                className={yoloMode ? 'data-[state=checked]:bg-amber-500' : ''}
+              />
+            </div>
+            {yoloMode && settings.sandboxYoloMode && sbxAvailable && (
+              <div className="flex items-center justify-between -mt-2 px-1">
+                <span className="text-xs text-zinc-500">Skip sandbox for this session</span>
+                <Switch
+                  checked={skipSandbox}
+                  onCheckedChange={setSkipSandbox}
+                />
+              </div>
+            )}
+            {yoloMode && settings.sandboxYoloMode && !sbxAvailable && (
+              <p className="text-xs text-amber-600 -mt-2 px-1">sbx not found — running unsandboxed. See docs.docker.com/ai/sandboxes to install.</p>
+            )}
+          </>
+        )}
+
+        {sbxAvailable && !(yoloMode && settings.sandboxYoloMode && !skipSandbox) && (
           <div className={cn(
             'flex items-center justify-between px-3 py-2.5 rounded-md border transition-colors',
-            yoloMode ? 'border-amber-500/40 bg-amber-500/5' : 'border-brand-panel'
+            useSandboxMode ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-brand-panel'
           )}>
             <div className="flex items-center gap-2 min-w-0">
-              <Zap size={12} className={cn('flex-shrink-0', yoloMode ? 'text-amber-400' : 'text-zinc-500')} />
-              <span className={cn('text-xs font-medium', yoloMode ? 'text-amber-300' : 'text-zinc-300')}>
-                YOLO Mode
+              <ShieldCheck size={12} className={cn('flex-shrink-0', useSandboxMode ? 'text-emerald-400' : 'text-zinc-500')} />
+              <span className={cn('text-xs font-medium', useSandboxMode ? 'text-emerald-300' : 'text-zinc-300')}>
+                Sandbox
               </span>
-              <span className="text-xs text-zinc-600 truncate">— skip permission prompts</span>
+              <span className="text-xs text-zinc-600 truncate">— Docker microVM isolation</span>
             </div>
             <Switch
-              checked={yoloMode}
-              onCheckedChange={setYoloMode}
-              className={yoloMode ? 'data-[state=checked]:bg-amber-500' : ''}
+              checked={useSandboxMode}
+              onCheckedChange={setUseSandboxMode}
+              className={useSandboxMode ? 'data-[state=checked]:bg-emerald-500' : ''}
             />
           </div>
         )}

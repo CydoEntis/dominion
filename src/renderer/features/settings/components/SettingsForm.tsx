@@ -145,6 +145,7 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
   const defaultSessionDir  = watch('defaultSessionDir') ?? ''
   const confirmClose      = watch('confirmCloseSession')
   const resumeOnStartup   = watch('resumeOnStartup')
+  const sandboxYoloMode   = watch('sandboxYoloMode')
   const hotkeys           = watch('hotkeys')
 
   const pickShell = async (): Promise<void> => {
@@ -321,6 +322,19 @@ export function SettingsForm({ onClose }: Props): JSX.Element {
               id="resume-on-startup"
               checked={resumeOnStartup ?? false}
               onCheckedChange={(v) => setValue('resumeOnStartup', v === true)}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor="sandbox-yolo" className="text-sm text-foreground font-normal cursor-pointer">
+                Sandbox YOLO mode
+              </Label>
+              <span className="text-xs text-zinc-500">Run YOLO sessions inside an sbx microVM sandbox — requires Docker sbx CLI</span>
+            </div>
+            <Checkbox
+              id="sandbox-yolo"
+              checked={sandboxYoloMode ?? true}
+              onCheckedChange={(v) => setValue('sandboxYoloMode', v === true)}
             />
           </div>
         </section>

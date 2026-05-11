@@ -12,31 +12,50 @@ import {
 } from './session-registry'
 import { IPC } from '@shared/ipc-channels'
 import { getSettings } from '../settings/settings-store'
+import { getSbxExecutable } from '../../lib/sbx'
 import type {
   CreateSessionPayload,
   SessionMeta,
   SessionExitPayload
 } from '@shared/ipc-types'
 
-function resolveShellSpawn(agentCommand?: string, yoloMode?: boolean): { command: string; args: string[] } {
-  const defaultShell = getSettings().defaultShell
+function resolveShellSpawn(agentCommand?: string, yoloMode?: boolean, noSandbox?: boolean, useSandbox?: boolean): { command: string; args: string[]; sandboxed: boolean } {
+  const settings = getSettings()
+  const defaultShell = settings.defaultShell
   let cmd = agentCommand
-  if (cmd && yoloMode) {
-    // Append skip-permissions flag for supported agents
-    if (cmd === 'claude' || cmd.startsWith('claude ')) {
+  let sandboxed = false
+  if (cmd) {
+    const sbxExe = getSbxExecutable()
+    const isClaudeCmd = cmd === 'claude' || cmd.startsWith('claude ')
+    const autoSandbox = yoloMode && settings.sandboxYoloMode
+    const shouldSandbox = (useSandbox || autoSandbox) && sbxExe !== null && !noSandbox
+    if (shouldSandbox && sbxExe) {
+      sandboxed = true
+      if (isClaudeCmd) {
+        // Preserve any extra args (e.g. --resume <id>) that come after 'claude'
+        const extraArgs = cmd.startsWith('claude ') ? cmd.slice(7).trim() : ''
+        const claudeFlags = [
+          ...(yoloMode ? ['--dangerously-skip-permissions'] : []),
+          ...(extraArgs ? [extraArgs] : [])
+        ].filter(Boolean).join(' ')
+        cmd = claudeFlags ? `${sbxExe} run claude -- ${claudeFlags}` : `${sbxExe} run claude`
+      } else {
+        cmd = `${sbxExe} run ${cmd}`
+      }
+    } else if (yoloMode && isClaudeCmd) {
       cmd = `${cmd} --dangerously-skip-permissions`
     }
   }
   if (process.platform === 'win32') {
     const shell = defaultShell || process.env.COMSPEC || 'C:\\Windows\\System32\\cmd.exe'
     return cmd
-      ? { command: shell, args: ['/k', cmd] }
-      : { command: shell, args: [] }
+      ? { command: shell, args: ['/k', cmd], sandboxed }
+      : { command: shell, args: [], sandboxed }
   }
   const shell = defaultShell || process.env.SHELL || '/bin/bash'
   return cmd
-    ? { command: shell, args: ['-c', `${cmd}; exec ${shell}`] }
-    : { command: shell, args: [] }
+    ? { command: shell, args: ['-c', `${cmd}; exec ${shell}`], sandboxed }
+    : { command: shell, args: [], sandboxed }
 }
 
 export function createSession(
@@ -48,7 +67,7 @@ export function createSession(
   const defaultCwd = getSettings().defaultSessionDir || join(home, 'Orbit')
   const cwd = payload.cwd || defaultCwd
   try { mkdirSync(cwd, { recursive: true }) } catch {}
-  const { command, args } = resolveShellSpawn(payload.agentCommand, payload.yoloMode)
+  const { command, args, sandboxed } = resolveShellSpawn(payload.agentCommand, payload.yoloMode, payload.noSandbox, payload.useSandbox)
 
   const meta: SessionMeta = {
     sessionId,
@@ -65,6 +84,7 @@ export function createSession(
     agentStatus: 'idle',
     groupId: payload.groupId,
     yoloMode: payload.yoloMode,
+    sandboxed: sandboxed || undefined,
     worktreePath: payload.worktreePath,
     worktreeBranch: payload.worktreeBranch,
     worktreeBaseBranch: payload.worktreeBaseBranch,
@@ -111,6 +131,11 @@ export function createSession(
   })
 
   registerSession({ meta, pty })
+
+  if (sandboxed) {
+    pty.injectOutput('\r\n\x1b[32m[Orbit] Starting Docker sandbox — microVM initializing…\x1b[0m\r\n\r\n')
+  }
+
   return meta
 }
 

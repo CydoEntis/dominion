@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-const EXTRA_THEMES = ['space', 'nebula', 'solar', 'aurora'] as const
+const EXTRA_THEMES = ['space', 'nebula', 'solar', 'aurora', 'mars', 'pulsar'] as const
 
 export function useTheme(appTheme: string): void {
   useEffect(() => {

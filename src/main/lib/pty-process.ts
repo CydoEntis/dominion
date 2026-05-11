@@ -175,6 +175,11 @@ export class PtyProcess {
     return [...this.scrollback]
   }
 
+  injectOutput(data: string): void {
+    this.appendScrollback(data)
+    this.fanOut(data)
+  }
+
   write(data: string): void {
     this.pty.write(data)
   }

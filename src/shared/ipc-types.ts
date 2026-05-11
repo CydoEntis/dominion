@@ -11,6 +11,8 @@ export const CreateSessionPayloadSchema = z.object({
   color: z.string().optional(),
   groupId: z.string().optional(),
   yoloMode: z.boolean().optional(),
+  noSandbox: z.boolean().optional(),
+  useSandbox: z.boolean().optional(),
   worktreePath: z.string().optional(),
   worktreeBranch: z.string().optional(),
   worktreeBaseBranch: z.string().optional(),
@@ -44,6 +46,7 @@ export const SessionMetaSchema = z.object({
   groupId: z.string().optional(),
   taskStatus: TaskStatusSchema.optional(),
   yoloMode: z.boolean().optional(),
+  sandboxed: z.boolean().optional(),
   worktreePath: z.string().optional(),
   worktreeBranch: z.string().optional(),
   worktreeBaseBranch: z.string().optional(),
@@ -112,7 +115,10 @@ export type DetachTabResponse = z.infer<typeof DetachTabResponseSchema>
 export const WindowInitialSessionsPayloadSchema = z.object({
   sessionIds: z.array(z.string().uuid()),
   windowId: z.string(),
-  isMainWindow: z.boolean().optional()
+  isMainWindow: z.boolean().optional(),
+  windowName: z.string().optional(),
+  windowColor: z.string().optional(),
+  totalWindowCount: z.number().optional(),
 })
 export type WindowInitialSessionsPayload = z.infer<typeof WindowInitialSessionsPayloadSchema>
 
@@ -130,6 +136,24 @@ export type WindowInitialNotePreviewPayload = z.infer<typeof WindowInitialNotePr
 
 export const WindowControlActionSchema = z.enum(['minimize', 'maximize', 'close'])
 export type WindowControlAction = z.infer<typeof WindowControlActionSchema>
+
+export type NotePanelType = 'notes' | 'markdown-preview'
+
+export interface DetachNotePanePayload {
+  noteId: string
+  panel: NotePanelType
+}
+
+export interface NotePanePayload {
+  noteId: string
+  panel: NotePanelType
+}
+
+export interface MoveNotePanePayload {
+  noteId: string
+  panel: NotePanelType
+  targetWindowId: string
+}
 
 // ─── Settings ───────────────────────────────────────────────────────────────
 
@@ -175,7 +199,7 @@ export const AppSettingsSchema = z.object({
   sessionGroups: z.array(z.object({ id: z.string(), name: z.string(), color: z.string().optional() })).default([]),
   fontSize: z.number().int().min(8).max(32).default(14),
   fontFamily: z.string().default("'Cascadia Code', 'JetBrains Mono', monospace"),
-  theme: z.enum(['system', 'light', 'dark', 'space', 'nebula', 'solar', 'aurora']).default('dark'),
+  theme: z.enum(['system', 'light', 'dark', 'space', 'nebula', 'solar', 'aurora', 'mars', 'pulsar']).default('space'),
   fileViewerTheme: z.string().default('vitesse-dark'),
   scrollbackLines: z.number().int().min(100).max(100000).default(10000),
   presets: z.array(PresetSchema).default([]),
@@ -188,9 +212,11 @@ export const AppSettingsSchema = z.object({
   notes: z.array(z.object({ id: z.string(), content: z.string().default(''), updatedAt: z.number().default(0) })).default([]),
   noteFolders: z.array(NoteFolderSchema).default([]),
   noteFolderMap: z.record(z.string()).default({}),
+  noteColorMap: z.record(z.string(), z.string()).default({}),
   lastActiveProject: z.string().default(''),
   defaultSessionDir: z.string().default(''),
-  dismissedReleaseVersion: z.string().default('')
+  dismissedReleaseVersion: z.string().default(''),
+  sandboxYoloMode: z.boolean().default(true)
 })
 
 export const NoteSchema = z.object({ id: z.string(), content: z.string().default(''), updatedAt: z.number().default(0) })
@@ -209,6 +235,7 @@ export interface PersistedSession {
   conversationId?: string
   color?: string
   groupId?: string
+  yoloMode?: boolean
   worktreePath?: string
   worktreeBranch?: string
   worktreeBaseBranch?: string
@@ -226,4 +253,5 @@ export interface PersistedLayout {
   tabs: PersistedTab[]
   activeTabIndex: number
   sessions: PersistedSession[]
+  detachedNotePanes?: Array<{ noteId: string; panel: 'notes' | 'markdown-preview' }>
 }

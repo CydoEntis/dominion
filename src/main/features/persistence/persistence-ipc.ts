@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { IPC } from '@shared/ipc-channels'
 import { getPersistedLayout, savePersistedLayout, clearPersistedLayout } from './persistence-store'
 import { getSession } from '../session/session-registry'
+import { getWindowNotePanesList } from '../../window-manager'
 import type { PersistedLayout } from '@shared/ipc-types'
 
 export function registerPersistenceIpc(): void {
@@ -19,6 +20,13 @@ export function registerPersistenceIpc(): void {
         if (convId) session.conversationId = convId
       }
     }
+    const seen = new Set<string>()
+    payload.detachedNotePanes = getWindowNotePanesList().filter(({ noteId, panel }) => {
+      const key = `${noteId}:${panel}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     savePersistedLayout(payload)
     return { ok: true }
   })

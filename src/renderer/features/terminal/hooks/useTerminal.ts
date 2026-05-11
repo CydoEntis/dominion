@@ -178,6 +178,30 @@ const AURORA_TERMINAL_THEME = {
   white: '#d0fff0', brightWhite: '#f0fff8',
 }
 
+const MARS_TERMINAL_THEME = {
+  background: '#100804', foreground: '#ffe8d0', cursor: '#ff6929',
+  black: '#1a0c06', brightBlack: '#3d1c0e',
+  red: '#ff4a2a', brightRed: '#ff7055',
+  green: '#a8d080', brightGreen: '#c8f080',
+  yellow: '#ffb040', brightYellow: '#ffd060',
+  blue: '#80b8ff', brightBlue: '#a0d0ff',
+  magenta: '#ff80c0', brightMagenta: '#ffaad8',
+  cyan: '#60d8c8', brightCyan: '#80f0e0',
+  white: '#ffe8d0', brightWhite: '#ffffff',
+}
+
+const PULSAR_TERMINAL_THEME = {
+  background: '#04080e', foreground: '#c8f0ff', cursor: '#00d7ff',
+  black: '#060e1c', brightBlack: '#0e1e3a',
+  red: '#ff6b8a', brightRed: '#ff9aad',
+  green: '#60ffb8', brightGreen: '#90ffd0',
+  yellow: '#ffe066', brightYellow: '#fff090',
+  blue: '#00d7ff', brightBlue: '#60e8ff',
+  magenta: '#c084ff', brightMagenta: '#d8b0ff',
+  cyan: '#00d7ff', brightCyan: '#60e8ff',
+  white: '#c8f0ff', brightWhite: '#e8f8ff',
+}
+
 const NAMED_THEMES: Record<string, typeof DARK_TERMINAL_THEME> = {
   dracula: DRACULA_TERMINAL_THEME,
   'one-dark': ONE_DARK_TERMINAL_THEME,
@@ -199,6 +223,8 @@ function resolveTerminalTheme(appTheme: string): typeof DARK_TERMINAL_THEME {
   if (appTheme === 'nebula') return NEBULA_TERMINAL_THEME
   if (appTheme === 'solar')  return SOLAR_TERMINAL_THEME
   if (appTheme === 'aurora') return AURORA_TERMINAL_THEME
+  if (appTheme === 'mars')   return MARS_TERMINAL_THEME
+  if (appTheme === 'pulsar') return PULSAR_TERMINAL_THEME
   const isDark = appTheme === 'dark' || (appTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   return isDark ? DARK_TERMINAL_THEME : LIGHT_TERMINAL_THEME
 }
@@ -306,15 +332,24 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     // browser has performed layout, so the container reports its true pixel dimensions.
     let disposed = false
 
-    // Fallback fit only for fresh terminals — pool hits already have content and
-    // don't need a safety net to ensure at least one fit fires.
+    // Fallback fit only for fresh terminals. Pool hits already have rendered content
+    // and triggering extra fits at wrong widths causes scrollback duplication in
+    // cursor-positioned TUI apps (Claude Code welcome screen, etc.).
+    // The ResizeObserver handles any container resize that happens after panel layout settles.
     const fallbackFitTimer = existing
       ? undefined
       : setTimeout(() => { if (!disposed) { try { fitAddon.fit() } catch {} } }, 200)
 
     requestAnimationFrame(() => {
       if (disposed) return
+      const prevCols = terminal.cols
       try { fitAddon.fit() } catch {}
+      // If re-parenting changed the terminal width, cursor-positioned TUI apps (Claude Code
+      // welcome screen, etc.) would leave stale content in scrollback at the old width.
+      // Erase saved lines before the app redraws so scrollback stays clean.
+      if (existing && terminal.cols !== prevCols) {
+        terminal.write('\x1b[3J')
+      }
       terminal.focus()
 
       const { cols, rows } = terminal

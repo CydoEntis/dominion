@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, LayoutPanelLeft, SplitSquareHorizontal, Trash2, FileText, GitBranch, Keyboard, GripHorizontal } from 'lucide-react'
+import { X, LayoutPanelLeft, SplitSquareHorizontal, Trash2, FileText, GitBranch, Keyboard, GripHorizontal, Shield, AppWindow, MousePointer2, Palette } from 'lucide-react'
 
 declare const __APP_VERSION__: string
 
@@ -17,6 +17,30 @@ interface ChangeEntry {
 }
 
 const CHANGES: ChangeEntry[] = [
+  {
+    icon: <Shield size={15} />,
+    title: 'Sandbox mode for Yolo sessions',
+    description:
+      'Yolo-mode sessions now run inside a Docker container via sbx, isolating file system and shell access from your host machine. Requires Docker and sbx installed.',
+  },
+  {
+    icon: <AppWindow size={15} />,
+    title: 'Window identity in status bar',
+    description:
+      'When multiple windows are open, your window name now appears centered in the status bar. Click it to rename or recolor the window.',
+  },
+  {
+    icon: <Palette size={15} />,
+    title: 'Two new themes',
+    description:
+      'Mars brings a dark rust and orange-red palette. Pulsar brings near-black navy with electric cyan accents. Both themes include matching terminal colors.',
+  },
+  {
+    icon: <MousePointer2 size={15} />,
+    title: 'Context menu polish',
+    description:
+      'Notes context menus now have icons matching the session menus. The "Move to Window" submenu shows colored squares for each window in all context menus.',
+  },
   {
     icon: <LayoutPanelLeft size={15} />,
     title: 'New layout engine',
@@ -81,7 +105,7 @@ export function ReleaseNotesModal({ open, onClose, onDismiss }: Props): JSX.Elem
           <div className="flex items-center gap-2.5">
             <span className="text-sm font-semibold text-zinc-200">What's new in v{__APP_VERSION__}</span>
             <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-brand-accent/20 text-brand-accent border border-brand-accent/30">
-              Major update
+              New features
             </span>
           </div>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 transition-colors">

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
-import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves, HelpCircle } from 'lucide-react'
+import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves, HelpCircle, Globe, Zap } from 'lucide-react'
 import { marked } from 'marked'
 import { createPortal } from 'react-dom'
 import { useTheme } from './hooks/useTheme'
@@ -27,6 +27,7 @@ import { useStore } from './store/root.store'
 import { findNotesLeafId } from './features/layout/layout-tree'
 import { LayoutDndProvider } from './features/layout/dnd/LayoutDndContext'
 import { TERMINAL_THEME_LIST } from './features/terminal/hooks/useTerminal'
+import { setWindowMeta } from './features/window/window.service'
 import { cn } from './lib/utils'
 
 declare const __APP_VERSION__: string
@@ -46,7 +47,95 @@ const THEMES = [
   { id: 'nebula' as const, label: 'Nebula', icon: Star      },
   { id: 'solar'  as const, label: 'Solar',  icon: Flame     },
   { id: 'aurora' as const, label: 'Aurora', icon: Waves     },
+  { id: 'mars'   as const, label: 'Mars',   icon: Globe     },
+  { id: 'pulsar' as const, label: 'Pulsar', icon: Zap       },
 ]
+
+const WINDOW_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#ef4444', '#06b6d4']
+
+function StatusWindowBadge(): JSX.Element | null {
+  const windowName = useStore((s) => s.windowName)
+  const windowColor = useStore((s) => s.windowColor)
+  const windowId = useStore((s) => s.windowId)
+  const totalWindowCount = useStore((s) => s.totalWindowCount)
+  const setWindowMetaStore = useStore((s) => s.setWindowMeta)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editColor, setEditColor] = useState('')
+  const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 })
+  const nameRef = useRef<HTMLButtonElement>(null)
+
+  if (windowId == null || totalWindowCount <= 1) return null
+
+  const handleEditOpen = (): void => {
+    const rect = nameRef.current?.getBoundingClientRect()
+    if (rect) setPopoverPos({ x: rect.left + rect.width / 2, y: rect.top })
+    setEditName(windowName)
+    setEditColor(windowColor)
+    setEditOpen(true)
+  }
+
+  const handleSave = (): void => {
+    const name = editName.trim() || windowName
+    setWindowMetaStore(name, editColor)
+    void setWindowMeta(name, editColor)
+    setEditOpen(false)
+  }
+
+  return (
+    <>
+      <button
+        ref={nameRef}
+        onClick={handleEditOpen}
+        className="flex items-center gap-1.5 h-7 px-2 rounded text-[11px] font-semibold hover:opacity-70 transition-opacity"
+        style={{ color: windowColor }}
+        title="Edit window name"
+      >
+        {windowName}
+      </button>
+      {editOpen && createPortal(
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setEditOpen(false)} />
+          <div
+            className="fixed z-[9999] bg-brand-surface border border-brand-panel/60 rounded-lg shadow-2xl p-3 w-56"
+            style={{ left: Math.max(4, popoverPos.x - 112), bottom: window.innerHeight - popoverPos.y + 8 }}
+          >
+            <input
+              autoFocus
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditOpen(false) }}
+              className="w-full bg-brand-panel border border-brand-panel/60 rounded px-2 py-1.5 text-xs text-zinc-200 outline-none focus:border-brand-accent mb-2"
+              placeholder="Window name"
+            />
+            <div className="flex flex-wrap gap-1.5 mb-2.5">
+              {WINDOW_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setEditColor(c)}
+                  className="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: c,
+                    outline: editColor === c ? `2px solid ${c}` : 'none',
+                    outlineOffset: '2px',
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              onClick={handleSave}
+              className="w-full py-1 text-xs font-semibold rounded transition-opacity hover:opacity-80"
+              style={{ backgroundColor: editColor, color: '#fff' }}
+            >
+              Save
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
+  )
+}
 
 function StatusThemeToggle(): JSX.Element {
   const theme = useStore((s) => s.settings.theme)
@@ -166,6 +255,8 @@ export function App(): JSX.Element {
   const sessions = useStore((s) => s.sessions)
   const appTheme = useStore((s) => s.settings.theme)
   const storeActiveSessionId = useStore((s) => s.activeSessionId)
+  const windowHighlighted = useStore((s) => s.windowHighlighted)
+  const windowColor = useStore((s) => s.windowColor)
 
   const settingsLoaded = useStore((s) => s.settingsLoaded)
   const dismissedReleaseVersion = useStore((s) => s.settings.dismissedReleaseVersion)
@@ -356,8 +447,8 @@ export function App(): JSX.Element {
       </LayoutDndProvider>
 
       {/* Status bar */}
-      <div className="flex items-center justify-between h-10 px-3 bg-brand-surface border-t border-brand-panel flex-shrink-0">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center h-10 px-3 bg-brand-surface border-t border-brand-panel flex-shrink-0">
+        <div className="flex-1 flex items-center gap-1">
           <span className="text-[11px] text-zinc-600 font-medium select-none">v{__APP_VERSION__}</span>
           <button
             onClick={() => setReleaseNotesOpen(true)}
@@ -367,7 +458,8 @@ export function App(): JSX.Element {
             <HelpCircle size={13} />
           </button>
         </div>
-        <div className="flex items-center gap-0.5">
+        <StatusWindowBadge />
+        <div className="flex-1 flex items-center gap-0.5 justify-end">
           {workspaceProject !== null && (
             <button
               onClick={() => { if (gitRoot) setSidePanel(p => p === 'git' ? null : 'git') }}
@@ -436,6 +528,12 @@ export function App(): JSX.Element {
         }}
       />
       <Toaster position="bottom-right" theme="dark" richColors />
+      {windowHighlighted && (
+        <div
+          className="fixed inset-0 pointer-events-none z-[9999] animate-pulse"
+          style={{ boxShadow: `inset 0 0 0 3px ${windowColor}` }}
+        />
+      )}
     </div>
   )
 }

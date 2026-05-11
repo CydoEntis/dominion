@@ -7,8 +7,8 @@ import { patchSession, killSession } from '../../session/session.service'
 import { EditSessionModal } from '../../session/components/EditSessionModal'
 import { EditGroupModal } from '../../session/components/EditGroupModal'
 import { removeWorktree } from '../../fs/fs.service'
-import { detachTab, reattachTab } from '../../window/window.service'
-import { findTabForSession, collectSessionIds, findNotesLeafIdForNote, findNotesLeafId, makeNotesLeaf } from '../../layout/layout-tree'
+import { detachTab, reattachTab, moveToWindow } from '../../window/window.service'
+import { findTabForSession, collectSessionIds, findNotesLeafId, makeNotesLeaf } from '../../layout/layout-tree'
 import { useWorktreeStats } from '../hooks/useWorktreeStats'
 import { useConfirmClose } from '../../session/hooks/useConfirmClose'
 import { FileTree } from '../../notes/components/FileTree'
@@ -31,6 +31,7 @@ interface Props {
 
 export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSessionId, onSelectSession }: Props): JSX.Element {
   const sessions = useStore((s) => s.sessions)
+  const tabOrder = useStore((s) => s.tabOrder)
   const isRestoringLayout = useStore((s) => s.isRestoringLayout)
   const isMainWindow = useStore((s) => s.isMainWindow)
   const windowId = useStore((s) => s.windowId)
@@ -42,7 +43,6 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const focusedSessionId = useStore((s) => s.focusedSessionId)
   const setFocusedSession = useStore((s) => s.setFocusedSession)
   const addTab = useStore((s) => s.addTab)
-  const switchPaneSession = useStore((s) => s.switchPaneSession)
   const insertLayoutAtRight = useStore((s) => s.insertLayoutAtRight)
   const sessionGroups = useStore((s) => s.settings.sessionGroups)
   const updateSettings = useStore((s) => s.updateSettings)
@@ -71,16 +71,26 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const isNoWorkspace = activeProject === null
   const normalizedActive = activeProject ? normalizePath(activeProject) : undefined
 
+  const currentWindowSessionIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const tabId of tabOrder) {
+      const tree = paneTree[tabId]
+      if (tree) collectSessionIds(tree).forEach((id) => ids.add(id))
+    }
+    return ids
+  }, [tabOrder, paneTree])
+
   const projectSessions: SessionMeta[] = useMemo(() =>
     Object.values(sessions)
       .filter((m) => {
+        if (!currentWindowSessionIds.has(m.sessionId)) return false
         if (isNoWorkspace) return !m.worktreePath
         if (!normalizedActive) return false
         const root = normalizePath(m.projectRoot ?? m.cwd)
         return (root === normalizedActive || root.startsWith(normalizedActive + '/')) && !!m.worktreePath
       })
       .sort((a, b) => b.createdAt - a.createdAt),
-    [sessions, isNoWorkspace, normalizedActive]
+    [sessions, currentWindowSessionIds, isNoWorkspace, normalizedActive]
   )
 
   const worktreeStats = useWorktreeStats(isNoWorkspace ? [] : projectSessions)
@@ -135,7 +145,9 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
 
   const handleSidebarNoteActivate = useCallback((noteId: string): void => {
     const s = useStore.getState()
-    const tabId = (activeSessionId && s.paneTree[activeSessionId]) ? activeSessionId : '__root__'
+    // activeSessionId may be a secondary session inside a split pane tab.
+    // findTabForSession traverses all pane trees to find the correct tab key.
+    const tabId = (activeSessionId ? findTabForSession(s.paneTree, activeSessionId) : null) ?? '__root__'
     const tree = s.paneTree[tabId]
     if (!tree) return
 
@@ -148,7 +160,9 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
       return
     }
 
-    const existingLeafId = findNotesLeafIdForNote(tree, noteId)
+    // Use findNotesLeafId (any notes pane) to avoid inserting a duplicate when
+    // a notes pane already exists but was opened without a specific noteId.
+    const existingLeafId = findNotesLeafId(tree)
     if (existingLeafId) {
       document.dispatchEvent(new CustomEvent('acc:activate-note', { detail: { noteId, tabId, leafId: existingLeafId } }))
       return
@@ -239,7 +253,8 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
 
   const handleDetach = useCallback((sessionId: string): void => {
     if (!windowId) return
-    detachPane(sessionId, sessionId)
+    const tabId = findTabForSession(useStore.getState().paneTree, sessionId) ?? sessionId
+    detachPane(tabId, sessionId)
     void detachTab(sessionId, windowId)
     if (activeSessionId === sessionId) onSelectSession(null)
   }, [detachPane, windowId, activeSessionId, onSelectSession])
@@ -247,6 +262,12 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const handleReattach = useCallback((sessionId: string): void => {
     void reattachTab(sessionId, windowId ?? undefined)
   }, [windowId])
+
+  const handleMoveToWindow = useCallback((sessionId: string, targetWindowId: string): void => {
+    const tabId = findTabForSession(useStore.getState().paneTree, sessionId) ?? sessionId
+    detachPane(tabId, sessionId)
+    void moveToWindow(sessionId, targetWindowId)
+  }, [detachPane])
 
   const handleSplitHere = useCallback((sessionId: string): void => {
     if (!activeSessionId) return
@@ -269,12 +290,11 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
     if (tabId) {
       onSelectSession(tabId)
       setFocusedSession(sessionId)
-    } else if (activeSessionId && activeSessionId !== '__root__') {
-      switchPaneSession(activeSessionId, sessionId)
     } else {
+      // Session exists but has no pane (closed pane, not killed) — re-open it in its own tab.
       addTab(sessionId)
     }
-  }, [paneTree, onSelectSession, setFocusedSession, addTab, switchPaneSession, activeSessionId])
+  }, [paneTree, onSelectSession, setFocusedSession, addTab])
 
   const renderSessionRow = (meta: SessionMeta): JSX.Element => (
     <SessionRow
@@ -559,6 +579,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
           onReattach={handleReattach}
           onCloseAllSplits={handleCloseAllSplits}
           onKill={handleCloseSession}
+          onMoveToWindow={handleMoveToWindow}
           activeSessionId={activeSessionId}
           paneTree={paneTree}
           isMainWindow={isMainWindow}
