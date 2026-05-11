@@ -25,16 +25,33 @@ export const IPC = {
 
   WINDOW_REATTACH_TAB: 'window:reattach-tab',
   WINDOW_DETACH_NOTE_PREVIEW: 'window:detach-note-preview',
+  WINDOW_MOVE_SESSION_ALONGSIDE: 'window:move-session-alongside',
+  WINDOW_LIST: 'window:list',
+  WINDOW_MOVE_TO_WINDOW: 'window:move-to-window',
+  WINDOW_HIGHLIGHT: 'window:highlight',
+  WINDOW_COUNT_CHANGED: 'window:count-changed',
+  WINDOW_SET_META: 'window:set-meta',
+  WINDOW_META_UPDATED: 'window:meta-updated',
+
+  // Drag: renderer → main (invoke)
+  DRAG_SESSION_START: 'drag:session-start',
+  DRAG_SESSION_END: 'drag:session-end',
 
   // Window: main → renderer (push)
   WINDOW_INITIAL_SESSIONS: 'window:initial-sessions',
   WINDOW_INITIAL_NOTE_PREVIEW: 'window:initial-note-preview',
   WINDOW_TAB_REATTACHED: 'window:tab-reattached',
+  WINDOW_ADD_SESSION: 'window:add-session',
+  WINDOW_SESSION_REMOVED: 'window:session-removed',
+  DRAG_HOVER_ENTER: 'drag:hover-enter',
+  DRAG_HOVER_LEAVE: 'drag:hover-leave',
   WINDOW_MAXIMIZED_CHANGE: 'window:maximized-change',
 
   // Settings: renderer → main (invoke)
   SETTINGS_GET: 'settings:get',
   SETTINGS_SET: 'settings:set',
+  // Settings: main → renderer (push)
+  SETTINGS_UPDATED: 'settings:updated',
 
   // Dialog: renderer → main (invoke)
   DIALOG_PICK_FOLDER: 'dialog:pick-folder',
@@ -80,6 +97,17 @@ export const IPC = {
   FS_GIT_WORKTREE_CREATE: 'fs:git-worktree-create',
   FS_GIT_WORKTREE_REMOVE: 'fs:git-worktree-remove',
   FS_GIT_WORKTREE_STATS: 'fs:git-worktree-stats',
+
+  // Note pane: renderer → main (invoke)
+  WINDOW_DETACH_NOTE_PANE: 'window:detach-note-pane',
+  WINDOW_REATTACH_NOTE_PANE: 'window:reattach-note-pane',
+  WINDOW_MOVE_NOTE_PANE: 'window:move-note-pane',
+
+  // Note pane: main → renderer (push)
+  WINDOW_INITIAL_NOTE_PANE: 'window:initial-note-pane',
+  WINDOW_NOTE_PANE_REATTACHED: 'window:note-pane-reattached',
+  WINDOW_ADD_NOTE_PANE: 'window:add-note-pane',
+  WINDOW_NOTE_PANE_REMOVED: 'window:note-pane-removed',
 
   // Notes: renderer → main (invoke)
   NOTES_LOAD: 'notes:load',

@@ -17,6 +17,7 @@ export interface SessionSlice {
   tabOrder: string[]
   activeSessionId: string | null
   focusedSessionId: string | null
+  focusedLeafId: string | null
   paneTree: Record<string, LayoutNode>
   pendingRestore: PersistedLayout | null
   isRestoringLayout: boolean
@@ -24,6 +25,7 @@ export interface SessionSlice {
   upsertSession: (meta: SessionMeta) => void
   setActiveSession: (sessionId: string | null) => void
   setFocusedSession: (sessionId: string | null) => void
+  setFocusedLeaf: (leafId: string | null) => void
   reorderTabs: (newOrder: string[]) => void
   markSessionExited: (sessionId: string, exitCode: number) => void
   addTab: (sessionId: string) => void
@@ -48,9 +50,15 @@ export interface SessionSlice {
   moveLayout: (tabId: string, sourceLeafId: string, targetLeafId: string, direction: 'horizontal' | 'vertical', side: 'before' | 'after') => void
   insertSessionIntoLayout: (targetTabId: string, targetLeafId: string, sessionId: string, direction: 'horizontal' | 'vertical', side: 'before' | 'after') => void
   replaceLayoutLeaf: (tabId: string, leafId: string, replacement: LayoutNode) => void
+  updateLeafNoteId: (tabId: string, leafId: string, noteId: string) => void
   insertLayoutAtRight: (tabId: string, newLeaf: LayoutLeaf) => void
   insertSessionAtRight: (targetTabId: string, sessionId: string) => void
   switchPaneSession: (tabId: string, toSessionId: string) => void
+  addNotePaneToLayout: (noteId: string, panel: 'notes' | 'markdown-preview') => void
+  removeNotePaneFromLayout: (noteId: string, panel: 'notes' | 'markdown-preview') => void
+  detachedNoteIds: string[]
+  addDetachedNoteId: (noteId: string) => void
+  removeDetachedNoteId: (noteId: string) => void
 }
 
 export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', never]], [], SessionSlice> = (set) => ({
@@ -58,9 +66,11 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
   tabOrder: ['__root__'],
   activeSessionId: null,
   focusedSessionId: null,
+  focusedLeafId: null,
   paneTree: { '__root__': makeHomeLeaf() as LayoutNode },
   pendingRestore: null,
   isRestoringLayout: false,
+  detachedNoteIds: [],
 
   upsertSession: (meta) =>
     set((state) => {
@@ -158,12 +168,19 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
   setFocusedSession: (sessionId) =>
     set((state) => {
       state.focusedSessionId = sessionId
+      if (sessionId) state.focusedLeafId = null
+    }),
+
+  setFocusedLeaf: (leafId) =>
+    set((state) => {
+      state.focusedLeafId = leafId
+      if (leafId) state.focusedSessionId = null
     }),
 
   setActiveSession: (sessionId) =>
     set((state) => {
       state.activeSessionId = sessionId
-      if (sessionId) state.focusedSessionId = sessionId
+      if (sessionId) { state.focusedSessionId = sessionId; state.focusedLeafId = null }
     }),
 
   reorderTabs: (newOrder) =>
@@ -309,6 +326,19 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       state.paneTree[tabId] = replaceNode(tree, leafId, replacement)
     }),
 
+  updateLeafNoteId: (tabId, leafId, noteId) =>
+    set((state) => {
+      const mutate = (node: LayoutNode): void => {
+        if (node.type === 'leaf' && node.id === leafId && (node.panel === 'notes' || node.panel === 'markdown-preview')) {
+          node.noteId = noteId
+        } else if (node.type === 'split') {
+          node.children.forEach(mutate)
+        }
+      }
+      const tree = state.paneTree[tabId]
+      if (tree) mutate(tree)
+    }),
+
   insertLayout: (tabId, targetLeafId, direction, newLeaf, side) =>
     set((state) => {
       const tree = state.paneTree[tabId]
@@ -404,5 +434,52 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
       state.paneTree[tabId] = replaceNode(tree, leafId, makeTerminalLeaf(toSessionId))
       state.activeSessionId = tabId
       state.focusedSessionId = toSessionId
+    }),
+
+  addNotePaneToLayout: (noteId, panel) =>
+    set((state) => {
+      const root = state.paneTree['__root__']
+      if (!root) return
+      const alreadyExists = (node: LayoutNode): boolean => {
+        if (node.type === 'leaf') return node.panel === panel && node.noteId === noteId
+        return node.children.some(alreadyExists)
+      }
+      if (alreadyExists(root)) return
+      const leaf = panel === 'notes' ? makeNotesLeaf(noteId) : makeMarkdownPreviewLeaf(noteId)
+      if (root.type === 'leaf' && root.panel === 'home') {
+        state.paneTree['__root__'] = leaf
+      } else {
+        state.paneTree['__root__'] = insertAtRight(root, leaf)
+      }
+      state.focusedLeafId = leaf.id
+    }),
+
+  removeNotePaneFromLayout: (noteId, panel) =>
+    set((state) => {
+      for (const tabId of Object.keys(state.paneTree)) {
+        const tree = state.paneTree[tabId]
+        if (!tree) continue
+        let leafId: string | null = null
+        const findLeaf = (node: LayoutNode): void => {
+          if (node.type === 'leaf' && node.panel === panel && node.noteId === noteId) leafId = node.id
+          else if (node.type === 'split') node.children.forEach(findLeaf)
+        }
+        findLeaf(tree)
+        if (!leafId) continue
+        const newTree = removeNode(tree, leafId)
+        if (newTree) { state.paneTree[tabId] = newTree }
+        else if (tabId === '__root__') { state.paneTree[tabId] = makeHomeLeaf() }
+        return
+      }
+    }),
+
+  addDetachedNoteId: (noteId) =>
+    set((state) => {
+      if (!state.detachedNoteIds.includes(noteId)) state.detachedNoteIds.push(noteId)
+    }),
+
+  removeDetachedNoteId: (noteId) =>
+    set((state) => {
+      state.detachedNoteIds = state.detachedNoteIds.filter((id) => id !== noteId)
     }),
 })

@@ -1,6 +1,6 @@
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 app.setName('Orbit')
-import { createWindow } from './window-manager'
+import { createWindow, focusMainWindow } from './window-manager'
 import { registerSessionIpc } from './features/session/session-ipc'
 import { registerWindowIpc } from './features/window/window-ipc'
 import { registerSettingsIpc } from './features/settings/settings-ipc'
@@ -8,6 +8,15 @@ import { registerPersistenceIpc } from './features/persistence/persistence-ipc'
 import { registerFsIpc } from './features/fs/fs-ipc'
 import { registerNotesIpc } from './features/notes/notes-ipc'
 import { initUpdater } from './features/updater/updater'
+
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+}
+
+app.on('second-instance', () => {
+  focusMainWindow()
+})
 
 function registerAllIpc(): void {
   registerSessionIpc()
@@ -24,7 +33,6 @@ app.whenReady().then(() => {
   initUpdater()
 
   app.on('activate', () => {
-    const { BrowserWindow } = require('electron')
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
     }

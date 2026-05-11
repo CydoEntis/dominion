@@ -1,6 +1,7 @@
-﻿import { Minus, Square, X } from 'lucide-react'
+import { Minus, Square, X } from 'lucide-react'
 import { sendWindowControl } from '../features/window/window.service'
 import { useWindowMaximized } from '../features/window/hooks/useWindowMaximized'
+import { useStore } from '../store/root.store'
 import { APP_NAME } from '@shared/constants'
 import logoUrl from '../assets/logo.png'
 
@@ -11,11 +12,21 @@ interface Props {
 
 export function TitleBar({ title, subtitle }: Props): JSX.Element {
   const isMaximized = useWindowMaximized()
+  const windowColor = useStore((s) => s.windowColor)
+  const windowId = useStore((s) => s.windowId)
+  const totalWindowCount = useStore((s) => s.totalWindowCount)
+
+  const showIdentity = windowId != null && totalWindowCount > 1
 
   return (
     <div
       className="flex items-center h-[52px] bg-brand-bg border-b border-brand-panel flex-shrink-0 select-none"
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      style={{
+        WebkitAppRegion: 'drag',
+        backgroundImage: showIdentity
+          ? `linear-gradient(to right, ${windowColor}50 0%, transparent 60%)`
+          : undefined,
+      } as React.CSSProperties}
     >
       {/* Logo + name */}
       <div className="flex items-center gap-2 px-3 flex-shrink-0 w-44">
@@ -55,6 +66,7 @@ export function TitleBar({ title, subtitle }: Props): JSX.Element {
           <X size={11} />
         </button>
       </div>
+
     </div>
   )
 }
