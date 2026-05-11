@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useStore } from '../../../store/root.store'
 import { createSession, patchSession, writeToSession } from '../session.service'
-import { detachTab, detachNotePane } from '../../window/window.service'
 import { clearLayout } from '../persistence.service'
 import { collectSessionIds, migrateLayoutNode } from '../../layout/layout-tree'
 import type { PersistedLayout } from '@shared/ipc-types'
@@ -33,12 +32,7 @@ export function useLayoutRestore(): void {
   const setIsRestoringLayout = useStore((s) => s.setIsRestoringLayout)
   const upsertSession = useStore((s) => s.upsertSession)
   const restoreTab = useStore((s) => s.restoreTab)
-  const windowId = useStore((s) => s.windowId)
   const resumeOnStartup = useStore((s) => s.settings.resumeOnStartup)
-  const addDetachedNoteId = useStore((s) => s.addDetachedNoteId)
-
-  const windowIdRef = useRef(windowId)
-  useEffect(() => { windowIdRef.current = windowId }, [windowId])
 
   const handleRestore = async (layout: PersistedLayout): Promise<void> => {
     setPendingRestore(null)
@@ -87,23 +81,10 @@ export function useLayoutRestore(): void {
       const newTabId = firstId ? idMap.get(firstId) : null
       if (!newTabId) continue
 
-      if (tab.detached) {
-        await detachTab(newTabId, windowIdRef.current ?? '')
-      } else {
-        const remapped = remapLayoutTree(tree, idMap)
-        const tabSessionIds = new Set(collectSessionIds(remapped))
-        const tabMetas = createdMetas.filter((m) => tabSessionIds.has(m.sessionId))
-        restoreTab(newTabId, remapped, tabMetas)
-      }
-    }
-
-    const seenNotePanes = new Set<string>()
-    for (const { noteId, panel } of layout.detachedNotePanes ?? []) {
-      const key = `${noteId}:${panel}`
-      if (seenNotePanes.has(key)) continue
-      seenNotePanes.add(key)
-      await detachNotePane(noteId, panel)
-      addDetachedNoteId(noteId)
+      const remapped = remapLayoutTree(tree, idMap)
+      const tabSessionIds = new Set(collectSessionIds(remapped))
+      const tabMetas = createdMetas.filter((m) => tabSessionIds.has(m.sessionId))
+      restoreTab(newTabId, remapped, tabMetas)
     }
 
     setIsRestoringLayout(false)
