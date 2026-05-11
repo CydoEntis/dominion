@@ -17,8 +17,9 @@ export function initUpdater(): void {
   ipcMain.handle(IPC.UPDATE_GET_PENDING, () => pendingUpdate)
   ipcMain.handle(IPC.UPDATE_INSTALL, () => {
     killAllPtys()
-    // Force-destroy all windows so nothing blocks app exit on Linux
-    const { BrowserWindow } = require('electron')
+    const { BrowserWindow, app } = require('electron')
+    // Remove window-all-closed listener so destroying windows doesn't race with quitAndInstall()
+    app.removeAllListeners('window-all-closed')
     for (const win of BrowserWindow.getAllWindows()) {
       win.destroy()
     }
