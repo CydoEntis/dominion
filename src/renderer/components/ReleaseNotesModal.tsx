@@ -21,7 +21,7 @@ const CHANGES: ChangeEntry[] = [
     icon: <RefreshCw size={15} />,
     title: 'Linux update and icon fixes',
     description:
-      'Fixed "not responding" hang when installing updates on Linux by cleanly shutting down terminal sessions first. Fixed taskbar icon not showing the Orbit logo on Linux.',
+      'Fixed "not responding" hang when installing updates on Linux — terminal sessions and windows are now forcibly closed before the installer runs. Improved dock icon registration for Linux desktop environments.',
   },
   {
     icon: <RefreshCw size={15} />,

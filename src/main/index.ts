@@ -1,5 +1,9 @@
 import { app, BrowserWindow } from 'electron'
 app.setName('Orbit')
+// Tells GNOME which .desktop file belongs to this app so the dock shows the right icon.
+// The .deb install places orbit.desktop in /usr/share/applications/.
+// AppImage users need AppImageLauncher for full desktop integration.
+if (process.platform === 'linux') (app as unknown as { setDesktopName: (n: string) => void }).setDesktopName('orbit.desktop')
 import { createWindow, focusMainWindow } from './window-manager'
 import { registerSessionIpc } from './features/session/session-ipc'
 import { registerWindowIpc } from './features/window/window-ipc'
