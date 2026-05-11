@@ -13,6 +13,11 @@ function broadcast(channel: string, payload?: unknown): void {
 let pendingUpdate: { version: string } | null = null
 
 export function initUpdater(): void {
+  ipcMain.handle(IPC.UPDATE_GET_PENDING, () => pendingUpdate)
+  ipcMain.handle(IPC.UPDATE_INSTALL, () => {
+    autoUpdater.quitAndInstall(true, true)
+  })
+
   if (!require('electron').app.isPackaged) return
 
   autoUpdater.autoDownload = true
@@ -25,14 +30,6 @@ export function initUpdater(): void {
   autoUpdater.on('update-downloaded', (info) => {
     pendingUpdate = { version: info.version }
     broadcast(IPC.UPDATE_DOWNLOADED, pendingUpdate)
-  })
-
-  ipcMain.handle(IPC.UPDATE_GET_PENDING, () => pendingUpdate)
-
-  ipcMain.handle(IPC.UPDATE_INSTALL, () => {
-    // isSilent=true: skip NSIS confirmation prompt
-    // isForceRunAfter=true: relaunch after install even if launched silently
-    autoUpdater.quitAndInstall(true, true)
   })
 
   autoUpdater.checkForUpdates().catch(() => {})

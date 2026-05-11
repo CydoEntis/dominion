@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="Orbit" width="120" />
+  <img src="logo-2.png" alt="Orbit" width="120" />
 </p>
 
 <h1 align="center">Orbit</h1>
@@ -17,15 +17,9 @@
 
 ---
 
-<p align="center">
-  <img src="orbit.png" alt="Orbit screenshot" width="100%" />
-</p>
-
----
-
 ## What is Orbit?
 
-Orbit is a desktop terminal manager designed for running multiple AI coding agents — Claude, Codex, Gemini, or any CLI tool — simultaneously in a single window. Instead of juggling a dozen terminal windows, you get one organized workspace with sessions, groups, tabs, a built-in file viewer, and a markdown notepad.
+Orbit is a desktop terminal manager designed for running multiple AI coding agents — Claude, Codex, Gemini, or any CLI tool — simultaneously in a single workspace. Instead of juggling a dozen terminal windows, you get one organized environment with sessions, groups, tabs, splits, a built-in file viewer, a markdown notepad, and full multi-window support.
 
 ---
 
@@ -40,7 +34,13 @@ Run as many agent sessions as you need side by side. Each session is a full term
 - **Groups** — organize sessions into named, color-coded groups in the sidebar
 - **Rename on double-click** — double-click any session in the sidebar to rename it and change its color
 - **Presets** — save your most-used agent configurations (shell, working directory, agent command) and launch them in one click
-- **Detachable windows** — pop a session out into its own window; closing it auto-reattaches to the main window
+- **Persistent layout** — tabs, splits, and session state are restored exactly as you left them on next launch
+
+### Multi-Window
+Pop sessions or note panes out into their own windows. Drag sessions between windows to reorganize your workspace. Each window has its own identity — name it and assign a color so you always know which is which. Closing a detached window reattaches its sessions back to the main window automatically. Note panes remember which window they live in across restarts.
+
+### Docker Sandbox Mode
+Run sessions in full Docker isolation via `sbx`. Enable sandbox mode per-session to contain agent file system access inside a container — useful for untrusted or experimental agent runs. Compatible with YOLO mode (`--dangerously-skip-permissions`).
 
 ### Agent Support
 Launch sessions with any agent command directly:
@@ -50,23 +50,37 @@ Launch sessions with any agent command directly:
 - Plain shell — no agent, just a terminal
 
 ### Built-in File Viewer
-Open any project directory from the sidebar. Browse the file tree, view files with full syntax highlighting (100+ languages via Shiki), preview Markdown, and inspect git diffs — all without leaving Orbit.
+Open any project directory from the sidebar. Browse the file tree, view files with full syntax highlighting (100+ languages via Shiki), preview Markdown in a dedicated pane, and inspect git diffs — all without leaving Orbit. Markdown preview panes can be split or detached to their own window.
 
 ### Notes Panel
-A lightweight markdown notepad accessible from the sidebar. Each note is saved as an individual `.md` file in a configurable directory — point it at iCloud, Dropbox, or OneDrive for automatic sync across machines.
+A lightweight markdown notepad accessible from the sidebar. Each note is saved as an individual `.md` file in a configurable directory — point it at iCloud, Dropbox, or OneDrive for automatic sync across machines. Notes can be dragged into the pane layout, moved to secondary windows, and their location is restored on next launch.
 
 ### Command Palette
 Hit `Ctrl+P` to open the command palette. Search and jump to any session, open projects, or trigger actions without touching the mouse.
+
+### Themes
+Six built-in themes with matching terminal color schemes:
+
+| Theme | Description |
+|-------|-------------|
+| Dark | Default dark UI |
+| Light | Clean light UI |
+| Space | Deep space blacks and blues |
+| Nebula | Purple and violet nebula tones |
+| Solar | Warm amber and gold |
+| Aurora | Cool green and teal |
+| Mars | Rust red and orange |
+| Pulsar | High-contrast neon |
 
 ### Customizable
 - **Shell picker** — choose which shell to use (cmd, PowerShell, bash, zsh, or any custom path)
 - **Notes directory** — configure where your notes live on disk
 - **Font size & family** — adjust terminal font from settings
 - **Hotkeys** — remap every keyboard shortcut
-- **Persistent layout** — your tabs, splits, and session state are restored on next launch
+- **Themes** — switch between eight color themes
 
 ### Auto-Update
-Orbit checks for updates automatically. When a new version is available it downloads in the background — a toast notification with a **Restart** button appears when it's ready to install.
+Orbit checks for updates automatically. When a new version is available it downloads in the background — a toast notification with a **Restart** button appears when it's ready to install. A version badge in the status bar opens the release notes at any time.
 
 ---
 
