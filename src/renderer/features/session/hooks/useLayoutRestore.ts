@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useStore } from '../../../store/root.store'
 import { createSession, patchSession, writeToSession } from '../session.service'
-import { detachTab } from '../../window/window.service'
+import { detachTab, detachNotePane } from '../../window/window.service'
 import { clearLayout } from '../persistence.service'
 import { collectSessionIds, migrateLayoutNode } from '../../layout/layout-tree'
 import type { PersistedLayout } from '@shared/ipc-types'
@@ -35,6 +35,7 @@ export function useLayoutRestore(): void {
   const restoreTab = useStore((s) => s.restoreTab)
   const windowId = useStore((s) => s.windowId)
   const resumeOnStartup = useStore((s) => s.settings.resumeOnStartup)
+  const addDetachedNoteId = useStore((s) => s.addDetachedNoteId)
 
   const windowIdRef = useRef(windowId)
   useEffect(() => { windowIdRef.current = windowId }, [windowId])
@@ -55,7 +56,11 @@ export function useLayoutRestore(): void {
       }
       try {
         const cwd = ps.worktreePath || ps.cwd || undefined
-        const meta = await createSession({ name: ps.name, agentCommand, cwd, cols: DEFAULT_COLS, rows: DEFAULT_ROWS, color: ps.color, groupId: ps.groupId })
+        // On restore, always skip sandbox — the previous sbx container may still
+        // hold its containerd bundle lock on Windows, causing a 500 error on restart.
+        // YOLO mode (--dangerously-skip-permissions) still applies; user can open a
+        // new sandboxed session if they need the Docker isolation.
+        const meta = await createSession({ name: ps.name, agentCommand, cwd, cols: DEFAULT_COLS, rows: DEFAULT_ROWS, color: ps.color, groupId: ps.groupId, yoloMode: ps.yoloMode, noSandbox: true })
         if (ps.worktreePath) {
           // Immediately put the session in the store with worktree fields from
           // the persisted data — don't wait on patchSession which can return
@@ -90,6 +95,15 @@ export function useLayoutRestore(): void {
         const tabMetas = createdMetas.filter((m) => tabSessionIds.has(m.sessionId))
         restoreTab(newTabId, remapped, tabMetas)
       }
+    }
+
+    const seenNotePanes = new Set<string>()
+    for (const { noteId, panel } of layout.detachedNotePanes ?? []) {
+      const key = `${noteId}:${panel}`
+      if (seenNotePanes.has(key)) continue
+      seenNotePanes.add(key)
+      await detachNotePane(noteId, panel)
+      addDetachedNoteId(noteId)
     }
 
     setIsRestoringLayout(false)

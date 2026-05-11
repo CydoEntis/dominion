@@ -25,7 +25,6 @@ export function AgentMonitorLayout({ sessionId, onSessionClose }: Props): JSX.El
     <PaneTreeRenderer
       node={paneTree}
       tabId={sessionId}
-      forceMainWindow={true}
       onCloseLastPane={handleCloseLastPane}
     />
   )

@@ -11,6 +11,7 @@ interface Props {
 export function NotesPane({ tabId, leafId, initialNoteId }: Props): JSX.Element | null {
   const removeLayoutLeaf = useStore((s) => s.removeLayoutLeaf)
   const openMarkdownPreviewPane = useStore((s) => s.openMarkdownPreviewPane)
+  const updateLeafNoteId = useStore((s) => s.updateLeafNoteId)
   const addNote = useStore((s) => s.addNote)
   const saveNote = useStore((s) => s.saveNote)
   const notes = useStore((s) => s.notes)
@@ -25,6 +26,11 @@ export function NotesPane({ tabId, leafId, initialNoteId }: Props): JSX.Element 
   // only initialize on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Keep layout leaf in sync so PaneTreeRenderer can read the active note's color
+  useEffect(() => {
+    if (activeNoteId) updateLeafNoteId(tabId, leafId, activeNoteId)
+  }, [activeNoteId, tabId, leafId])
 
   // Broadcast which note is active so the sidebar can highlight it
   useEffect(() => {

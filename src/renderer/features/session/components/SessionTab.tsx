@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '../../../lib/utils'
 import type { SessionMeta } from '@shared/ipc-types'
@@ -81,6 +81,9 @@ export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMe
           className="w-2 h-2 rounded-full flex-shrink-0"
           style={{ backgroundColor: isExited ? '#71717a' : color }}
         />
+        {meta.sandboxed && (
+          <span title="Running in Docker sandbox"><ShieldCheck size={10} className="flex-shrink-0 text-emerald-500" /></span>
+        )}
 
         <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
           <span className="truncate text-sm leading-snug">{meta.name}</span>
