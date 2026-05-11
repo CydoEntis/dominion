@@ -67,6 +67,7 @@ export const IPC = {
   UPDATE_DOWNLOADED: 'update:downloaded',
   // Updater: renderer → main (invoke)
   UPDATE_INSTALL: 'update:install',
+  UPDATE_GET_PENDING: 'update:get-pending',
 
   // Filesystem: renderer → main (invoke)
   FS_DETECT_SHELLS: 'fs:detect-shells',

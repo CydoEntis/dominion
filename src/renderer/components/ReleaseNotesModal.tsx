@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, LayoutPanelLeft, SplitSquareHorizontal, Trash2, FileText, GitBranch, Keyboard, GripHorizontal, Shield, AppWindow, MousePointer2, Palette } from 'lucide-react'
+import { X, LayoutPanelLeft, SplitSquareHorizontal, Trash2, FileText, GitBranch, Keyboard, GripHorizontal, Shield, AppWindow, MousePointer2, Palette, RefreshCw } from 'lucide-react'
 
 declare const __APP_VERSION__: string
 
@@ -17,6 +17,12 @@ interface ChangeEntry {
 }
 
 const CHANGES: ChangeEntry[] = [
+  {
+    icon: <RefreshCw size={15} />,
+    title: 'Reliable auto-update and restart',
+    description:
+      'The updater now restarts the app correctly after installing. Updates that finish downloading before the app fully loads are no longer silently lost.',
+  },
   {
     icon: <Shield size={15} />,
     title: 'Sandbox mode for Yolo sessions',
