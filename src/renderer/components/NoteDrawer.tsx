@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
-import { X, Eye } from 'lucide-react'
 import { marked } from 'marked'
 import { useStore } from '../store/root.store'
 import { FileTree, noteTitle } from '../features/notes/components/FileTree'
@@ -24,7 +22,6 @@ export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate, onOpen
   const [showTree, setShowTree] = useState(false)
   const [treeWidth, setTreeWidth] = useState(240)
   const [editorMode, setEditorMode] = useState<'raw' | 'split' | 'preview'>('raw')
-  const [headerCtxPos, setHeaderCtxPos] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -93,7 +90,6 @@ export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate, onOpen
   return (
     <div
       className="flex h-full w-full bg-brand-bg"
-      onContextMenu={(e) => { e.preventDefault(); setHeaderCtxPos({ x: e.clientX, y: e.clientY }) }}
     >
       {/* File tree — slides in on the left */}
       {showTree && (
@@ -177,33 +173,6 @@ export function NoteDrawer({ onClose, activeNoteId, onActivate, onCreate, onOpen
         )}
       </div>
 
-      {headerCtxPos && createPortal(
-        <>
-          <div className="fixed inset-0 z-[9998]" onMouseDown={() => setHeaderCtxPos(null)} />
-          <div
-            className="fixed z-[9999] bg-brand-surface border border-brand-panel/60 rounded-md shadow-2xl py-1 w-44"
-            style={{ left: Math.min(headerCtxPos.x, window.innerWidth - 176), top: Math.min(headerCtxPos.y, window.innerHeight - 80) }}
-          >
-            {activeNote && onOpenPreview && (
-              <button
-                onMouseDown={(e) => { e.stopPropagation(); setHeaderCtxPos(null); onOpenPreview() }}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
-              >
-                <Eye size={12} />
-                Preview Markdown
-              </button>
-            )}
-            <button
-              onMouseDown={(e) => { e.stopPropagation(); setHeaderCtxPos(null); onClose() }}
-              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
-            >
-              <X size={12} />
-              Close
-            </button>
-          </div>
-        </>,
-        document.body
-      )}
     </div>
   )
 }

@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus } from 'lucide-react'
+import { X, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus, Pencil, Trash2, ArrowRightLeft } from 'lucide-react'
 import { useStore } from '../../../store/root.store'
 import { cn } from '../../../lib/utils'
+import { EditNoteModal } from './EditNoteModal'
+import { detachNotePane, moveNotePaneToWindow, listWindows } from '../../window/window.service'
+import { WindowMoveSubmenu } from '../../window/components/WindowMoveSubmenu'
 import type { Note } from '@shared/ipc-types'
+import type { LayoutNode } from '../../layout/layout-tree'
 
 export function noteTitle(note: Note): string {
   const first = note.content.split('\n').find(l => l.trim())
@@ -45,6 +49,13 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
   const deleteNote = useStore((s) => s.deleteNote)
   const deleteNoteFolder = useStore((s) => s.deleteNoteFolder)
   const saveNote = useStore((s) => s.saveNote)
+  const setNoteColor = useStore((s) => s.setNoteColor)
+  const noteColorMap = useStore((s) => s.settings.noteColorMap ?? {})
+  const isMainWindow = useStore((s) => s.isMainWindow)
+  const paneTree = useStore((s) => s.paneTree)
+  const removeNotePaneFromLayout = useStore((s) => s.removeNotePaneFromLayout)
+  const addDetachedNoteId = useStore((s) => s.addDetachedNoteId)
+  const detachedNoteIds = useStore((s) => s.detachedNoteIds)
 
   const [query, setQuery] = useState('')
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
@@ -54,13 +65,40 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'folder' | 'note'; id: string } | null>(null)
   const [renamingNoteId, setRenamingNoteId] = useState<string | null>(null)
   const [renamingNoteName, setRenamingNoteName] = useState('')
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [showMoveSubmenu, setShowMoveSubmenu] = useState(false)
+  const [submenuY, setSubmenuY] = useState(0)
+  const [otherWindows, setOtherWindows] = useState<{ windowId: string; windowName: string; windowColor: string }[]>([])
   // null id = new folder, string id = edit existing
   const [folderPopover, setFolderPopover] = useState<{ id: string | null; name: string; color: string; x: number; y: number } | null>(null)
   const renamingNoteRef = useRef<HTMLInputElement>(null)
+  const moveTriggerRef = useRef<HTMLButtonElement>(null)
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (renamingNoteId) setTimeout(() => renamingNoteRef.current?.focus(), 0)
   }, [renamingNoteId])
+
+  useEffect(() => () => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current)
+  }, [])
+
+  const clearHideTimeout = (): void => {
+    if (hideTimeoutRef.current) { clearTimeout(hideTimeoutRef.current); hideTimeoutRef.current = null }
+  }
+  const scheduleHideSubmenu = (): void => {
+    clearHideTimeout()
+    hideTimeoutRef.current = setTimeout(() => setShowMoveSubmenu(false), 150)
+  }
+  const dismissContextMenu = (): void => {
+    setContextMenu(null); setShowMoveSubmenu(false)
+  }
+  const getSubmenuX = (): number => {
+    const menuWidth = 180
+    const submenuWidth = 160
+    const rightX = (contextMenu?.x ?? 0) + menuWidth + 4
+    return rightX + submenuWidth > window.innerWidth ? (contextMenu?.x ?? 0) - submenuWidth - 4 : rightX
+  }
 
   const startRenameNote = (id: string): void => {
     const note = notes.find(n => n.id === id)
@@ -97,9 +135,15 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
   const handleContextMenu = (e: React.MouseEvent, type: 'folder' | 'note', id: string): void => {
     e.preventDefault()
     e.stopPropagation()
-    const x = Math.min(e.clientX, window.innerWidth - 148)
-    const y = Math.min(e.clientY, window.innerHeight - 72)
+    const x = Math.min(e.clientX, window.innerWidth - 184)
+    const y = Math.min(e.clientY, window.innerHeight - 160)
     setContextMenu({ type, id, x, y })
+    setShowMoveSubmenu(false)
+    if (type === 'note') {
+      listWindows().then((wins) => {
+        setOtherWindows(wins.map((w) => ({ windowId: w.windowId, windowName: w.windowName, windowColor: w.windowColor, isMain: w.isMain })))
+      }).catch(() => {})
+    }
   }
 
   const openFolderPopover = (pos: { x: number; y: number }, folder?: { id: string; name: string; color?: string }): void => {
@@ -112,7 +156,17 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
     })
   }
 
-  const sorted = notes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
+  const filteredNotes = (() => {
+    if (isMainWindow) return notes.filter((n) => !detachedNoteIds.includes(n.id))
+    const ids = new Set<string>()
+    const collect = (node: LayoutNode): void => {
+      if (node.type === 'leaf' && (node.panel === 'notes' || node.panel === 'markdown-preview') && node.noteId) ids.add(node.noteId)
+      else if (node.type === 'split') node.children.forEach(collect)
+    }
+    for (const tree of Object.values(paneTree)) collect(tree)
+    return notes.filter(n => ids.has(n.id))
+  })()
+  const sorted = filteredNotes.slice().sort((a, b) => b.updatedAt - a.updatedAt)
   const matchesQuery = (n: Note): boolean => !query || n.content.toLowerCase().includes(query.toLowerCase())
   const unfiledNotes = sorted.filter(n => !noteFolderMap[n.id] && matchesQuery(n))
   const sortedFolders = noteFolders.slice().sort((a, b) => a.name.localeCompare(b.name))
@@ -166,7 +220,7 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
         ) : (
           <>
             {unfiledNotes.map(note => {
-              const nc = noteColorFromId(note.id)
+              const nc = noteColorMap[note.id] ?? noteColorFromId(note.id)
               const isActive = note.id === activeNoteId
               if (renamingNoteId === note.id) return (
                 <div key={note.id} className="px-3 py-1.5 border-l-2 border-transparent">
@@ -235,7 +289,7 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
                   {!isCollapsed && (
                     <div className="ml-4 border-l border-brand-panel/40">
                       {folderNotes.map(note => {
-                        const nc = noteColorFromId(note.id)
+                        const nc = noteColorMap[note.id] ?? noteColorFromId(note.id)
                         const isActive = note.id === activeNoteId
                         if (renamingNoteId === note.id) return (
                           <div key={note.id} className="px-3 py-1.5 border-l-2 border-transparent">
@@ -286,48 +340,76 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
       {/* Context menu */}
       {contextMenu && (
         <>
-          <div className="fixed inset-0 z-[200]" onClick={() => setContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setContextMenu(null) }} />
+          <div className="fixed inset-0 z-[200]" onClick={dismissContextMenu} onContextMenu={(e) => { e.preventDefault(); dismissContextMenu() }} />
           <div
-            className="fixed z-[201] bg-brand-surface border border-brand-panel rounded shadow-xl py-1 min-w-[130px]"
+            className="fixed z-[201] bg-brand-surface border border-brand-panel rounded shadow-xl py-1 min-w-[180px]"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             {contextMenu.type === 'folder' ? (
               <>
                 <button
-                  className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
                   onClick={() => {
                     const f = noteFolders.find(f => f.id === contextMenu.id)
                     if (f) openFolderPopover({ x: contextMenu.x, y: contextMenu.y }, f)
                     setContextMenu(null)
                   }}
                 >
-                  Edit
+                  <Pencil size={12} />Edit
                 </button>
                 <button
-                  className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-brand-panel hover:text-red-300 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-red-400 hover:bg-brand-panel hover:text-red-300 transition-colors"
                   onClick={() => { setDeleteConfirm({ type: 'folder', id: contextMenu.id }); setContextMenu(null) }}
                 >
-                  Delete
+                  <Trash2 size={12} />Delete
                 </button>
               </>
             ) : (
               <>
                 <button
-                  className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
-                  onClick={() => { startRenameNote(contextMenu.id); setContextMenu(null) }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                  onClick={() => { const n = notes.find(n => n.id === contextMenu.id); if (n) setEditingNote(n); setContextMenu(null) }}
                 >
-                  Rename
+                  <Pencil size={12} />Edit
                 </button>
+                <div className="my-1 border-t border-brand-panel/60" />
                 <button
-                  className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-brand-panel hover:text-red-300 transition-colors"
+                  ref={moveTriggerRef}
+                  onMouseEnter={() => {
+                    clearHideTimeout()
+                    const rect = moveTriggerRef.current?.getBoundingClientRect()
+                    if (rect) setSubmenuY(rect.top)
+                    setShowMoveSubmenu(true)
+                  }}
+                  onMouseLeave={scheduleHideSubmenu}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                >
+                  <span className="flex items-center gap-2.5"><ArrowRightLeft size={12} />Move to Window</span>
+                  <ChevronRight size={10} className="text-zinc-600" />
+                </button>
+                <div className="my-1 border-t border-brand-panel/60" />
+                <button
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-red-400 hover:bg-brand-panel hover:text-red-300 transition-colors"
                   onClick={() => { setDeleteConfirm({ type: 'note', id: contextMenu.id }); setContextMenu(null) }}
                 >
-                  Delete
+                  <Trash2 size={12} />Delete
                 </button>
               </>
             )}
           </div>
         </>
+      )}
+
+      {/* Move-to-window submenu */}
+      {showMoveSubmenu && contextMenu?.type === 'note' && (isMainWindow || otherWindows.length > 0) && (
+        <WindowMoveSubmenu
+          style={{ left: getSubmenuX(), top: submenuY }}
+          windows={otherWindows}
+          onSelect={(windowId) => { removeNotePaneFromLayout(contextMenu.id, 'notes'); void moveNotePaneToWindow(contextMenu.id, 'notes', windowId); dismissContextMenu() }}
+          onMouseEnter={clearHideTimeout}
+          onMouseLeave={scheduleHideSubmenu}
+          onNewWindow={isMainWindow ? () => { removeNotePaneFromLayout(contextMenu.id, 'notes'); addDetachedNoteId(contextMenu.id); void detachNotePane(contextMenu.id, 'notes'); dismissContextMenu() } : undefined}
+        />
       )}
 
       {/* Folder popover — create or edit */}
@@ -379,6 +461,24 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
             </div>
           </div>
         </>
+      )}
+
+      {editingNote && (
+        <EditNoteModal
+          note={editingNote}
+          folders={noteFolders}
+          currentFolderId={noteFolderMap[editingNote.id] ?? null}
+          currentColor={noteColorMap[editingNote.id] ?? null}
+          onDismiss={() => setEditingNote(null)}
+          onSave={async (name, color, folderId) => {
+            const lines = editingNote.content.split('\n')
+            lines[0] = name
+            await saveNote(editingNote.id, lines.join('\n'))
+            await setNoteColor(editingNote.id, color)
+            await setNoteFolder(editingNote.id, folderId)
+            setEditingNote(null)
+          }}
+        />
       )}
 
       {deleteConfirm && (() => {
