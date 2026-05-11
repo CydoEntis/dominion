@@ -350,6 +350,9 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       if (existing && terminal.cols !== prevCols) {
         terminal.write('\x1b[3J')
       }
+      // Force a full canvas repaint after DOM re-parent — the WebGL/canvas renderer can
+      // lose its drawing state when the element moves to a new container.
+      if (existing) try { terminal.refresh(0, terminal.rows - 1) } catch {}
       terminal.focus()
 
       const { cols, rows } = terminal
@@ -583,6 +586,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       requestAnimationFrame(() => {
         try {
           fitAddonRef.current?.fit()
+          terminalRef.current?.refresh(0, terminalRef.current.rows - 1)
           terminalRef.current?.focus()
         } catch {}
       })
