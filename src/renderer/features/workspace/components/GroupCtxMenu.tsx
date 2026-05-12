@@ -1,14 +1,15 @@
 import { createPortal } from 'react-dom'
-import { Pencil, X } from 'lucide-react'
+import { Pencil, X, Columns2 } from 'lucide-react'
 
 interface GroupCtxMenuProps {
   groupCtxMenu: { x: number; y: number; group: { id: string; name: string; color?: string } }
   onDismiss: () => void
   onEdit: (group: { id: string; name: string; color?: string }) => void
   onDelete: (groupId: string) => void
+  onOpenAsLayout: (groupId: string) => void
 }
 
-export function GroupCtxMenu({ groupCtxMenu, onDismiss, onEdit, onDelete }: GroupCtxMenuProps): JSX.Element {
+export function GroupCtxMenu({ groupCtxMenu, onDismiss, onEdit, onDelete, onOpenAsLayout }: GroupCtxMenuProps): JSX.Element {
   const { x, y, group } = groupCtxMenu
   return createPortal(
     <>
@@ -19,8 +20,15 @@ export function GroupCtxMenu({ groupCtxMenu, onDismiss, onEdit, onDelete }: Grou
       />
       <div
         className="fixed z-[9999] bg-brand-surface border border-brand-panel/60 rounded shadow-xl py-1 min-w-[160px]"
-        style={{ left: Math.min(x, window.innerWidth - 180), top: Math.min(y, window.innerHeight - 100) }}
+        style={{ left: Math.min(x, window.innerWidth - 180), top: Math.min(y, window.innerHeight - 130) }}
       >
+        <button
+          onMouseDown={(e) => { e.stopPropagation(); onOpenAsLayout(group.id); onDismiss() }}
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+        >
+          <Columns2 size={12} />Open as Layout
+        </button>
+        <div className="my-1 border-t border-brand-panel/60" />
         <button
           onMouseDown={(e) => { e.stopPropagation(); onEdit(group); onDismiss() }}
           className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
