@@ -29,6 +29,9 @@ export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMe
   const color = meta.color ?? TAB_COLORS[0]
   const isExited = meta.status !== 'running'
   const agentStatus = meta.agentStatus ?? 'idle'
+  const isWorking = !isExited && agentStatus === 'running'
+  const isWaitingInput = !isExited && agentStatus === 'waiting-input'
+  const isCompleted = meta.status === 'exited' && meta.exitCode === 0
 
   const handleClose = (e: React.MouseEvent): void => {
     e.stopPropagation()
@@ -67,20 +70,35 @@ export function SessionTab({ meta, isActive, isDragOver, onActivate, onContextMe
           'flex items-center gap-1.5 h-full px-4 text-sm font-medium cursor-pointer border-b-2 transition-colors select-none flex-shrink-0 min-w-0 w-[160px]',
           isActive
             ? 'text-zinc-100 bg-brand-panel/20'
-            : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/40',
+            : isWaitingInput
+              ? 'border-transparent text-amber-300/90 hover:text-amber-200 hover:bg-brand-panel/40'
+              : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel/40',
           isDragOver && !isActive && 'bg-brand-accent/10 border-b-brand-accent/50',
-          isExited && 'opacity-50'
+          isExited && 'opacity-60'
         )}
         style={{
-          borderBottomColor: isActive ? color : isDragOver ? 'rgba(34,197,94,0.4)' : 'transparent',
+          borderBottomColor: isActive
+            ? color
+            : isWaitingInput
+              ? 'rgba(251,191,36,0.55)'
+              : isDragOver
+                ? 'rgba(34,197,94,0.4)'
+                : 'transparent',
           WebkitAppRegion: 'no-drag'
         } as React.CSSProperties}
       >
-        {/* Agent status indicators disabled — detection unreliable, revisit in roadmap */}
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: isExited ? '#71717a' : color }}
-        />
+        {isWorking ? (
+          <Loader2 size={10} className="flex-shrink-0 animate-spin" style={{ color }} />
+        ) : isWaitingInput ? (
+          <span className="flex-shrink-0 text-[11px] leading-none" title="Waiting for input">💬</span>
+        ) : isCompleted ? (
+          <span className="flex-shrink-0 text-[11px] leading-none" title="Completed">✅</span>
+        ) : (
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: isExited ? '#71717a' : color }}
+          />
+        )}
         {meta.sandboxed && (
           <span title="Running in Docker sandbox"><ShieldCheck size={10} className="flex-shrink-0 text-emerald-500" /></span>
         )}
