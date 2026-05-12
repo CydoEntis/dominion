@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Toaster } from 'sonner'
-import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves, HelpCircle, Globe, Zap } from 'lucide-react'
+import { Settings, Moon, Sun, Monitor, Sparkles, GitBranch, Palette, Star, Flame, Waves, HelpCircle, Globe, Zap, ExternalLink } from 'lucide-react'
 import { marked } from 'marked'
 import { createPortal } from 'react-dom'
 import { useTheme } from './hooks/useTheme'
@@ -28,6 +28,11 @@ import { findNotesLeafId } from './features/layout/layout-tree'
 import { LayoutDndProvider } from './features/layout/dnd/LayoutDndContext'
 import { TERMINAL_THEME_LIST } from './features/terminal/hooks/useTerminal'
 import { setWindowMeta } from './features/window/window.service'
+import { useInstalledEditors } from './features/fs/hooks/useInstalledEditors'
+import { openInEditor } from './features/fs/fs.service'
+import { openNoteInEditor } from './features/notes/notes.service'
+import { ipc } from './lib/ipc'
+import { IPC } from '@shared/ipc-channels'
 import { cn } from './lib/utils'
 
 declare const __APP_VERSION__: string
@@ -261,17 +266,21 @@ export function App(): JSX.Element {
   const settingsLoaded = useStore((s) => s.settingsLoaded)
   const dismissedReleaseVersion = useStore((s) => s.settings.dismissedReleaseVersion)
   const updateSettings = useStore((s) => s.updateSettings)
+  const patchNoteContent = useStore((s) => s.patchNoteContent)
 
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [releaseNotesOpen, setReleaseNotesOpen] = useState(false)
   const [sidePanel, setSidePanel] = useState<'settings' | 'git' | null>(null)
+  const [openInMenuOpen, setOpenInMenuOpen] = useState(false)
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
   const [workspaceSessionId, setWorkspaceSessionId] = useState<string | null>('__root__')
   const [workspaceProject, setWorkspaceProject] = useState<string | null>(
     () => localStorage.getItem('orbit:workspaceProject') ?? null
   )
   const { sidebarWidth, handleSidebarDragStart } = useSidebarResize(224)
+  const installedEditors = useInstalledEditors()
 
   const selectedSession = useStore((s) => workspaceSessionId ? s.sessions[workspaceSessionId] : null)
   const gitRoot = selectedSession?.worktreePath ?? workspaceProject
@@ -296,11 +305,26 @@ export function App(): JSX.Element {
   useEffect(() => { setSidePanel(null) }, [workspaceProject])
 
   useEffect(() => {
+    const handler = (e: Event): void => {
+      setActiveNoteId((e as CustomEvent<{ noteId: string }>).detail.noteId)
+    }
+    document.addEventListener('acc:note-active-changed', handler)
+    return () => document.removeEventListener('acc:note-active-changed', handler)
+  }, [])
+
+  useEffect(() => {
+    return ipc.on(IPC.NOTES_EXTERNAL_UPDATE, (payload) => {
+      const { id, content } = payload as { id: string; content: string }
+      patchNoteContent(id, content)
+    })
+  }, [patchNoteContent])
+
+  useEffect(() => {
     const newId = storeActiveSessionId ?? '__root__'
-    if (newId !== '__root__' && workspaceProject) {
+    if (newId !== '__root__') {
       const { sessions: currentSessions } = useStore.getState()
       const session = currentSessions[newId]
-      if (session) {
+      if (workspaceProject && session) {
         const normalized = workspaceProject.replace(/\\/g, '/')
         const root = (session.projectRoot ?? session.cwd ?? '').replace(/\\/g, '/')
         const belongsToWorkspace = (root === normalized || root.startsWith(normalized + '/')) && !!session.worktreePath
@@ -377,7 +401,7 @@ export function App(): JSX.Element {
   const noteTitleText = focusedNote
     ? (focusedNote.content.split('\n').find((l) => l.trim())?.trim().slice(0, 50) || 'Untitled')
     : null
-  const titleBarTitle = sidePanel === 'settings' ? 'Settings' : (noteTitleText ?? (titleSession?.name ?? 'Orbit'))
+  const titleBarTitle = sidePanel === 'settings' ? 'Settings' : (noteTitleText ?? titleSession?.name ?? 'Orbit')
   const titleBarSubtitle = sidePanel === 'settings' ? '' : (noteTitleText ? 'Note' : (titleSession?.cwd ?? ''))
 
 
@@ -422,7 +446,11 @@ export function App(): JSX.Element {
           {/* Terminal area */}
           <div className="flex-1 min-w-0 min-h-0 relative">
             <AgentMonitorLayout
-              sessionId={workspaceSessionId ?? '__root__'}
+              sessionId={
+                workspaceSessionId && (sessions[workspaceSessionId] || workspaceSessionId === '__root__')
+                  ? workspaceSessionId
+                  : '__root__'
+              }
               onSessionClose={() => setWorkspaceSessionId('__root__')}
             />
 
@@ -457,6 +485,58 @@ export function App(): JSX.Element {
           >
             <HelpCircle size={13} />
           </button>
+          {installedEditors.length > 0 && (workspaceProject !== null || activeNoteId !== null) && (
+            <div className="relative ml-1">
+              <button
+                onClick={() => setOpenInMenuOpen(v => !v)}
+                className="flex items-center gap-1.5 px-2 h-6 rounded text-zinc-500 hover:text-zinc-300 hover:bg-brand-panel transition-colors"
+              >
+                <ExternalLink size={12} />
+                <span className="text-[11px] font-medium">Open In</span>
+              </button>
+              {openInMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenInMenuOpen(false)} />
+                  <div className="absolute left-0 bottom-full mb-1 z-50 bg-brand-bg border border-brand-panel/60 rounded shadow-xl py-1 min-w-[160px]">
+                    {workspaceProject !== null && (
+                      <>
+                        <div className="px-3 py-1 text-[10px] text-zinc-600 uppercase tracking-wider font-medium select-none">Project</div>
+                        {installedEditors.map(ed => (
+                          <button
+                            key={`proj-${ed.command}`}
+                            onClick={() => { openInEditor(ed.command, workspaceProject); setOpenInMenuOpen(false) }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-400 hover:bg-brand-panel hover:text-zinc-200 transition-colors text-left"
+                          >
+                            {ed.name}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {workspaceProject !== null && activeNoteId !== null && (
+                      <div className="my-1 border-t border-brand-panel/40" />
+                    )}
+                    {activeNoteId !== null && (
+                      <>
+                        <div className="px-3 py-1 text-[10px] text-zinc-600 uppercase tracking-wider font-medium select-none">Note</div>
+                        {installedEditors.map(ed => (
+                          <button
+                            key={`note-${ed.command}`}
+                            onClick={() => {
+                              openNoteInEditor(ed.command, activeNoteId)
+                              setOpenInMenuOpen(false)
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-400 hover:bg-brand-panel hover:text-zinc-200 transition-colors text-left"
+                          >
+                            {ed.name}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <StatusWindowBadge />
         <div className="flex-1 flex items-center gap-0.5 justify-end">

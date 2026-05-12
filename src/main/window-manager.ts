@@ -324,6 +324,12 @@ export function moveNotePaneToWindow(noteId: string, panel: 'notes' | 'markdown-
   if (targetWindowId !== mainWindowId) windowNotePanes.set(targetWindowId, { noteId, panel })
 }
 
+export function getMainWindow(): BrowserWindow | undefined {
+  if (!mainWindowId) return undefined
+  const win = windows.get(mainWindowId)
+  return win && !win.isDestroyed() ? win : undefined
+}
+
 export function getWindowList(excludeWindowId?: string): { windowId: string; isMain: boolean; windowName: string; windowColor: string }[] {
   const result: { windowId: string; isMain: boolean; windowName: string; windowColor: string }[] = []
   for (const [windowId] of windows) {

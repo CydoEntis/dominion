@@ -15,7 +15,9 @@ export const MAX_NAME_LENGTH = 32
 
 export async function createSession(payload: CreateSessionPayload): Promise<SessionMeta> {
   const { tabOrder } = useStore.getState()
-  if (tabOrder.length >= MAX_SESSIONS) throw new Error(`Maximum ${MAX_SESSIONS} sessions allowed`)
+  if (tabOrder.length >= MAX_SESSIONS) {
+    throw new Error(`Maximum ${MAX_SESSIONS} sessions allowed`)
+  }
   const color = payload.color ?? SESSION_COLORS[tabOrder.length % SESSION_COLORS.length]
   return ipc.invoke(IPC.SESSION_CREATE, { ...payload, color }) as Promise<SessionMeta>
 }

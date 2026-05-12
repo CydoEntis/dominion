@@ -25,7 +25,6 @@ export function useSessionLifecycle(): void {
   const removeNotePaneFromLayout = useStore((s) => s.removeNotePaneFromLayout)
   const addDetachedNoteId = useStore((s) => s.addDetachedNoteId)
   const removeDetachedNoteId = useStore((s) => s.removeDetachedNoteId)
-
   const layoutRef = useRef<PersistedLayout | null | 'loading'>('loading')
   const isMainRef = useRef<boolean | null>(null)
   // Tracks running sessions found at startup — 'pending' until listSessions resolves

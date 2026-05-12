@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { SearchAddon } from '@xterm/addon-search'
+import { WebglAddon } from '@xterm/addon-webgl'
+import { CanvasAddon } from '@xterm/addon-canvas'
+import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { ipc } from '../../../lib/ipc'
 import { IPC } from '@shared/ipc-channels'
 import { replayRequest, writeToSession, resizeSession } from '../../session/session.service'
@@ -13,6 +16,7 @@ interface PoolEntry {
   terminal: Terminal
   fitAddon: FitAddon
   searchAddon: SearchAddon
+  rendererAddon: WebglAddon | CanvasAddon | null
 }
 // Module-level pool: preserves xterm instances across React remounts caused by layout changes.
 // Entries are fully disposed only when the session leaves the store (closed, not just moved).
@@ -250,7 +254,7 @@ export interface TerminalSearch {
   findPrevious: (term: string) => void
 }
 
-export function useTerminal(sessionId: string, containerRef: React.RefObject<HTMLDivElement>): {
+export function useTerminal(sessionId: string, containerRef: React.RefObject<HTMLDivElement>, inputEnabledRef?: React.MutableRefObject<boolean>): {
   ctxMenu: TerminalCtxMenu | null
   dismissCtxMenu: () => void
   search: TerminalSearch
@@ -316,7 +320,27 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       terminal.loadAddon(fitAddon)
       terminal.loadAddon(searchAddon)
       terminal.open(container)
-      terminalPool.set(sessionId, { terminal, fitAddon, searchAddon })
+      // GPU-accelerated renderer: WebGL → Canvas → DOM fallback
+      let rendererAddon: WebglAddon | CanvasAddon | null = null
+      try {
+        const webgl = new WebglAddon()
+        webgl.onContextLoss(() => {
+          webgl.dispose()
+          try { terminal.loadAddon(new CanvasAddon()) } catch {}
+        })
+        terminal.loadAddon(webgl)
+        rendererAddon = webgl
+      } catch {
+        try {
+          const canvas = new CanvasAddon()
+          terminal.loadAddon(canvas)
+          rendererAddon = canvas
+        } catch {}
+      }
+      const unicode11 = new Unicode11Addon()
+      terminal.loadAddon(unicode11)
+      terminal.unicode.activeVersion = '11'
+      terminalPool.set(sessionId, { terminal, fitAddon, searchAddon, rendererAddon })
     }
 
     terminalRef.current = terminal
@@ -361,6 +385,7 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       if (!existing) {
         replayRequest(sessionId).then(({ chunks }) => {
           if (disposed) return
+          if (fallbackFitTimer !== undefined) clearTimeout(fallbackFitTimer)
           chunks.forEach((chunk) => terminal.write(chunk))
           setTerminalReady(sessionId, true)
         })
@@ -403,7 +428,10 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
 
     // Per-mount disposables — captured so cleanup can remove them without disposing the terminal.
     // Without explicit dispose, calling onData/onResize again on a pooled terminal would stack listeners.
-    const dataDisposable = terminal.onData((data) => { writeToSession({ sessionId, data }) })
+    const dataDisposable = terminal.onData((data) => {
+      if (inputEnabledRef?.current === false) return
+      writeToSession({ sessionId, data })
+    })
     const resizeDisposable = terminal.onResize(({ cols, rows }) => { resizeSession({ sessionId, cols, rows }) })
 
     // Per-chunk line buffer + active capture state (lives in closure across chunks)
@@ -520,28 +548,34 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
     container.addEventListener('contextmenu', handleContextMenu, true)
     container.addEventListener('paste', handlePaste, true)
 
+    // When cols change, xterm reflows cursor-positioned TUI output (Claude Code welcome screen)
+    // producing duplicate lines. Clearing the viewport lets the app redraw clean via SIGWINCH.
     const safeRefit = (): void => {
+      const t = terminalRef.current
+      if (!t) return
+      const prevCols = t.cols
       try { fitAddonRef.current?.fit() } catch {}
+      if (t.cols !== prevCols) {
+        t.write('\x1b[2J\x1b[H')
+      }
     }
 
-    // Resize observer — skip zero-dimension entries (fired when parent gets display:none)
-    let rafId = 0
+    // Debounce to 150ms so reflows only happen when drag settles, not on every animation frame.
+    // During a 500ms drag the old RAF approach fired ~30 reflows; this fires at most 1-2.
+    let resizeTimer: ReturnType<typeof setTimeout> | undefined
     const observer = new ResizeObserver((entries) => {
-      cancelAnimationFrame(rafId)
-      rafId = requestAnimationFrame(() => {
-        const entry = entries[0]
-        if (entry && (entry.contentRect.width === 0 || entry.contentRect.height === 0)) return
-        safeRefit()
-      })
+      const entry = entries[0]
+      if (entry && (entry.contentRect.width === 0 || entry.contentRect.height === 0)) return
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(safeRefit, 150)
     })
 
     // Re-fit when pane becomes visible again (e.g. switching back from projects view).
-    // Route through rafId so a simultaneous ResizeObserver + visibility change don't
-    // fire two concurrent safeRefit calls.
+    let visRafId = 0
     const visibilityObserver = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting) {
-        cancelAnimationFrame(rafId)
-        rafId = requestAnimationFrame(safeRefit)
+        cancelAnimationFrame(visRafId)
+        visRafId = requestAnimationFrame(safeRefit)
       }
     })
 
@@ -550,7 +584,8 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
 
     return () => {
       disposed = true
-      cancelAnimationFrame(rafId)
+      clearTimeout(resizeTimer)
+      cancelAnimationFrame(visRafId)
       if (fallbackFitTimer !== undefined) clearTimeout(fallbackFitTimer)
       offData()
       dataDisposable.dispose()
@@ -572,7 +607,9 @@ export function useTerminal(sessionId: string, containerRef: React.RefObject<HTM
       // Fully dispose only when the session has been removed from the store (closed,
       // not just moved to a different layout position).
       if (!useStore.getState().sessions[sessionId]) {
+        const poolEntry = terminalPool.get(sessionId)
         terminalPool.delete(sessionId)
+        poolEntry?.rendererAddon?.dispose()
         searchAddon.dispose()
         terminal.dispose()
         unregisterTerminal(sessionId)

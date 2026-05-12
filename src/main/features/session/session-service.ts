@@ -13,11 +13,19 @@ import {
 import { IPC } from '@shared/ipc-channels'
 import { getSettings } from '../settings/settings-store'
 import { getSbxExecutable } from '../../lib/sbx'
+import { getMainWindow } from '../../window-manager'
 import type {
   CreateSessionPayload,
   SessionMeta,
   SessionExitPayload
 } from '@shared/ipc-types'
+
+function syncTaskbarProgress(): void {
+  const win = getMainWindow()
+  if (!win) return
+  const anyRunning = listSessions().some((s) => s.agentStatus === 'running')
+  win.setProgressBar(anyRunning ? 2 : -1)
+}
 
 function resolveShellSpawn(agentCommand?: string, yoloMode?: boolean, noSandbox?: boolean, useSandbox?: boolean): { command: string; args: string[]; sandboxed: boolean } {
   const settings = getSettings()
@@ -48,8 +56,12 @@ function resolveShellSpawn(agentCommand?: string, yoloMode?: boolean, noSandbox?
   }
   if (process.platform === 'win32') {
     const shell = defaultShell || process.env.COMSPEC || 'C:\\Windows\\System32\\cmd.exe'
+    const shellBase = shell.toLowerCase().split(/[/\\]/).pop() ?? ''
+    const isPowerShell = shellBase.startsWith('powershell') || shellBase.startsWith('pwsh')
     return cmd
-      ? { command: shell, args: ['/k', cmd], sandboxed }
+      ? isPowerShell
+        ? { command: shell, args: ['-NoExit', '-Command', cmd], sandboxed }
+        : { command: shell, args: ['/k', cmd], sandboxed }
       : { command: shell, args: [], sandboxed }
   }
   const shell = defaultShell || process.env.SHELL || '/bin/bash'
@@ -88,7 +100,7 @@ export function createSession(
     worktreePath: payload.worktreePath,
     worktreeBranch: payload.worktreeBranch,
     worktreeBaseBranch: payload.worktreeBaseBranch,
-    projectRoot: payload.projectRoot
+    projectRoot: payload.projectRoot,
   }
 
   const pty = new PtyProcess({
@@ -98,13 +110,17 @@ export function createSession(
     cwd,
     cols: payload.cols,
     rows: payload.rows,
+    skipShellIntegration: !!payload.agentCommand,
     onCwdChange: (newCwd) => {
       const updated = updateSessionMeta(sessionId, { cwd: newCwd })
       if (updated) broadcastMetaUpdate(updated)
     },
     onAgentStatus: (agentStatus) => {
       const updated = updateSessionMeta(sessionId, { agentStatus })
-      if (updated) broadcastMetaUpdate(updated)
+      if (updated) {
+        broadcastMetaUpdate(updated)
+        syncTaskbarProgress()
+      }
     },
     onConversationId: (conversationId) => {
       const updated = updateSessionMeta(sessionId, { conversationId })
@@ -121,6 +137,7 @@ export function createSession(
   pty.onExit((exitCode) => {
     const updated = updateSessionMeta(sessionId, { status: 'exited', exitCode })
     if (updated) broadcastMetaUpdate(updated)
+    syncTaskbarProgress()
     const exitPayload: SessionExitPayload = { sessionId, exitCode }
     for (const id of pty.subscriberIds) {
       const wc = webContents.fromId(id)

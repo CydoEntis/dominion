@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ExternalLink, X, ChevronRight, ArrowRightLeft, Eye } from 'lucide-react'
 import { listWindows, highlightWindow } from '../../window/window.service'
+import { useInstalledEditors } from '../../fs/hooks/useInstalledEditors'
+import { openNoteInEditor } from '../notes.service'
 
 interface NotePaneCtxMenuProps {
   ctxMenu: { x: number; y: number }
+  noteId: string | null
   isMainWindow: boolean
   onDismiss: () => void
   onDetach: () => void
@@ -14,7 +17,11 @@ interface NotePaneCtxMenuProps {
   onOpenPreview?: () => void
 }
 
-export function NotePaneCtxMenu({ ctxMenu, isMainWindow, onDismiss, onDetach, onReattach, onMoveToWindow, onClose, onOpenPreview }: NotePaneCtxMenuProps): JSX.Element {
+export function NotePaneCtxMenu({ ctxMenu, noteId, isMainWindow, onDismiss, onDetach, onReattach, onMoveToWindow, onClose, onOpenPreview }: NotePaneCtxMenuProps): JSX.Element {
+  const installedEditors = useInstalledEditors()
+  const [showOpenInSubmenu, setShowOpenInSubmenu] = useState(false)
+  const [openInSubmenuY, setOpenInSubmenuY] = useState(0)
+  const openInTriggerRef = useRef<HTMLButtonElement>(null)
   const [otherWindows, setOtherWindows] = useState<{ windowId: string; windowName: string; windowColor: string; isMain: boolean }[]>([])
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false)
   const [submenuY, setSubmenuY] = useState(0)
@@ -37,7 +44,7 @@ export function NotePaneCtxMenu({ ctxMenu, isMainWindow, onDismiss, onDetach, on
 
   const scheduleHideSubmenu = (): void => {
     clearHideTimeout()
-    hideTimeoutRef.current = setTimeout(() => { setShowMoveSubmenu(false); clearHighlight() }, 150)
+    hideTimeoutRef.current = setTimeout(() => { setShowMoveSubmenu(false); setShowOpenInSubmenu(false); clearHighlight() }, 150)
   }
 
   useEffect(() => {
@@ -76,6 +83,23 @@ export function NotePaneCtxMenu({ ctxMenu, isMainWindow, onDismiss, onDetach, on
             <div className="my-1 border-t border-brand-panel/60" />
           </>
         )}
+        {noteId && installedEditors.length > 0 && (
+          <button
+            ref={openInTriggerRef}
+            onMouseEnter={() => {
+              clearHideTimeout()
+              const rect = openInTriggerRef.current?.getBoundingClientRect()
+              if (rect) setOpenInSubmenuY(rect.top)
+              setShowMoveSubmenu(false)
+              setShowOpenInSubmenu(true)
+            }}
+            onMouseLeave={scheduleHideSubmenu}
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+          >
+            <span className="flex items-center gap-2.5"><ExternalLink size={12} />Open In</span>
+            <ChevronRight size={10} className="text-zinc-600" />
+          </button>
+        )}
         <button
           ref={moveTriggerRef}
           onMouseEnter={() => {
@@ -98,6 +122,25 @@ export function NotePaneCtxMenu({ ctxMenu, isMainWindow, onDismiss, onDetach, on
           <X size={12} />Close Pane
         </button>
       </div>
+
+      {showOpenInSubmenu && noteId && installedEditors.length > 0 && (
+        <div
+          className="fixed z-[10000] bg-brand-surface border border-brand-panel/60 rounded shadow-xl py-1 min-w-[140px]"
+          style={{ left: getSubmenuX(), top: openInSubmenuY }}
+          onMouseEnter={clearHideTimeout}
+          onMouseLeave={scheduleHideSubmenu}
+        >
+          {installedEditors.map(ed => (
+            <button
+              key={ed.command}
+              onMouseDown={(e) => { e.stopPropagation(); openNoteInEditor(ed.command, noteId).catch(() => {}); onDismiss() }}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+            >
+              {ed.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {showMoveSubmenu && (isMainWindow || otherWindows.length > 0) && (
         <div

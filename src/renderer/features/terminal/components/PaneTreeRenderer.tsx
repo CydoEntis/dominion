@@ -72,6 +72,7 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
           {noteCtxMenu && noteCtxMenu.leafId === node.id && (
             <NotePaneCtxMenu
               ctxMenu={noteCtxMenu}
+              noteId={noteCtxMenu.noteId || null}
               isMainWindow={isMainWindow}
               onDismiss={() => setNoteCtxMenu(null)}
               onDetach={() => { removeLayoutLeaf(tabId, node.id); addDetachedNoteId(noteCtxMenu.noteId); void detachNotePane(noteCtxMenu.noteId, 'notes') }}
@@ -112,6 +113,7 @@ export function PaneTreeRenderer({ node, tabId, onContextMenu, forceMainWindow, 
           {noteCtxMenu && noteCtxMenu.leafId === node.id && (
             <NotePaneCtxMenu
               ctxMenu={noteCtxMenu}
+              noteId={noteCtxMenu.noteId || null}
               isMainWindow={isMainWindow}
               onDismiss={() => setNoteCtxMenu(null)}
               onDetach={() => { removeLayoutLeaf(tabId, node.id); addDetachedNoteId(noteCtxMenu.noteId); void detachNotePane(noteCtxMenu.noteId, 'markdown-preview') }}

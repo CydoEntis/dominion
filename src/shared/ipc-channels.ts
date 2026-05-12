@@ -114,6 +114,13 @@ export const IPC = {
   NOTES_LOAD: 'notes:load',
   NOTES_SAVE: 'notes:save',
   NOTES_DELETE: 'notes:delete',
+  NOTES_GET_FILE_PATH: 'notes:get-file-path',
+  NOTES_OPEN_IN_EDITOR: 'notes:open-in-editor',
+  NOTES_EXTERNAL_UPDATE: 'notes:external-update',
+
+  // Filesystem write: renderer → main (invoke)
+  FS_MKDIR: 'fs:mkdir',
+  FS_WRITE_FILE: 'fs:write-file',
 
   // Shell: renderer → main (invoke)
   SHELL_OPEN_EXTERNAL: 'shell:open-external',

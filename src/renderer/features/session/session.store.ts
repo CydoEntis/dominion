@@ -59,6 +59,7 @@ export interface SessionSlice {
   detachedNoteIds: string[]
   addDetachedNoteId: (noteId: string) => void
   removeDetachedNoteId: (noteId: string) => void
+
 }
 
 export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', never]], [], SessionSlice> = (set) => ({
@@ -482,4 +483,5 @@ export const createSessionSlice: StateCreator<RootStore, [['zustand/immer', neve
     set((state) => {
       state.detachedNoteIds = state.detachedNoteIds.filter((id) => id !== noteId)
     }),
+
 })

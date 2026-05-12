@@ -1,6 +1,11 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, BrowserWindow } from 'electron'
 import { join } from 'path'
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync, existsSync } from 'fs'
+import { tmpdir } from 'os'
+import { spawn } from 'child_process'
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync, existsSync, watch as fsWatch } from 'fs'
+import type { FSWatcher } from 'fs'
+
+const activeWatchers = new Map<string, FSWatcher>()
 import { IPC } from '@shared/ipc-channels'
 import type { Note } from '@shared/ipc-types'
 import { getSettings, setSettings } from '../settings/settings-store'
@@ -8,6 +13,13 @@ import { getNotesDir } from '../../lib/paths'
 
 function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true })
+}
+
+function sanitizeTitle(str: string): string {
+  return str
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+    .slice(0, 80)
+    .trim() || 'Untitled'
 }
 
 function readAllNotes(dir: string): Note[] {
@@ -26,6 +38,11 @@ function readAllNotes(dir: string): Note[] {
   }
   return notes
 }
+
+app.on('will-quit', () => {
+  for (const w of activeWatchers.values()) w.close()
+  activeWatchers.clear()
+})
 
 export function registerNotesIpc(): void {
   ipcMain.handle(IPC.NOTES_LOAD, (): Note[] => {
@@ -65,5 +82,41 @@ export function registerNotesIpc(): void {
   ipcMain.handle(IPC.NOTES_DELETE, (_event, { id }: { id: string }): void => {
     const filePath = join(getNotesDir(), `${id}.md`)
     if (existsSync(filePath)) unlinkSync(filePath)
+  })
+
+  ipcMain.handle(IPC.NOTES_GET_FILE_PATH, (_event, { id }: { id: string }): string => {
+    return join(getNotesDir(), `${id}.md`)
+  })
+
+  ipcMain.handle(IPC.NOTES_OPEN_IN_EDITOR, (_event, { noteId, command }: { noteId: string; command: string }): void => {
+    const noteFile = join(getNotesDir(), `${noteId}.md`)
+    if (!existsSync(noteFile)) return
+
+    const content = readFileSync(noteFile, 'utf-8')
+    const firstLine = content.split('\n').find(l => l.trim()) ?? 'Untitled'
+    const title = sanitizeTitle(firstLine.trim())
+    const tempDir = join(tmpdir(), 'orbit-notes')
+    ensureDir(tempDir)
+    const tempFile = join(tempDir, `${title}.md`)
+
+    writeFileSync(tempFile, content, 'utf-8')
+
+    activeWatchers.get(noteId)?.close()
+    let debounce: ReturnType<typeof setTimeout> | null = null
+    const watcher = fsWatch(tempFile, () => {
+      if (debounce) clearTimeout(debounce)
+      debounce = setTimeout(() => {
+        try {
+          const updated = readFileSync(tempFile, 'utf-8')
+          writeFileSync(noteFile, updated, 'utf-8')
+          for (const win of BrowserWindow.getAllWindows()) {
+            win.webContents.send(IPC.NOTES_EXTERNAL_UPDATE, { id: noteId, content: updated })
+          }
+        } catch {}
+      }, 300)
+    })
+    activeWatchers.set(noteId, watcher)
+
+    spawn(command, [tempFile], { detached: true, stdio: 'ignore', shell: true }).unref()
   })
 }

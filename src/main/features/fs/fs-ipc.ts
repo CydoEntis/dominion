@@ -110,7 +110,7 @@ export function registerFsIpc(): void {
   })
 
   ipcMain.handle(IPC.FS_OPEN_IN_EDITOR, (_event, { command, filePath }: { command: string; filePath: string }) => {
-    spawn(command, [filePath], { detached: true, stdio: 'ignore' }).unref()
+    spawn(command, [filePath], { detached: true, stdio: 'ignore', shell: true }).unref()
   })
 
   ipcMain.handle(IPC.FS_DETECT_EDITORS, async () => {
@@ -118,7 +118,10 @@ export function registerFsIpc(): void {
     const results = await Promise.all(
       CANDIDATE_EDITORS.map(async (e) => {
         try {
-          await execAsync(`${probe} ${e.command}`)
+          const { stdout } = await execAsync(`${probe} ${e.command}`)
+          const resolved = stdout.trim().split('\n')[0].trim()
+          if (!resolved) return null
+          await fs.access(resolved)
           return e
         } catch {
           return null
@@ -135,6 +138,15 @@ export function registerFsIpc(): void {
 
   ipcMain.handle(IPC.FS_TRASH, async (_event, { filePath }: { filePath: string }) => {
     await shell.trashItem(filePath)
+  })
+
+  ipcMain.handle(IPC.FS_MKDIR, async (_, { dirPath }: { dirPath: string }): Promise<void> => {
+    await fs.mkdir(dirPath, { recursive: true })
+  })
+
+  ipcMain.handle(IPC.FS_WRITE_FILE, async (_, { filePath, content }: { filePath: string; content: string }): Promise<void> => {
+    await fs.mkdir(dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, content, 'utf-8')
   })
 
   ipcMain.handle(IPC.SHELL_OPEN_EXTERNAL, (_event, { url }: { url: string }) => {

@@ -110,7 +110,26 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('version','?'\\)\\)\")",
       "Bash(xargs grep -l \"toast\\\\|notification\")",
       "Bash(xargs grep -l \"toast\")",
-      "Bash(xargs wc -l)"
+      "Bash(xargs wc -l)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.docker.com)",
+      "Bash(where.exe sbx *)",
+      "Read(//c/Program Files/Docker/**)",
+      "Read(//c/Program Files//**)",
+      "Read(//c/Users/cstin/AppData/Local//**)",
+      "Bash(xargs grep -l \"LayoutLeaf\\\\|panel.*notes\\\\|MarkdownPreviewPane\\\\|NotesPane\")",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(identify /c/Programming/command-center/logo.png)",
+      "Bash(python3 -c \"from PIL import Image; print\\('pillow ok'\\)\")",
+      "Bash(python -c \"from PIL import Image; print\\('pillow ok'\\)\")",
+      "Bash(npx eslint *)",
+      "WebFetch(domain:cocalc.com)",
+      "Bash(grep -rn \"getGlobal\\\\|window\\\\\\\\.electron\\\\|ipcRenderer\\\\|ipcMain\" /c/Programming/command-center/src/renderer --include=\"*.ts\" --include=\"*.tsx\")",
+      "Bash(Write-Host \"Deleted orchestrator directory and OrchestratorRow.tsx\")",
+      "Bash(rm -rf \"src/renderer/features/orchestrator\")",
+      "Bash(rm -f \"src/renderer/features/workspace/components/OrchestratorRow.tsx\")"
     ]
   }
 }

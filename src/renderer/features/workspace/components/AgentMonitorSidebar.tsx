@@ -1,13 +1,12 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { Plus, ChevronDown, ChevronRight, FolderOpen, X, Users, Code2 } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight, FolderOpen, X, Users, Columns2 } from 'lucide-react'
 import { useStore } from '../../../store/root.store'
 import { useLayoutDnd } from '../../layout/dnd/LayoutDndContext'
 import { useProjects } from '../../session/hooks/useProjects'
 import { patchSession, killSession } from '../../session/session.service'
 import { EditSessionModal } from '../../session/components/EditSessionModal'
 import { EditGroupModal } from '../../session/components/EditGroupModal'
-import { removeWorktree, openInEditor } from '../../fs/fs.service'
-import { useInstalledEditors } from '../../fs/hooks/useInstalledEditors'
+import { removeWorktree } from '../../fs/fs.service'
 import { detachTab, reattachTab, moveToWindow } from '../../window/window.service'
 import { findTabForSession, collectSessionIds, findNotesLeafId, makeNotesLeaf } from '../../layout/layout-tree'
 import { useWorktreeStats } from '../hooks/useWorktreeStats'
@@ -52,9 +51,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
   const { openProjects, addProject, removeProject } = useProjects()
   const { requestClose, modal: closeModal } = useConfirmClose()
 
-  const installedEditors = useInstalledEditors()
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [editorMenuOpen, setEditorMenuOpen] = useState(false)
   const [confirmCloseProject, setConfirmCloseProject] = useState(false)
   const [showNewGroupModal, setShowNewGroupModal] = useState(false)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; meta: SessionMeta } | null>(null)
@@ -248,6 +245,11 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
     await updateSettings({ sessionGroups: sessionGroups.filter((g) => g.id !== groupId) })
   }, [projectSessions, sessionGroups, updateSettings, upsertSession])
 
+  const handleOpenGroupAsLayout = useCallback((groupId: string): void => {
+    const sessionIds = projectSessions.filter((s) => s.groupId === groupId).map((s) => s.sessionId)
+    if (sessionIds.length > 0) openGroupInSplits(sessionIds)
+  }, [projectSessions, openGroupInSplits])
+
   const handleCreateGroup = useCallback(async (name: string, color: string): Promise<void> => {
     const id = crypto.randomUUID()
     await updateSettings({ sessionGroups: [...sessionGroups, { id, name, color }] })
@@ -428,33 +430,6 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
             <span className="flex-1 text-xs text-zinc-300 truncate min-w-0">{workspaceLabel}</span>
             <ChevronDown size={12} className={cn('flex-shrink-0 text-zinc-500 transition-transform', dropdownOpen && 'rotate-180')} />
           </button>
-          {!isNoWorkspace && installedEditors.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setEditorMenuOpen((v) => !v)}
-                className="flex items-center justify-center w-7 h-7 rounded hover:bg-brand-panel/60 text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0"
-                title="Open project in editor"
-              >
-                <Code2 size={13} />
-              </button>
-              {editorMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setEditorMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-brand-bg border border-brand-panel/60 rounded shadow-xl py-1 min-w-[140px]">
-                    {installedEditors.map((ed) => (
-                      <button
-                        key={ed.command}
-                        onClick={() => { openInEditor(ed.command, activeProject!); setEditorMenuOpen(false) }}
-                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-400 hover:bg-brand-panel hover:text-zinc-200 transition-colors text-left"
-                      >
-                        {ed.name}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
           {!isNoWorkspace && (
             <button
               onClick={() => setConfirmCloseProject(true)}
@@ -632,6 +607,7 @@ export function AgentMonitorSidebar({ activeProject, onProjectChange, activeSess
           onDismiss={() => setGroupCtxMenu(null)}
           onEdit={setEditingGroup}
           onDelete={(id) => void handleDeleteGroup(id)}
+          onOpenAsLayout={handleOpenGroupAsLayout}
         />
       )}
 

@@ -38,6 +38,14 @@ export async function detectEditors(): Promise<{ name: string; command: string }
   return ipc.invoke(IPC.FS_DETECT_EDITORS) as Promise<{ name: string; command: string }[]>
 }
 
+export async function mkdir(dirPath: string): Promise<void> {
+  return ipc.invoke(IPC.FS_MKDIR, { dirPath }) as Promise<void>
+}
+
+export async function writeFile(filePath: string, content: string): Promise<void> {
+  return ipc.invoke(IPC.FS_WRITE_FILE, { filePath, content }) as Promise<void>
+}
+
 export async function renameEntry(oldPath: string, newName: string): Promise<void> {
   return ipc.invoke(IPC.FS_RENAME, { oldPath, newName }) as Promise<void>
 }

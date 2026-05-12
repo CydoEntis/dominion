@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus, Pencil, Trash2, ArrowRightLeft } from 'lucide-react'
+import { X, Plus, Search, ChevronRight, FolderOpen, FolderClosed, FileText, FolderPlus, Pencil, Trash2, ArrowRightLeft, ExternalLink } from 'lucide-react'
 import { useStore } from '../../../store/root.store'
 import { cn } from '../../../lib/utils'
 import { EditNoteModal } from './EditNoteModal'
 import { detachNotePane, moveNotePaneToWindow, listWindows } from '../../window/window.service'
+import { useInstalledEditors } from '../../fs/hooks/useInstalledEditors'
+import { openNoteInEditor } from '../notes.service'
 import { WindowMoveSubmenu } from '../../window/components/WindowMoveSubmenu'
 import type { Note } from '@shared/ipc-types'
 import type { LayoutNode } from '../../layout/layout-tree'
@@ -57,6 +59,7 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
   const addDetachedNoteId = useStore((s) => s.addDetachedNoteId)
   const detachedNoteIds = useStore((s) => s.detachedNoteIds)
 
+  const installedEditors = useInstalledEditors()
   const [query, setQuery] = useState('')
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
   const [dragNoteId, setDragNoteId] = useState<string | null>(null)
@@ -67,12 +70,15 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
   const [renamingNoteName, setRenamingNoteName] = useState('')
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [showMoveSubmenu, setShowMoveSubmenu] = useState(false)
+  const [showOpenInSubmenu, setShowOpenInSubmenu] = useState(false)
   const [submenuY, setSubmenuY] = useState(0)
+  const [openInSubmenuY, setOpenInSubmenuY] = useState(0)
   const [otherWindows, setOtherWindows] = useState<{ windowId: string; windowName: string; windowColor: string }[]>([])
   // null id = new folder, string id = edit existing
   const [folderPopover, setFolderPopover] = useState<{ id: string | null; name: string; color: string; x: number; y: number } | null>(null)
   const renamingNoteRef = useRef<HTMLInputElement>(null)
   const moveTriggerRef = useRef<HTMLButtonElement>(null)
+  const openInTriggerRef = useRef<HTMLButtonElement>(null)
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -88,10 +94,10 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
   }
   const scheduleHideSubmenu = (): void => {
     clearHideTimeout()
-    hideTimeoutRef.current = setTimeout(() => setShowMoveSubmenu(false), 150)
+    hideTimeoutRef.current = setTimeout(() => { setShowMoveSubmenu(false); setShowOpenInSubmenu(false) }, 150)
   }
   const dismissContextMenu = (): void => {
-    setContextMenu(null); setShowMoveSubmenu(false)
+    setContextMenu(null); setShowMoveSubmenu(false); setShowOpenInSubmenu(false)
   }
   const getSubmenuX = (): number => {
     const menuWidth = 180
@@ -372,6 +378,23 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
                 >
                   <Pencil size={12} />Edit
                 </button>
+                {installedEditors.length > 0 && (
+                  <button
+                    ref={openInTriggerRef}
+                    onMouseEnter={() => {
+                      clearHideTimeout()
+                      const rect = openInTriggerRef.current?.getBoundingClientRect()
+                      if (rect) setOpenInSubmenuY(rect.top)
+                      setShowMoveSubmenu(false)
+                      setShowOpenInSubmenu(true)
+                    }}
+                    onMouseLeave={scheduleHideSubmenu}
+                    className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+                  >
+                    <span className="flex items-center gap-2.5"><ExternalLink size={12} />Open In</span>
+                    <ChevronRight size={10} className="text-zinc-600" />
+                  </button>
+                )}
                 <div className="my-1 border-t border-brand-panel/60" />
                 <button
                   ref={moveTriggerRef}
@@ -398,6 +421,26 @@ export function FileTree({ activeNoteId, onActivate, onCreate, onNoteDragStart, 
             )}
           </div>
         </>
+      )}
+
+      {/* Open-in-editor submenu */}
+      {showOpenInSubmenu && contextMenu?.type === 'note' && installedEditors.length > 0 && (
+        <div
+          className="fixed z-[202] bg-brand-surface border border-brand-panel rounded shadow-xl py-1 min-w-[140px]"
+          style={{ left: getSubmenuX(), top: openInSubmenuY }}
+          onMouseEnter={clearHideTimeout}
+          onMouseLeave={scheduleHideSubmenu}
+        >
+          {installedEditors.map(ed => (
+            <button
+              key={ed.command}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-zinc-300 hover:bg-brand-panel hover:text-zinc-100 transition-colors"
+              onClick={() => { openNoteInEditor(ed.command, contextMenu.id); dismissContextMenu() }}
+            >
+              {ed.name}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* Move-to-window submenu */}

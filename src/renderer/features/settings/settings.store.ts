@@ -16,6 +16,7 @@ export interface SettingsSlice {
   saveNote: (id: string, content: string) => Promise<void>
   deleteNote: (id: string) => Promise<void>
   addNote: (id: string) => void
+  patchNoteContent: (id: string, content: string) => void
   addNoteFolder: (name: string, color?: string) => Promise<string>
   deleteNoteFolder: (id: string) => Promise<void>
   renameNoteFolder: (id: string, name: string, color?: string) => Promise<void>
@@ -63,6 +64,13 @@ export const createSettingsSlice: StateCreator<RootStore, [['zustand/immer', nev
   addNote: (id: string) => {
     set((state) => {
       state.notes.unshift({ id, content: '', updatedAt: Date.now() })
+    })
+  },
+
+  patchNoteContent: (id: string, content: string) => {
+    set((state) => {
+      const idx = state.notes.findIndex(n => n.id === id)
+      if (idx !== -1) state.notes[idx] = { ...state.notes[idx], content, updatedAt: Date.now() }
     })
   },
 
